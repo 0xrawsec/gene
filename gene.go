@@ -23,6 +23,7 @@ const (
 var (
 	debug         bool
 	showTimestamp bool
+	allEvents     bool
 
 	rules    string
 	ruleExts = args.ListVar{".gen", ".gene"}
@@ -31,6 +32,7 @@ var (
 func main() {
 	flag.BoolVar(&debug, "d", debug, "Enable debug mode")
 	flag.BoolVar(&showTimestamp, "t", showTimestamp, "Show the timestamp of the event when printing")
+	flag.BoolVar(&allEvents, "all", allEvents, "Print all events (even the one not matching rules)")
 	flag.StringVar(&rules, "r", rules, "Rule file or directory")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Usage = func() {
@@ -102,6 +104,12 @@ func main() {
 		for event := range ef.FastEvents() {
 			if n, _ := e.Match(event); len(n) > 0 {
 				// Prints out the events with timestamp or not
+				if showTimestamp {
+					fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+				} else {
+					fmt.Println(string(evtx.ToJSON(event)))
+				}
+			} else if allEvents {
 				if showTimestamp {
 					fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
 				} else {
