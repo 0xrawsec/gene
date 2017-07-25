@@ -34,7 +34,7 @@ func main() {
 	flag.StringVar(&rules, "r", rules, "Rule file or directory")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s: %[1]s [OPTIONS] FILES...\n", filepath.Base(os.Args[0]))
+		fmt.Fprintf(os.Stderr, "%s: %[1]s -r RULES [OPTIONS] FILES...\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
@@ -44,6 +44,11 @@ func main() {
 	// Enable debugging mode if needed
 	if debug {
 		log.InitLogger(log.LDebug)
+	}
+
+	// Control parameters
+	if rules == "" {
+		log.LogErrorAndExit(fmt.Errorf("No rule file to load"), exitFail)
 	}
 
 	// Initialization
