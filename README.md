@@ -125,9 +125,9 @@ We can build up an example rule to match it.
 "Matches": [
   "$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'",
   "$b: ImageLoaded = 'C:\\\\Windows\\\\System32\\\\DataExchange\.dll'",
-  "$c: Signed != 'false'"
+  "$c: Signed = 'false'"
   ],
-"Condition": "($a or $b) and $c"
+"Condition": "($a or $b) and !$c"
 }
 ```
 
@@ -140,6 +140,6 @@ The above rule is useless and is a showcase just to introduce you the concept.
   * So far the operatior only applies on `string` there is not type information possible
 * There are three types of operators for the `Matches`
   * `=` strict match
-  * `!=` don't match
+  * `!=` don't match (I am thinking about removing this one since we can negate in the condition)
   * `~=` regexp match (following Go regexp syntax)
 * The `Condition` is the logic applied to the `Matches` in order to trigger the rule

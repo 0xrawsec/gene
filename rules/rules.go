@@ -166,23 +166,29 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 	if etok.Contains(token) || etok.Contains(string(token[0])) {
 		return
 	}
-	log.Debugf("%s: '%s'", ErrUnexpectedToken, token)
+	log.Debugf("%s: '%s' not in %v", ErrUnexpectedToken, token, expects)
 	return "", ErrUnexpectedToken
 }
 
 //ParseCondition parses a condition
-func (t *Tokenizer) ParseCondition() (c Condition, err error) {
+func (t *Tokenizer) ParseCondition(level int) (c Condition, err error) {
 	var token string
 
-	token, err = t.NextExpectedToken("$", "(", ")")
+	token, err = t.NextExpectedToken("$", "!", "(", ")", "and", "or")
 	if err != nil {
 		return
 	}
 BeginSwitch:
 	switch token[0] {
+	case '!':
+		c.Negate = true
+		token = token[1:]
+		goto BeginSwitch
 	case '$':
 		// Set the operand
 		c.Operand = token
+		// Set the Level
+		c.Level = level
 		token, err = t.NextExpectedToken("and", "&&", "AND", "or", "||", "OR", ")")
 		//if err != nil && err == ErrUnexpectedToken {
 		if err != nil {
@@ -195,6 +201,7 @@ BeginSwitch:
 		case "or", "||", "OR":
 			c.Operator = '|'
 		case ")":
+			level--
 			token, err = t.NextExpectedToken("and", "&&", "AND", "or", "||", "OR", ")")
 			if err != nil {
 				return
@@ -207,7 +214,7 @@ BeginSwitch:
 			}
 		}
 		// Set the next condition
-		next, err := t.ParseCondition()
+		next, err := t.ParseCondition(level)
 		switch err {
 		case nil, EOT:
 			c.Next = &next
@@ -215,11 +222,12 @@ BeginSwitch:
 			return c, err
 		}
 	case '(':
+		level++
 		if len(token) > 1 {
 			token = token[1:]
 			goto BeginSwitch
 		} else {
-			return t.ParseCondition()
+			return t.ParseCondition(level)
 		}
 	}
 	return
@@ -231,11 +239,18 @@ BeginSwitch:
 type Condition struct {
 	Operand  string
 	Operator rune
+	Negate   bool
+	Level    int
 	Next     *Condition
 }
 
 func (c *Condition) String() string {
-	return fmt.Sprintf("Operand: %s Operator: (%q) Next: (%s)", c.Operand, c.Operator, c.Next)
+	if c.Negate {
+		return fmt.Sprintf("NOT Operand: %s Operator: (%q) Level:%d Next: (%s)",
+			c.Operand, c.Operator, c.Level, c.Next)
+	}
+	return fmt.Sprintf("Operand: %s Operator: (%q) Level:%d Next: (%s)",
+		c.Operand, c.Operator, c.Level, c.Next)
 }
 
 ///////////////////////////////////// Rule /////////////////////////////////////
@@ -300,17 +315,35 @@ func (er *CompiledRule) metaMatch(event *evtx.GoEvtxMap) bool {
 
 func (er *CompiledRule) match(cond *Condition, event *evtx.GoEvtxMap) bool {
 	if a, ok := er.AtomMap.Contains(cond.Operand); ok {
+		// If there is not other continuation in the condition
 		if cond.Next == nil {
-			return a.(*AtomRule).Match(event)
+			am := a.(*AtomRule).Match(event)
+			if cond.Negate {
+				return !am
+			}
+			return am
 		}
+
 		switch cond.Operator {
 		case '&':
-			return a.(*AtomRule).Match(event) && er.match(cond.Next, event)
+			am := a.(*AtomRule).Match(event)
+			if cond.Negate {
+				return !am && er.match(cond.Next, event)
+			}
+			return am && er.match(cond.Next, event)
 		case '|':
-			return a.(*AtomRule).Match(event) || er.match(cond.Next, event)
+			am := a.(*AtomRule).Match(event)
+			if cond.Negate {
+				return !am || er.match(cond.Next, event)
+			}
+			return am || er.match(cond.Next, event)
 		default:
 			//case '\x00':
-			return a.(*AtomRule).Match(event)
+			am := a.(*AtomRule).Match(event)
+			if cond.Negate {
+				return !am
+			}
+			return am
 		}
 	} else {
 		log.Errorf("Unknown Operand: %s", cond.Operand)
@@ -390,7 +423,7 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 
 	// Parse the condition
 	tokenizer := NewTokenizer(jr.Condition)
-	cond, err := tokenizer.ParseCondition()
+	cond, err := tokenizer.ParseCondition(0)
 	if err != nil && err != EOT {
 		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 		return nil, err
@@ -433,7 +466,7 @@ func Load(b []byte) (*CompiledRule, error) {
 
 	// Parse the condition
 	tokenizer := NewTokenizer(jr.Condition)
-	cond, err := tokenizer.ParseCondition()
+	cond, err := tokenizer.ParseCondition(0)
 	if err != nil && err != EOT {
 		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 		return nil, err

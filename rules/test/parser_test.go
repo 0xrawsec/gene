@@ -19,6 +19,9 @@ var (
 		`$a or $b`,
 		`$a and ( $b or $c )`,
 		`( $a or $b) and ($c or $d ) and $e`,
+		`( $a or $b) and ($c or $d ) and !$e`,
+		`( $a or $b) and ( $c or $d ) and !$e`,
+		`( $a or $b) and ($c or ($d and !$e) ) and !$f`,
 	}
 )
 
@@ -54,7 +57,7 @@ func TestParseAtomRule(t *testing.T) {
 func TestParseCondition(t *testing.T) {
 	for _, cond := range conditions {
 		tokenizer := rules.NewTokenizer(cond)
-		cond, err := tokenizer.ParseCondition()
+		cond, err := tokenizer.ParseCondition(0)
 		t.Logf("%s Error:%v", &cond, err)
 	}
 }
@@ -88,7 +91,7 @@ func TestEvtxRule(t *testing.T) {
 
 	condStr := "$b or ($a AND $y)"
 	tokenizer := rules.NewTokenizer(condStr)
-	cond, err := tokenizer.ParseCondition()
+	cond, err := tokenizer.ParseCondition(0)
 	if err != nil {
 		t.Logf("Failed to parse: %s", condStr)
 		t.Fail()

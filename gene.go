@@ -13,6 +13,7 @@ import (
 	"github.com/0xrawsec/golang-utils/fsutil"
 	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
+	"github.com/0xrawsec/golang-utils/progress"
 )
 
 const (
@@ -24,6 +25,8 @@ var (
 	debug         bool
 	showTimestamp bool
 	allEvents     bool
+	showProgress  bool
+	tagsVar       args.ListVar
 
 	rules    string
 	ruleExts = args.ListVar{".gen", ".gene"}
@@ -31,10 +34,12 @@ var (
 
 func main() {
 	flag.BoolVar(&debug, "d", debug, "Enable debug mode")
-	flag.BoolVar(&showTimestamp, "t", showTimestamp, "Show the timestamp of the event when printing")
+	flag.BoolVar(&showTimestamp, "ts", showTimestamp, "Show the timestamp of the event when printing")
 	flag.BoolVar(&allEvents, "all", allEvents, "Print all events (even the one not matching rules)")
+	flag.BoolVar(&showProgress, "progress", showProgress, "Show progress")
 	flag.StringVar(&rules, "r", rules, "Rule file or directory")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
+	flag.Var(&tagsVar, "t", "Tags to search for (comma separated)")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s: %[1]s -r RULES [OPTIONS] FILES...\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
@@ -42,6 +47,9 @@ func main() {
 	}
 
 	flag.Parse()
+
+	prog := progress.New(128)
+	prog.SetPre("Event Processed")
 
 	// Enable debugging mode if needed
 	if debug {
@@ -56,6 +64,7 @@ func main() {
 	// Initialization
 	e := engine.NewEngine()
 	setRuleExts := datastructs.NewSyncedSet()
+	tags := []string(tagsVar)
 
 	// Initializes the set of rule extensions
 	for _, e := range ruleExts {
@@ -97,23 +106,50 @@ func main() {
 
 	// Scanning the EVTX files
 	for _, evtxFile := range flag.Args() {
+		eventCnt, cntChunk, oldEventCnt := 0, 100, 100
 		ef, err := evtx.New(evtxFile)
 		if err != nil {
 			log.Error(err)
 		}
-		for event := range ef.FastEvents() {
-			if n, _ := e.Match(event); len(n) > 0 {
-				// Prints out the events with timestamp or not
-				if showTimestamp {
-					fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-				} else {
-					fmt.Println(string(evtx.ToJSON(event)))
+		// Init Progress
+		prog.SetPre(filepath.Base(evtxFile))
+		for event := range ef.UnorderedEvents() {
+			eventCnt++
+			if showProgress && eventCnt >= oldEventCnt {
+				prog.Update(fmt.Sprintf("%d", eventCnt))
+				prog.Print()
+				oldEventCnt = eventCnt + cntChunk
+			}
+			if len(tags) == 0 {
+				if n, _ := e.Match(event); len(n) > 0 {
+					// Prints out the events with timestamp or not
+					if showTimestamp {
+						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+					} else {
+						fmt.Println(string(evtx.ToJSON(event)))
+					}
+				} else if allEvents {
+					if showTimestamp {
+						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+					} else {
+						fmt.Println(string(evtx.ToJSON(event)))
+					}
 				}
-			} else if allEvents {
-				if showTimestamp {
-					fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-				} else {
-					fmt.Println(string(evtx.ToJSON(event)))
+
+			} else {
+				if n, _ := e.MatchByTag(&tags, event); len(n) > 0 {
+					// Prints out the events with timestamp or not
+					if showTimestamp {
+						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+					} else {
+						fmt.Println(string(evtx.ToJSON(event)))
+					}
+				} else if allEvents {
+					if showTimestamp {
+						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+					} else {
+						fmt.Println(string(evtx.ToJSON(event)))
+					}
 				}
 			}
 		}
