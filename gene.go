@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"engine"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -26,17 +28,55 @@ var (
 	showTimestamp bool
 	allEvents     bool
 	showProgress  bool
+	inJSONFmt     bool
+	tags          []string
 	tagsVar       args.ListVar
 
 	rules    string
 	ruleExts = args.ListVar{".gen", ".gene"}
 )
 
+func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
+	if len(tags) == 0 {
+		if n, _ := e.Match(event); len(n) > 0 {
+			// Prints out the events with timestamp or not
+			if showTimestamp {
+				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+			} else {
+				fmt.Println(string(evtx.ToJSON(event)))
+			}
+		} else if allEvents {
+			if showTimestamp {
+				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+			} else {
+				fmt.Println(string(evtx.ToJSON(event)))
+			}
+		}
+
+	} else {
+		if n, _ := e.MatchByTag(&tags, event); len(n) > 0 {
+			// Prints out the events with timestamp or not
+			if showTimestamp {
+				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+			} else {
+				fmt.Println(string(evtx.ToJSON(event)))
+			}
+		} else if allEvents {
+			if showTimestamp {
+				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+			} else {
+				fmt.Println(string(evtx.ToJSON(event)))
+			}
+		}
+	}
+}
+
 func main() {
 	flag.BoolVar(&debug, "d", debug, "Enable debug mode")
 	flag.BoolVar(&showTimestamp, "ts", showTimestamp, "Show the timestamp of the event when printing")
 	flag.BoolVar(&allEvents, "all", allEvents, "Print all events (even the one not matching rules)")
 	flag.BoolVar(&showProgress, "progress", showProgress, "Show progress")
+	flag.BoolVar(&inJSONFmt, "j", inJSONFmt, "Input is in JSON format")
 	flag.StringVar(&rules, "r", rules, "Rule file or directory")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Var(&tagsVar, "t", "Tags to search for (comma separated)")
@@ -64,7 +104,7 @@ func main() {
 	// Initialization
 	e := engine.NewEngine()
 	setRuleExts := datastructs.NewSyncedSet()
-	tags := []string(tagsVar)
+	tags = []string(tagsVar)
 
 	// Initializes the set of rule extensions
 	for _, e := range ruleExts {
@@ -105,53 +145,53 @@ func main() {
 	log.Infof("Loaded %d rules", e.Count())
 
 	// Scanning the EVTX files
-	for _, evtxFile := range flag.Args() {
-		eventCnt, cntChunk, oldEventCnt := 0, 100, 100
-		ef, err := evtx.New(evtxFile)
-		if err != nil {
-			log.Error(err)
-		}
-		// Init Progress
-		prog.SetPre(filepath.Base(evtxFile))
-		for event := range ef.UnorderedEvents() {
-			eventCnt++
-			if showProgress && eventCnt >= oldEventCnt {
-				prog.Update(fmt.Sprintf("%d", eventCnt))
-				prog.Print()
-				oldEventCnt = eventCnt + cntChunk
+	if !inJSONFmt {
+		for _, evtxFile := range flag.Args() {
+			eventCnt, cntChunk, oldEventCnt := 0, 100, 100
+			ef, err := evtx.New(evtxFile)
+			if err != nil {
+				log.Error(err)
 			}
-			if len(tags) == 0 {
-				if n, _ := e.Match(event); len(n) > 0 {
-					// Prints out the events with timestamp or not
-					if showTimestamp {
-						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-					} else {
-						fmt.Println(string(evtx.ToJSON(event)))
-					}
-				} else if allEvents {
-					if showTimestamp {
-						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-					} else {
-						fmt.Println(string(evtx.ToJSON(event)))
-					}
+			// Init Progress
+			prog.SetPre(filepath.Base(evtxFile))
+			for event := range ef.UnorderedEvents() {
+				eventCnt++
+				if showProgress && eventCnt >= oldEventCnt {
+					prog.Update(fmt.Sprintf("%d", eventCnt))
+					prog.Print()
+					oldEventCnt = eventCnt + cntChunk
 				}
+				matchEvent(&e, event)
+			}
+		}
+	} else {
+		for _, jsonFile := range flag.Args() {
+			eventCnt, cntChunk, oldEventCnt := 0, 100, 100
+			prog.SetPre(filepath.Base(jsonFile))
+			f, err := os.Open(jsonFile)
+			if err != nil {
+				log.LogError(err)
+			}
+			d := json.NewDecoder(f)
+			for {
+				event := evtx.GoEvtxMap{}
+				if err := d.Decode(&event); err != nil {
+					if err == io.EOF {
+						break
+					}
+					log.LogError(err)
+					break
+				}
+				// Printing Progress
+				eventCnt++
+				if showProgress && eventCnt >= oldEventCnt {
+					prog.Update(fmt.Sprintf("%d", eventCnt))
+					prog.Print()
+					oldEventCnt = eventCnt + cntChunk
+				}
+				matchEvent(&e, &event)
+			}
+		}
 
-			} else {
-				if n, _ := e.MatchByTag(&tags, event); len(n) > 0 {
-					// Prints out the events with timestamp or not
-					if showTimestamp {
-						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-					} else {
-						fmt.Println(string(evtx.ToJSON(event)))
-					}
-				} else if allEvents {
-					if showTimestamp {
-						fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-					} else {
-						fmt.Println(string(evtx.ToJSON(event)))
-					}
-				}
-			}
-		}
 	}
 }
