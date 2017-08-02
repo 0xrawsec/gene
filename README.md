@@ -9,7 +9,7 @@ Here are some of our motivations:
   1. By doing IR frequently we quickly notice the importance of the information
   we can find inside EVTX files (when they don't get cleared :)).
   2. Some particular events can be considered as IOCs and are sometimes the only
-  onces left on the system.
+  ones left on the system.
   3. To the best of my knowledge, there is no easy way to query the logs and
   extract directly the interesting events.
     * because we (at least I) never remember all the interesting events
@@ -24,7 +24,7 @@ Here are some of our motivations:
   5. Before writing that tool I was always ending up implementing a custom piece
   of software in order to extract the information I needed, which in the end is
   not scalable at all and very time consuming.
-  6. Cross platform tool
+  6. I wanted a cross platform tool
 
 # Use Cases
 
@@ -35,9 +35,10 @@ Here are some of our motivations:
     * IOC scan on all your machines
   2. If you are forwarding the Windows Event somewhere, you can use it as a
   scheduled task to extract relevant piece of information from those logs.
-  3. It can be combined with Sysmon in order to build up use cases in a minute
-  (the time to write the rule) and it is much more flexible and easy to understand
-  than the Sysmon configuration file.
+  3. It can be used to retro search into your EVTX backup
+  4. It can be combined with Sysmon in order to build up use cases in a minute
+  (the time to write the rule) and it is much more flexible than the Sysmon
+  configuration file.
     * Suspicious process spawned by another one
     * Suspicious Driver load events
     * Unusual DLL loaded by a given process
@@ -47,14 +48,22 @@ Here are some of our motivations:
 
 ```
 gene: gene -r RULES [OPTIONS] FILES...
--all
-  	Print all events (even the one not matching rules)
--d	Enable debug mode
--e value
-  	Rule file extensions to load (default [.gen .gene])
--r string
-  	Rule file or directory
--t	Show the timestamp of the event when printing
+  -all
+    	Print all events (even the one not matching rules)
+  -d	Enable debug mode
+  -e value
+    	Rule file extensions to load (default [.gen .gene])
+  -j	Input is in JSON format
+  -n value
+    	Rule names to match against (comma separated)
+  -progress
+    	Show progress
+  -r string
+    	Rule file or directory
+  -t value
+    	Tags to search for (comma separated)
+  -ts
+    	Show the timestamp of the event when printing
 ```
 
 # Rule Example
@@ -64,6 +73,7 @@ on the JSON format. The rules are quite straightforward. You have to respect th
 following skeleton if you want the rule to be loaded correctly.
 
 ## Simple Rule
+
 Considering the following Sysmon event (converted to JSON)
 
 ```json
@@ -133,13 +143,18 @@ We can build up an example rule to match it.
 
 The above rule is useless and is a showcase just to introduce you the concept.
 
-1. The `Meta` part of the rule matches what is under the `System` part of the event
+* The `Meta` part of the rule matches what is under the `System` part of the event
 * The `Criticality` is a criticality level attributed to the event matching the rule
-* The `Matches` contains the different matches you can use in the `Condition`
-* A match is in a form of `$NAME: OPERAND OPERATOR 'VALUE'`
-  * So far the operatior only applies on `string` there is not type information possible
+* The `Matches` contains the different matches you can use later in the `Condition`
+* A `Match` is in a form of `$NAME: OPERAND OPERATOR 'VALUE'`
+  * So far the operatior only applies on `string` so the value cannot by `typed`
 * There are three types of operators for the `Matches`
   * `=` strict match
-  * `!=` don't match (I am thinking about removing this one since we can negate in the condition)
+  * `!=` don't match (I am thinking about removing this one since we can negate `=` in the condition)
   * `~=` regexp match (following Go regexp syntax)
 * The `Condition` is the logic applied to the `Matches` in order to trigger the rule
+
+# Notes
+
+This project is quite new and may still have little bugs, so do not hesitate to
+open issues for those.
