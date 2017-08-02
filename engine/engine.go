@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
+	"github.com/0xrawsec/golang-utils/log"
 )
 
 var (
@@ -159,22 +160,28 @@ func (e *Engine) MatchByTag(tags *[]string, event *evtx.GoEvtxMap) (names []stri
 	return
 }
 
-//MatchByName checks if rule referenced by name in the engine matches the event
-func (e *Engine) MatchByName(name string, event *evtx.GoEvtxMap) (bool, int) {
+//MatchByNames checks if rule referenced by name in the engine matches the event
+func (e *Engine) MatchByNames(names *[]string, event *evtx.GoEvtxMap) (matchedNames []string, criticality int) {
 	e.RLock()
 	defer e.RUnlock()
-	if rIdx, ok := e.names[name]; ok {
-		r := e.rules[rIdx]
-		if r.Match(event) {
-			// Bound criticality
-			criticality := globals.Bound(r.Criticality)
-			// Update event with signature information
-			genInfo := map[string]interface{}{
-				"Signature":   []string{name},
-				"Criticality": criticality}
-			event.Set(&geneInfoPath, genInfo)
-			return true, r.Criticality
+	matchedNames = make([]string, 0)
+	for _, name := range *names {
+		if rIdx, ok := e.names[name]; ok {
+			r := e.rules[rIdx]
+			if r.Match(event) {
+				matchedNames = append(matchedNames, r.Name)
+				criticality += r.Criticality
+			}
+		} else {
+			log.Error(fmt.Sprintf("No rule named: %s", name))
 		}
 	}
-	return false, 0
+	// Bound criticality
+	criticality = globals.Bound(criticality)
+	// Update event with signature information
+	genInfo := map[string]interface{}{
+		"Signature":   matchedNames,
+		"Criticality": criticality}
+	event.Set(&geneInfoPath, genInfo)
+	return
 }

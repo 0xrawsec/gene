@@ -56,9 +56,15 @@ func TestParseAtomRule(t *testing.T) {
 
 func TestParseCondition(t *testing.T) {
 	for _, cond := range conditions {
+		t.Log(cond)
 		tokenizer := rules.NewTokenizer(cond)
-		cond, err := tokenizer.ParseCondition(0)
-		t.Logf("%s Error:%v", &cond, err)
+		cond, err := tokenizer.ParseCondition(0, 0)
+		if err != nil {
+			t.FailNow()
+			t.Logf("%s Error:%v", &cond, err)
+		}
+		group := rules.NewCondGroup(&cond)
+		t.Log(group)
 	}
 }
 
@@ -91,7 +97,7 @@ func TestEvtxRule(t *testing.T) {
 
 	condStr := "$b or ($a AND $y)"
 	tokenizer := rules.NewTokenizer(condStr)
-	cond, err := tokenizer.ParseCondition(0)
+	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil {
 		t.Logf("Failed to parse: %s", condStr)
 		t.Fail()

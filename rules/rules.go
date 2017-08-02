@@ -171,7 +171,7 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 }
 
 //ParseCondition parses a condition
-func (t *Tokenizer) ParseCondition(level int) (c Condition, err error) {
+func (t *Tokenizer) ParseCondition(group, level int) (c Condition, err error) {
 	var token string
 
 	token, err = t.NextExpectedToken("$", "!", "(", ")", "and", "or")
@@ -189,6 +189,7 @@ BeginSwitch:
 		c.Operand = token
 		// Set the Level
 		c.Level = level
+		c.Group = group
 		token, err = t.NextExpectedToken("and", "&&", "AND", "or", "||", "OR", ")")
 		//if err != nil && err == ErrUnexpectedToken {
 		if err != nil {
@@ -201,6 +202,7 @@ BeginSwitch:
 		case "or", "||", "OR":
 			c.Operator = '|'
 		case ")":
+			group++
 			level--
 			token, err = t.NextExpectedToken("and", "&&", "AND", "or", "||", "OR", ")")
 			if err != nil {
@@ -214,7 +216,7 @@ BeginSwitch:
 			}
 		}
 		// Set the next condition
-		next, err := t.ParseCondition(level)
+		next, err := t.ParseCondition(group, level)
 		switch err {
 		case nil, EOT:
 			c.Next = &next
@@ -223,11 +225,12 @@ BeginSwitch:
 		}
 	case '(':
 		level++
+
 		if len(token) > 1 {
 			token = token[1:]
 			goto BeginSwitch
 		} else {
-			return t.ParseCondition(level)
+			return t.ParseCondition(group, level)
 		}
 	}
 	return
@@ -241,16 +244,76 @@ type Condition struct {
 	Operator rune
 	Negate   bool
 	Level    int
+	Group    int
 	Next     *Condition
 }
 
 func (c *Condition) String() string {
 	if c.Negate {
-		return fmt.Sprintf("NOT Operand: %s Operator: (%q) Level:%d Next: (%s)",
-			c.Operand, c.Operator, c.Level, c.Next)
+		//return fmt.Sprintf("NOT Operand: %s Operator: (%q) Level:%d Next: (%s)",
+		//c.Operand, c.Operator, c.Level, c.Next)
+		if c.Next != nil {
+			return fmt.Sprintf("!%s %c %s", c.Operand, c.Operator, c.Next)
+		}
+		return fmt.Sprintf("!%s", c.Operand)
 	}
-	return fmt.Sprintf("Operand: %s Operator: (%q) Level:%d Next: (%s)",
-		c.Operand, c.Operator, c.Level, c.Next)
+	//return fmt.Sprintf("Operand: %s Operator: (%q) Level:%d Next: (%s)",
+	//c.Operand, c.Operator, c.Level, c.Next)
+	if c.Next != nil {
+		return fmt.Sprintf("%s %c %s", c.Operand, c.Operator, c.Next)
+	}
+	return fmt.Sprintf("%s", c.Operand)
+}
+
+func (c *Condition) DebugString() string {
+	if c.Negate {
+		//return fmt.Sprintf("NOT Operand: %s Operator: (%q) Level:%d Next: (%s)",
+		//c.Operand, c.Operator, c.Level, c.Next)
+		return fmt.Sprintf("NOT Operand: %s Operator: (%q) Group:%d Next: (%s)",
+			c.Operand, c.Operator, c.Group, c.Next.DebugString())
+	}
+	//return fmt.Sprintf("Operand: %s Operator: (%q) Level:%d Next: (%s)",
+	//c.Operand, c.Operator, c.Level, c.Next)
+	return fmt.Sprintf("Operand: %s Operator: (%q) Group:%d Next: (%s)",
+		c.Operand, c.Operator, c.Group, c.Next.DebugString())
+}
+
+////////////////////////////// Group ///////////////////////////////////////////
+
+type CondGroup struct {
+	condition    *Condition
+	operatorSub  rune
+	subGroup     *CondGroup
+	operatorNext rune
+	next         *CondGroup
+}
+
+func (cg *CondGroup) String() string {
+	return fmt.Sprintf("condition:%s\noperatorSub:(%q)\nsubgroup:%s\noperatorNext:(%q)\nnext=%s\n",
+		cg.condition, cg.operatorSub, cg.subGroup, cg.operatorNext, cg.next)
+}
+
+func NewCondGroup(condition *Condition) *CondGroup {
+	group := CondGroup{}
+	group.condition = condition
+	if condition != nil {
+		for cond := condition; cond.Next != nil; cond = cond.Next {
+			log.Debug(condition)
+			log.Debug(condition.Next)
+			if cond.Next.Level > cond.Level {
+				group.subGroup = NewCondGroup(cond.Next)
+				group.operatorSub = cond.Operator
+				cond.Next = nil
+				break
+			} else if cond.Next.Level <= cond.Level && cond.Next.Group != cond.Group {
+				group.next = NewCondGroup(cond.Next)
+				group.operatorNext = cond.Operator
+				cond.Next = nil
+				break
+			}
+		}
+	}
+	return &group
 }
 
 ///////////////////////////////////// Rule /////////////////////////////////////
@@ -271,6 +334,7 @@ type CompiledRule struct {
 	EventIDs    datastructs.SyncedSet
 	AtomMap     datastructs.SyncedMap
 	Condition   *Condition
+	Conditions  *CondGroup
 }
 
 //NewCompiledRule initializes and returns an EvtxRule object
@@ -313,36 +377,101 @@ func (er *CompiledRule) metaMatch(event *evtx.GoEvtxMap) bool {
 	return true
 }
 
-func (er *CompiledRule) match(cond *Condition, event *evtx.GoEvtxMap) bool {
+func (er *CompiledRule) matchGroup(group *CondGroup, event *evtx.GoEvtxMap) bool {
+	// Match the condition
+	mc := er.matchCondition(group.condition, event)
+	log.Debugf("Match Condition: %s Result: %t", group.condition, mc)
+	// Match subgroup equal to condition match by default
+	result := mc
+	// Then match any subgroup
+	if group.subGroup != nil {
+		switch {
+		case !mc && group.operatorSub == '&':
+			result = false
+			break
+		case mc && group.operatorSub == '|':
+			result = true
+			break
+		default:
+			switch group.operatorSub {
+			case '&':
+				result = mc && er.matchGroup(group.subGroup, event)
+			case '|':
+				result = mc || er.matchGroup(group.subGroup, event)
+			default:
+				panic(ErrUnkOperator)
+			}
+		}
+	}
+
+	if group.next != nil {
+		switch group.operatorNext {
+		case '&':
+			if !result {
+				return result
+			}
+			ngm := er.matchGroup(group.next, event)
+			return result && ngm
+		case '|':
+			if result {
+				return result
+			}
+			ngm := er.matchGroup(group.next, event)
+			return result || ngm
+		default:
+			panic(ErrUnkOperator)
+		}
+	}
+	// If no more group we return the value of msg
+	return result
+}
+
+func (er *CompiledRule) matchCondition(cond *Condition, event *evtx.GoEvtxMap) bool {
 	if a, ok := er.AtomMap.Contains(cond.Operand); ok {
 		// If there is not other continuation in the condition
 		if cond.Next == nil {
 			am := a.(*AtomRule).Match(event)
+			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
 			if cond.Negate {
+				log.Debugf("Return:%t", !am)
 				return !am
 			}
+			log.Debugf("Return:%t", am)
 			return am
 		}
 
 		switch cond.Operator {
 		case '&':
 			am := a.(*AtomRule).Match(event)
+			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
+			//log.Debugf("MatchNext:%t Cond.Next:%s", er.match(cond.Next, event), cond.Next)
+			nm := er.matchCondition(cond.Next, event)
 			if cond.Negate {
-				return !am && er.match(cond.Next, event)
+				log.Debugf("Return:%t", !am && nm)
+				return !am && nm
 			}
-			return am && er.match(cond.Next, event)
+			log.Debugf("Return:%t", am && nm)
+			return am && nm
 		case '|':
 			am := a.(*AtomRule).Match(event)
+			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
+			//log.Debugf("MatchNext:%t Cond.Next:%s", er.match(cond.Next, event), cond.Next)
+			nm := er.matchCondition(cond.Next, event)
 			if cond.Negate {
-				return !am || er.match(cond.Next, event)
+				log.Debugf("Return:%t", !am || nm)
+				return !am || nm
 			}
-			return am || er.match(cond.Next, event)
+			log.Debugf("Return:%t", am || nm)
+			return am || nm
 		default:
 			//case '\x00':
 			am := a.(*AtomRule).Match(event)
+			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
 			if cond.Negate {
+				log.Debugf("Return:%t", !am)
 				return !am
 			}
+			log.Debugf("Return:%t", am)
 			return am
 		}
 	} else {
@@ -363,11 +492,13 @@ func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
 	}
 
 	// We proceed with AtomicRule mathing
-	return er.match(er.Condition, event)
+	//return er.matchCondition(er.Condition, event)
+	log.Debug(er.Conditions)
+	return er.matchGroup(er.Conditions, event)
 }
 
 //////////////////////////////// String Rule ///////////////////////////////////
-// Temporary: we use JSON for easy prasing right now, lets see if we need to
+// Temporary: we use JSON for easy parsing right now, lets see if we need to
 // switch to another format in the future
 
 //MetaSection defines the section holding the metadata of the rule
@@ -423,12 +554,13 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 
 	// Parse the condition
 	tokenizer := NewTokenizer(jr.Condition)
-	cond, err := tokenizer.ParseCondition(0)
+	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil && err != EOT {
 		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 		return nil, err
 	}
 	rule.Condition = &cond
+	rule.Conditions = NewCondGroup(&cond)
 
 	return &rule, nil
 }
@@ -466,12 +598,13 @@ func Load(b []byte) (*CompiledRule, error) {
 
 	// Parse the condition
 	tokenizer := NewTokenizer(jr.Condition)
-	cond, err := tokenizer.ParseCondition(0)
+	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil && err != EOT {
 		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 		return nil, err
 	}
 	rule.Condition = &cond
+	rule.Conditions = NewCondGroup(&cond)
 
 	return &rule, nil
 }

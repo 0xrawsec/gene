@@ -30,14 +30,16 @@ var (
 	showProgress  bool
 	inJSONFmt     bool
 	tags          []string
+	names         []string
 	tagsVar       args.ListVar
+	namesVar      args.ListVar
 
 	rules    string
 	ruleExts = args.ListVar{".gen", ".gene"}
 )
 
 func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
-	if len(tags) == 0 {
+	if len(tags) == 0 && len(names) == 0 {
 		if n, _ := e.Match(event); len(n) > 0 {
 			// Prints out the events with timestamp or not
 			if showTimestamp {
@@ -53,8 +55,23 @@ func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
 			}
 		}
 
-	} else {
+	} else if len(tags) > 0 {
 		if n, _ := e.MatchByTag(&tags, event); len(n) > 0 {
+			// Prints out the events with timestamp or not
+			if showTimestamp {
+				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+			} else {
+				fmt.Println(string(evtx.ToJSON(event)))
+			}
+		} else if allEvents {
+			if showTimestamp {
+				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+			} else {
+				fmt.Println(string(evtx.ToJSON(event)))
+			}
+		}
+	} else if len(names) > 0 {
+		if n, _ := e.MatchByNames(&names, event); len(n) > 0 {
 			// Prints out the events with timestamp or not
 			if showTimestamp {
 				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
@@ -80,6 +97,7 @@ func main() {
 	flag.StringVar(&rules, "r", rules, "Rule file or directory")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Var(&tagsVar, "t", "Tags to search for (comma separated)")
+	flag.Var(&namesVar, "n", "Rule names to match against (comma separated)")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s: %[1]s -r RULES [OPTIONS] FILES...\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
@@ -105,6 +123,12 @@ func main() {
 	e := engine.NewEngine()
 	setRuleExts := datastructs.NewSyncedSet()
 	tags = []string(tagsVar)
+	names = []string(namesVar)
+
+	// Validation
+	if len(tags) > 0 && len(names) > 0 {
+		log.LogErrorAndExit(fmt.Errorf("Cannot search by tags and names at the same time"), exitFail)
+	}
 
 	// Initializes the set of rule extensions
 	for _, e := range ruleExts {
@@ -133,7 +157,7 @@ func main() {
 				if setRuleExts.Contains(ext) {
 					err := e.Load(rulefile)
 					if err != nil {
-						log.Error(err)
+						log.Errorf("Error loading %s: %s", rulefile, err)
 					}
 				}
 			}
@@ -143,7 +167,6 @@ func main() {
 	}
 
 	log.Infof("Loaded %d rules", e.Count())
-
 	// Scanning the EVTX files
 	if !inJSONFmt {
 		for _, evtxFile := range flag.Args() {
@@ -163,15 +186,24 @@ func main() {
 				}
 				matchEvent(&e, event)
 			}
+			log.Infof("Count Event Scanned: %d", eventCnt)
 		}
 	} else {
 		for _, jsonFile := range flag.Args() {
+			var f *os.File
+			var err error
 			eventCnt, cntChunk, oldEventCnt := 0, 100, 100
-			prog.SetPre(filepath.Base(jsonFile))
-			f, err := os.Open(jsonFile)
-			if err != nil {
-				log.LogError(err)
+			if jsonFile != "-" {
+				f, err = os.Open(jsonFile)
+				if err != nil {
+					log.LogError(err)
+				}
+			} else {
+				jsonFile = "stdin"
+				f = os.Stdin
 			}
+			// Setting progress message
+			prog.SetPre(filepath.Base(jsonFile))
 			d := json.NewDecoder(f)
 			for {
 				event := evtx.GoEvtxMap{}
@@ -191,6 +223,7 @@ func main() {
 				}
 				matchEvent(&e, &event)
 			}
+			log.Infof("Count Event Scanned: %d", eventCnt)
 		}
 
 	}
