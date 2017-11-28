@@ -333,8 +333,9 @@ type CompiledRule struct {
 	Tags        datastructs.SyncedSet
 	EventIDs    datastructs.SyncedSet
 	AtomMap     datastructs.SyncedMap
-	Condition   *Condition
-	Conditions  *CondGroup
+	Traces      []*Trace
+	//Condition   *Condition
+	Conditions *CondGroup
 }
 
 //NewCompiledRule initializes and returns an EvtxRule object
@@ -487,7 +488,7 @@ func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
 	}
 
 	// If there is no rule and the condition is empty we return true
-	if *(er.Condition) == defaultCondition && er.AtomMap.Len() == 0 {
+	if *(er.Conditions.condition) == defaultCondition && er.AtomMap.Len() == 0 {
 		return true
 	}
 
@@ -506,6 +507,7 @@ type MetaSection struct {
 	EventIDs    []int64 // GoEvtxMap.EventID returns int64
 	Channels    []string
 	Computers   []string
+	Traces      []string
 	Criticality int
 }
 
@@ -518,7 +520,22 @@ type Rule struct {
 	Condition string
 }
 
-//Compile a JSONRule into EvtxRule
+func NewRule() Rule {
+	r := Rule{
+		Name: "",
+		Tags: make([]string, 0),
+		Meta: MetaSection{
+			EventIDs:    make([]int64, 0),
+			Channels:    make([]string, 0),
+			Computers:   make([]string, 0),
+			Traces:      make([]string, 0),
+			Criticality: 0},
+		Matches:   make([]string, 0),
+		Condition: ""}
+	return r
+}
+
+//Compile a JSONRule into CompiledRule
 func (jr *Rule) Compile() (*CompiledRule, error) {
 	var err error
 	rule := NewCompiledRule()
@@ -541,6 +558,17 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 		rule.Channels.Add(s)
 	}
 
+	// Parses and Initializes the Traces
+	for i, st := range jr.Meta.Traces {
+		var tr *Trace
+		trName := fmt.Sprintf("Trace#%d", i)
+		if tr, err = ParseTrace(trName, st); err != nil {
+			log.Errorf("Cannot parse trace \"%s\" in \"%s\": %s", st, jr.Name, err)
+		} else {
+			rule.Traces = append(rule.Traces, tr)
+		}
+	}
+
 	// Parse predicates
 	for _, p := range jr.Matches {
 		var a AtomRule
@@ -559,7 +587,7 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 		return nil, err
 	}
-	rule.Condition = &cond
+	//rule.Condition = &cond
 	rule.Conditions = NewCondGroup(&cond)
 
 	return &rule, nil
@@ -568,43 +596,10 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 // Load loads rule to EvtxRule
 func Load(b []byte) (*CompiledRule, error) {
 	var jr Rule
-	rule := NewCompiledRule()
+	//rule := NewCompiledRule()
 	err := json.Unmarshal(b, &jr)
 	if err != nil {
 		return nil, err
 	}
-
-	rule.Name = jr.Name
-	for _, t := range jr.Tags {
-		rule.Tags.Add(t)
-	}
-	for _, e := range jr.Meta.EventIDs {
-		rule.EventIDs.Add(e)
-	}
-	for _, s := range jr.Meta.Channels {
-		rule.Channels.Add(s)
-	}
-
-	// Parse predicates
-	for _, p := range jr.Matches {
-		var a AtomRule
-		a, err = ParseAtomRule(p)
-		if err != nil {
-			log.Errorf("Failed to parse predicate \"%s\": %s", p, err)
-			return nil, err
-		}
-		rule.AddAtom(&a)
-	}
-
-	// Parse the condition
-	tokenizer := NewTokenizer(jr.Condition)
-	cond, err := tokenizer.ParseCondition(0, 0)
-	if err != nil && err != EOT {
-		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
-		return nil, err
-	}
-	rule.Condition = &cond
-	rule.Conditions = NewCondGroup(&cond)
-
-	return &rule, nil
+	return jr.Compile()
 }

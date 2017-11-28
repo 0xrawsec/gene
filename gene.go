@@ -8,6 +8,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"rules"
+	"runtime/pprof"
+	"time"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/args"
@@ -29,33 +32,40 @@ var (
 	allEvents     bool
 	showProgress  bool
 	inJSONFmt     bool
+	trace         bool
+	template      bool
+	cpuprofile    string
 	tags          []string
 	names         []string
 	tagsVar       args.ListVar
 	namesVar      args.ListVar
 
-	rules    string
-	ruleExts = args.ListVar{".gen", ".gene"}
+	criticalityThresh int
+
+	rulesPath string
+	ruleExts  = args.ListVar{".gen", ".gene"}
 )
 
 func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
-	if len(tags) == 0 && len(names) == 0 {
-		if n, _ := e.Match(event); len(n) > 0 {
-			// Prints out the events with timestamp or not
-			if showTimestamp {
-				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-			} else {
-				fmt.Println(string(evtx.ToJSON(event)))
-			}
-		} else if allEvents {
-			if showTimestamp {
-				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-			} else {
+	//if len(tags) == 0 && len(names) == 0 {
+	if n, crit := e.Match(event); len(n) > 0 {
+		// Prints out the events with timestamp or not
+		if showTimestamp && crit >= criticalityThresh {
+			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+		} else {
+			if crit >= criticalityThresh {
 				fmt.Println(string(evtx.ToJSON(event)))
 			}
 		}
+	} else if allEvents {
+		if showTimestamp {
+			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+		} else {
+			fmt.Println(string(evtx.ToJSON(event)))
+		}
+	}
 
-	} else if len(tags) > 0 {
+	/*} else if len(tags) > 0 {
 		if n, _ := e.MatchByTag(&tags, event); len(n) > 0 {
 			// Prints out the events with timestamp or not
 			if showTimestamp {
@@ -85,7 +95,7 @@ func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
 				fmt.Println(string(evtx.ToJSON(event)))
 			}
 		}
-	}
+	}*/
 }
 
 func main() {
@@ -94,7 +104,11 @@ func main() {
 	flag.BoolVar(&allEvents, "all", allEvents, "Print all events (even the one not matching rules)")
 	flag.BoolVar(&showProgress, "progress", showProgress, "Show progress")
 	flag.BoolVar(&inJSONFmt, "j", inJSONFmt, "Input is in JSON format")
-	flag.StringVar(&rules, "r", rules, "Rule file or directory")
+	flag.BoolVar(&trace, "trace", trace, "Tells the engine to use the trace function of the rules")
+	flag.BoolVar(&template, "template", template, "Prints a rule template")
+	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
+	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
+	flag.IntVar(&criticalityThresh, "c", criticalityThresh, "Criticality treshold. Prints only if criticality above threshold")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Var(&tagsVar, "t", "Tags to search for (comma separated)")
 	flag.Var(&namesVar, "n", "Rule names to match against (comma separated)")
@@ -106,6 +120,15 @@ func main() {
 
 	flag.Parse()
 
+	if cpuprofile != "" {
+		f, err := os.Create(cpuprofile)
+		if err != nil {
+			log.LogErrorAndExit(err)
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
 	prog := progress.New(128)
 	prog.SetPre("Event Processed")
 
@@ -114,13 +137,23 @@ func main() {
 		log.InitLogger(log.LDebug)
 	}
 
+	// Display rule template and exit if template flag
+	if template {
+		b, err := json.Marshal(rules.NewRule())
+		if err != nil {
+			log.LogErrorAndExit(err, exitFail)
+		}
+		fmt.Println(string(b))
+		os.Exit(exitSuccess)
+	}
+
 	// Control parameters
-	if rules == "" {
+	if rulesPath == "" {
 		log.LogErrorAndExit(fmt.Errorf("No rule file to load"), exitFail)
 	}
 
 	// Initialization
-	e := engine.NewEngine()
+	e := engine.NewEngine(trace)
 	setRuleExts := datastructs.NewSyncedSet()
 	tags = []string(tagsVar)
 	names = []string(namesVar)
@@ -129,6 +162,7 @@ func main() {
 	if len(tags) > 0 && len(names) > 0 {
 		log.LogErrorAndExit(fmt.Errorf("Cannot search by tags and names at the same time"), exitFail)
 	}
+	e.SetFilters(names, tags)
 
 	// Initializes the set of rule extensions
 	for _, e := range ruleExts {
@@ -136,7 +170,7 @@ func main() {
 	}
 
 	// Loading the rules
-	realPath, err := fsutil.ResolveLink(rules)
+	realPath, err := fsutil.ResolveLink(rulesPath)
 	if err != nil {
 		log.LogErrorAndExit(err, exitFail)
 	}
@@ -163,7 +197,7 @@ func main() {
 			}
 		}
 	default:
-		log.LogErrorAndExit(fmt.Errorf("Cannot resolve %s to file or dir", rules), exitFail)
+		log.LogErrorAndExit(fmt.Errorf("Cannot resolve %s to file or dir", rulesPath), exitFail)
 	}
 
 	log.Infof("Loaded %d rules", e.Count())
@@ -177,10 +211,12 @@ func main() {
 			}
 			// Init Progress
 			prog.SetPre(filepath.Base(evtxFile))
+			start := time.Now()
 			for event := range ef.UnorderedEvents() {
 				eventCnt++
 				if showProgress && eventCnt >= oldEventCnt {
-					prog.Update(fmt.Sprintf("%d", eventCnt))
+					delta := time.Now().Sub(start)
+					prog.Update(fmt.Sprintf("%d (%2.f EPS)", eventCnt, float64(eventCnt)/delta.Seconds()))
 					prog.Print()
 					oldEventCnt = eventCnt + cntChunk
 				}
@@ -205,6 +241,7 @@ func main() {
 			// Setting progress message
 			prog.SetPre(filepath.Base(jsonFile))
 			d := json.NewDecoder(f)
+			start := time.Now()
 			for {
 				event := evtx.GoEvtxMap{}
 				if err := d.Decode(&event); err != nil {
@@ -217,13 +254,15 @@ func main() {
 				// Printing Progress
 				eventCnt++
 				if showProgress && eventCnt >= oldEventCnt {
-					prog.Update(fmt.Sprintf("%d", eventCnt))
+					delta := time.Now().Sub(start)
+					prog.Update(fmt.Sprintf("%d (%2.f EPS)", eventCnt, float64(eventCnt)/delta.Seconds()))
 					prog.Print()
 					oldEventCnt = eventCnt + cntChunk
 				}
 				matchEvent(&e, &event)
 			}
 			log.Infof("Count Event Scanned: %d", eventCnt)
+			log.Infof("Count Rules Used (loaded + generated): %d", e.Count())
 		}
 
 	}

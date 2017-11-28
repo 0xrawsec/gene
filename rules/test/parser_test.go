@@ -102,7 +102,7 @@ func TestEvtxRule(t *testing.T) {
 		t.Logf("Failed to parse: %s", condStr)
 		t.Fail()
 	}
-	er.Condition = &cond
+	er.Conditions = rules.NewCondGroup(&cond)
 
 	count := 0
 	for e := range f.FastEvents() {

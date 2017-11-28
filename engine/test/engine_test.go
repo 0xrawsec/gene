@@ -22,7 +22,7 @@ func openEvtx(path string) evtx.File {
 }
 
 func TestLoad(t *testing.T) {
-	e := engine.NewEngine()
+	e := engine.NewEngine(false)
 	if err := e.Load(singleRuleFile); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -31,7 +31,7 @@ func TestLoad(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
-	e := engine.NewEngine()
+	e := engine.NewEngine(false)
 	if err := e.Load(singleRuleFile); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -48,7 +48,7 @@ func TestMatch(t *testing.T) {
 }
 
 func TestMatchByTag(t *testing.T) {
-	e := engine.NewEngine()
+	e := engine.NewEngine(false)
 	if err := e.Load(singleRuleFile); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -67,7 +67,7 @@ func TestMatchByTag(t *testing.T) {
 }
 
 func BenchmarkLoadThousand(b *testing.B) {
-	e := engine.NewEngine()
+	e := engine.NewEngine(false)
 	if err := e.Load(bigRuleFile); err != nil {
 		b.Logf("Loading failed: %s", err)
 		b.FailNow()
