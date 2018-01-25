@@ -428,7 +428,7 @@ func (er *CompiledRule) matchGroup(group *CondGroup, event *evtx.GoEvtxMap) bool
 }
 
 func (er *CompiledRule) matchCondition(cond *Condition, event *evtx.GoEvtxMap) bool {
-	if a, ok := er.AtomMap.Contains(cond.Operand); ok {
+	if a, ok := er.AtomMap.Get(cond.Operand); ok {
 		// If there is not other continuation in the condition
 		if cond.Next == nil {
 			am := a.(*AtomRule).Match(event)
