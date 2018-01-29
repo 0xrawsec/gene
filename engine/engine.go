@@ -81,13 +81,8 @@ func (e *Engine) Count() int {
 	return len(e.rules)
 }
 
-//Load loads a rule file into the current engine
-func (e *Engine) Load(rulefile string) error {
-	f, err := os.Open(rulefile)
-	if err != nil {
-		return err
-	}
-	dec := json.NewDecoder(f)
+func (e *Engine) loadReader(reader io.Reader) error {
+	dec := json.NewDecoder(reader)
 	for {
 		var jRule rules.Rule
 		if err := dec.Decode(&jRule); err != nil {
@@ -105,6 +100,39 @@ func (e *Engine) Load(rulefile string) error {
 		}
 	}
 	return nil
+
+}
+
+func (e *Engine) LoadReader(reader io.Reader) error {
+	return e.loadReader(reader)
+}
+
+//Load loads a rule file into the current engine
+func (e *Engine) Load(rulefile string) error {
+	f, err := os.Open(rulefile)
+	if err != nil {
+		return err
+	}
+	return e.loadReader(f)
+	/*
+		dec := json.NewDecoder(f)
+		for {
+			var jRule rules.Rule
+			if err := dec.Decode(&jRule); err != nil {
+				if err == io.EOF {
+					break
+				}
+				return err
+			}
+			er, err := jRule.Compile()
+			if err != nil {
+				return err
+			}
+			if err := e.AddRule(er); err != nil {
+				return err
+			}
+		}
+		return nil*/
 }
 
 //AddRule adds a rule to the current engine

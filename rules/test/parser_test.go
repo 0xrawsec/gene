@@ -10,9 +10,9 @@ import (
 
 var (
 	testFile    = "sysmon.evtx"
-	ar          = rules.NewAtomRule("$foo", "Hashes", "!=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
+	ar          = rules.NewAtomRule("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
 	rulesString = [...]string{
-		`$hello: "Hashes = Test" != 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
+		`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
 		`$test: "Hashes" = "c'est un super test"`,
 		`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`}
 	conditions = []string{
@@ -22,11 +22,12 @@ var (
 		`( $a or $b) and ($c or $d ) and !$e`,
 		`( $a or $b) and ( $c or $d ) and !$e`,
 		`( $a or $b) and ($c or ($d and !$e) ) and !$f`,
+		`!( $a or $b) and ($c or ($d and !$e) ) and !$f`,
 	}
 )
 
 func init() {
-	log.InitLogger(log.LDebug)
+	//log.InitLogger(log.LDebug)
 }
 
 func TestAtomRule(t *testing.T) {
@@ -63,8 +64,49 @@ func TestParseCondition(t *testing.T) {
 			t.FailNow()
 			t.Logf("%s Error:%v", &cond, err)
 		}
-		group := rules.NewCondGroup(&cond)
-		t.Log(group)
+	}
+}
+
+var (
+	operands = map[string]bool{"$a": true, "$b": false}
+	// Key: condition Value: expected result according to operands
+	conditionMap = map[string]bool{
+		"$a":                                             true,
+		"$b":                                             false,
+		"!$a":                                            false,
+		"!$b":                                            true,
+		"$a or $b":                                       true,
+		"$a and $b":                                      false,
+		"($a and !$b)":                                   true,
+		"((($a and !$b)))":                               true,
+		"$a and ($b or !$b)":                             true,
+		"!($a or $b) or $a":                              true,
+		"$a and !$b and !$a":                             false,
+		"!($a and $b or !($a and $b))":                   false,
+		"!($a or $b) and ($a or ($b and !$a)) and !$a":   false,
+		"!$b or (!($a or $b) and ($a or ($b and !$a)))":  true,
+		"(!($a or $b) and ($a or ($b and !$a)))":         false,
+		"(($a and !$b) and $a)":                          true,
+		"(!($a and $b) and $b)":                          false,
+		"(!($a and $b) and $b) or (($a and !$b) and $a)": true,
+	}
+)
+
+func TestCondition(t *testing.T) {
+	for strCond, expectRes := range conditionMap {
+		tokenizer := rules.NewTokenizer(strCond)
+		cond, err := tokenizer.ParseCondition(0, 0)
+		if err != nil {
+			t.Logf("%s Error:%v", &cond, err)
+			t.FailNow()
+		}
+		t.Logf("Parsed Condition: %s", &cond)
+		result := rules.Compute(&cond, operands)
+		t.Logf("Cond: %s With: %v => Result: %t", &cond, operands, result)
+		if result != expectRes {
+			t.Log("Unexpected result")
+			t.FailNow()
+		}
 	}
 }
 
@@ -95,14 +137,14 @@ func TestEvtxRule(t *testing.T) {
 	er.AddAtom(&a)
 	er.AddAtom(&b)
 
-	condStr := "$b or ($a AND $y)"
+	condStr := "$b or ($a and $y)"
 	tokenizer := rules.NewTokenizer(condStr)
 	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil {
 		t.Logf("Failed to parse: %s", condStr)
 		t.Fail()
 	}
-	er.Conditions = rules.NewCondGroup(&cond)
+	er.Conditions = &cond
 
 	count := 0
 	for e := range f.FastEvents() {
@@ -130,7 +172,7 @@ func TestLoadRule(t *testing.T) {
 		"Computer": ["Test"],
 		"Action": "warn"
 		},
-	"Predicates": [
+	"Matches": [
 		"$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'",
 		"$b: Hashes ~= '7D2AB43576DEA34829209710CC711DB172DCC07E'",
 		"$c: ImageLoaded ~= '(?i:wininet\\.dll$)'"

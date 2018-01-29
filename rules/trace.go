@@ -161,7 +161,8 @@ func (t *Trace) Compile(trigger *CompiledRule, value string) (*CompiledRule, err
 	cr.AddAtom(&a)
 
 	// Create the condition only matching the atom previously created
-	cr.Conditions = NewCondGroup(&Condition{Operand: "$a"})
+	//cr.Conditions = NewCondGroup(&ConditionElement{Operand: "$a"})
+	cr.Conditions = &ConditionElement{Operand: "$a", Type: TypeOperand}
 
 	return &cr, nil
 }

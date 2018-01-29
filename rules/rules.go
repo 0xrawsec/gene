@@ -66,8 +66,9 @@ func (a *AtomRule) Compile() {
 		switch a.Operator {
 		case "=":
 			a.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(a.Value)))
-		case "!=":
-			a.cRule, err = regexp.Compile(fmt.Sprintf("(%s){0}", regexp.QuoteMeta(a.Value)))
+		/*case "!=":
+		a.cRule, err = regexp.Compile(fmt.Sprintf("(%s){0}", regexp.QuoteMeta(a.Value)))
+		*/
 		case "~=":
 			a.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", a.Value))
 		}
@@ -124,14 +125,26 @@ func NewTokenizer(condition string) (c Tokenizer) {
 			if token[0] == '(' {
 				c.tokens[i] = token[1:]
 				c.tokens = append(c.tokens[:i], append([]string{"("}, c.tokens[i:]...)...)
+				continue
 			}
-			if token[len(token)-1] == ')' {
-				c.tokens[i] = token[:len(token)-1]
-				c.tokens = append(c.tokens[:i+1], append([]string{")"}, c.tokens[i+1:]...)...)
+			log.Debug(token)
+			if token[0] == '!' {
+				c.tokens[i] = token[1:]
+				c.tokens = append(c.tokens[:i], append([]string{"!"}, c.tokens[i:]...)...)
+				continue
 			}
+			brackets := make([]string, 0)
+			for k := len(token) - 1; k > 0; k-- {
+				if token[k] == ')' {
+					brackets = append(brackets, ")")
+					continue
+				}
+				break
+			}
+			c.tokens[i] = token[:len(token)-len(brackets)]
+			c.tokens = append(c.tokens[:i+1], append(brackets, c.tokens[i+1:]...)...)
 		}
 	}
-	log.Debug(c.tokens)
 	return
 }
 
@@ -170,156 +183,172 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 	return "", ErrUnexpectedToken
 }
 
-//ParseCondition parses a condition
-func (t *Tokenizer) ParseCondition(group, level int) (c Condition, err error) {
+func (t *Tokenizer) ParseCondition(group, level int) (c ConditionElement, err error) {
 	var token string
+	log.Debugf("Tokens: %v", t.tokens[t.i:])
 
 	token, err = t.NextExpectedToken("$", "!", "(", ")", "and", "or")
 	if err != nil {
 		return
 	}
-BeginSwitch:
-	switch token[0] {
-	case '!':
+	c.Level = level
+	c.Group = group
+	switch {
+	case token[0] == '!':
 		c.Negate = true
-		token = token[1:]
-		goto BeginSwitch
-	case '$':
-		// Set the operand
-		c.Operand = token
-		// Set the Level
-		c.Level = level
-		c.Group = group
-		token, err = t.NextExpectedToken("and", "&&", "AND", "or", "||", "OR", ")")
-		//if err != nil && err == ErrUnexpectedToken {
-		if err != nil {
-			return
-		}
-		// Set the operator according to the operator
-		switch token {
-		case "and", "&&", "AND":
-			c.Operator = '&'
-		case "or", "||", "OR":
-			c.Operator = '|'
-		case ")":
-			group++
-			level--
-			token, err = t.NextExpectedToken("and", "&&", "AND", "or", "||", "OR", ")")
-			if err != nil {
-				return
-			}
-			switch token {
-			case "and", "&&", "AND":
-				c.Operator = '&'
-			case "or", "||", "OR":
-				c.Operator = '|'
-			}
-		}
-		// Set the next condition
-		next, err := t.ParseCondition(group, level)
-		switch err {
-		case nil, EOT:
-			c.Next = &next
-		case ErrUnexpectedToken:
-			return c, err
-		}
-	case '(':
-		level++
+		c.Type = TypeNegate
 
-		if len(token) > 1 {
-			token = token[1:]
-			goto BeginSwitch
-		} else {
-			return t.ParseCondition(group, level)
+	case token[0] == '$':
+		c.Operand = token
+		c.Type = TypeOperand
+
+	case token[0] == '(':
+		level++
+		return t.ParseCondition(group, level)
+
+	case token[0] == ')':
+		group++
+		level--
+		return t.ParseCondition(group, level)
+
+	default:
+		switch token {
+		case "and", "AND", "&&":
+			c.Operator = '&'
+			c.Type = TypeOperator
+		case "or", "OR", "||":
+			c.Operator = '|'
+			c.Type = TypeOperator
 		}
+	}
+
+	// Set the next condition
+	next, err := t.ParseCondition(group, level)
+	switch err {
+	case nil:
+		c.Next = &next
+	case EOT:
+		// Don't set next element if EOT
+		err = nil
+	case ErrUnexpectedToken:
+		return c, err
 	}
 	return
 }
 
 ///////////////////////////////// Condition ////////////////////////////////////
 
-//Condition structure definition
-type Condition struct {
+const (
+	TypeOperand = 0x1 << iota
+	TypeOperator
+	TypeNegate
+)
+
+//ConditionElement structure definition
+type ConditionElement struct {
 	Operand  string
 	Operator rune
 	Negate   bool
 	Level    int
 	Group    int
-	Next     *Condition
+	Type     int
+	Next     *ConditionElement
 }
 
-func (c *Condition) String() string {
-	if c.Negate {
-		//return fmt.Sprintf("NOT Operand: %s Operator: (%q) Level:%d Next: (%s)",
-		//c.Operand, c.Operator, c.Level, c.Next)
-		if c.Next != nil {
-			return fmt.Sprintf("!%s %c %s", c.Operand, c.Operator, c.Next)
-		}
-		return fmt.Sprintf("!%s", c.Operand)
+func Compute(ce *ConditionElement, operands map[string]bool) bool {
+	nce, ret := compute(false, ce, operands)
+	for nce != nil {
+		nce, ret = compute(ret, nce, operands)
 	}
-	//return fmt.Sprintf("Operand: %s Operator: (%q) Level:%d Next: (%s)",
-	//c.Operand, c.Operator, c.Level, c.Next)
-	if c.Next != nil {
-		return fmt.Sprintf("%s %c %s", c.Operand, c.Operator, c.Next)
+	return ret
+}
+
+func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*ConditionElement, bool) {
+	// Stop Condition
+	if ce == nil {
+		log.Debug("Any computation should finish here")
+		return nil, computed
 	}
-	return fmt.Sprintf("%s", c.Operand)
-}
 
-func (c *Condition) DebugString() string {
-	if c.Negate {
-		//return fmt.Sprintf("NOT Operand: %s Operator: (%q) Level:%d Next: (%s)",
-		//c.Operand, c.Operator, c.Level, c.Next)
-		return fmt.Sprintf("NOT Operand: %s Operator: (%q) Group:%d Next: (%s)",
-			c.Operand, c.Operator, c.Group, c.Next.DebugString())
-	}
-	//return fmt.Sprintf("Operand: %s Operator: (%q) Level:%d Next: (%s)",
-	//c.Operand, c.Operator, c.Level, c.Next)
-	return fmt.Sprintf("Operand: %s Operator: (%q) Group:%d Next: (%s)",
-		c.Operand, c.Operator, c.Group, c.Next.DebugString())
-}
+	switch ce.Type {
 
-////////////////////////////// Group ///////////////////////////////////////////
-
-type CondGroup struct {
-	condition    *Condition
-	operatorSub  rune
-	subGroup     *CondGroup
-	operatorNext rune
-	next         *CondGroup
-}
-
-func (cg *CondGroup) String() string {
-	return fmt.Sprintf("condition:%s\noperatorSub:(%q)\nsubgroup:%s\noperatorNext:(%q)\nnext=%s\n",
-		cg.condition, cg.operatorSub, cg.subGroup, cg.operatorNext, cg.next)
-}
-
-func NewCondGroup(condition *Condition) *CondGroup {
-	group := CondGroup{}
-	group.condition = condition
-	if condition != nil {
-		for cond := condition; cond.Next != nil; cond = cond.Next {
-			log.Debug(condition)
-			log.Debug(condition.Next)
-			if cond.Next.Level > cond.Level {
-				group.subGroup = NewCondGroup(cond.Next)
-				group.operatorSub = cond.Operator
-				cond.Next = nil
-				break
-			} else if cond.Next.Level <= cond.Level && cond.Next.Group != cond.Group {
-				group.next = NewCondGroup(cond.Next)
-				group.operatorNext = cond.Operator
-				cond.Next = nil
-				break
+	case TypeNegate:
+		// Assume next is operand
+		if v, ok := operands[ce.Next.Operand]; ok {
+			if ce.Next.Level == ce.Level && ce.Next.Group == ce.Group {
+				return compute(!v, ce.Next.Next, operands)
+			} else {
+				nce, v := compute(false, ce.Next, operands)
+				return compute(!v, nce, operands)
 			}
+		} else {
+			panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
 		}
+	//!:0|0  $a:1|0  :1|0 | $b:1|0  :0|1 | $a:0|1
+	case TypeOperator:
+		switch ce.Operator {
+		case '&':
+			nce, ret := compute(false, ce.Next, operands)
+			ret = computed && ret
+			return nce, ret
+		case '|':
+			nce, ret := compute(false, ce.Next, operands)
+			ret = computed || ret
+			return nce, ret
+		}
+
+	case TypeOperand:
+		if v, ok := operands[ce.Operand]; ok {
+			if ce.Next != nil && ce.Next.Level != ce.Level {
+				return ce.Next, v
+			}
+			return compute(v, ce.Next, operands)
+		} else {
+			panic(fmt.Sprintf("Unkown Operand: %s", ce.Operand))
+		}
+
+	default:
+		panic("Unkown type")
 	}
-	return &group
+	panic("Should not go there")
+	return nil, false
+}
+
+func (c *ConditionElement) String() string {
+	if c.Negate {
+		if c.Next != nil {
+			return fmt.Sprintf("!%s:%d|%d %c %s", c.Operand, c.Level, c.Group, c.Operator, c.Next)
+		}
+		return fmt.Sprintf("!%s:%d|%d", c.Operand, c.Level, c.Group)
+	}
+	if c.Next != nil {
+		return fmt.Sprintf("%s:%d|%d %c %s", c.Operand, c.Level, c.Group, c.Operator, c.Next)
+	}
+	return fmt.Sprintf("%s:%d|%d", c.Operand, c.Level, c.Group)
+}
+
+func (c *ConditionElement) DebugString() string {
+	if c.Negate {
+		if c.Next != nil {
+			return fmt.Sprintf("NOT Operand: %s Operator: (%q) Group:%d Next: (%s)",
+				c.Operand, c.Operator, c.Group, c.Next.DebugString())
+		}
+		return fmt.Sprintf("NOT Operand: %s Operator: (%q) Group:%d Next: nil",
+			c.Operand, c.Operator, c.Group)
+	}
+	if c.Next != nil {
+		return fmt.Sprintf("Operand: %s Operator: (%q) Group:%d Next: (%s)",
+			c.Operand, c.Operator, c.Group, c.Next.DebugString())
+
+	}
+	return fmt.Sprintf("Operand: %s Operator: (%q) Group:%d Next: nil",
+		c.Operand, c.Operator, c.Group)
 }
 
 ///////////////////////////////////// Rule /////////////////////////////////////
 
 var (
-	defaultCondition = Condition{}
+	defaultCondition = ConditionElement{}
 	channelPath      = evtx.Path("/Event/System/Channel")
 	computerPath     = evtx.Path("/Event/System/Computer")
 )
@@ -334,8 +363,7 @@ type CompiledRule struct {
 	EventIDs    datastructs.SyncedSet
 	AtomMap     datastructs.SyncedMap
 	Traces      []*Trace
-	//Condition   *Condition
-	Conditions *CondGroup
+	Conditions  *ConditionElement
 }
 
 //NewCompiledRule initializes and returns an EvtxRule object
@@ -378,109 +406,6 @@ func (er *CompiledRule) metaMatch(event *evtx.GoEvtxMap) bool {
 	return true
 }
 
-func (er *CompiledRule) matchGroup(group *CondGroup, event *evtx.GoEvtxMap) bool {
-	// Match the condition
-	mc := er.matchCondition(group.condition, event)
-	log.Debugf("Match Condition: %s Result: %t", group.condition, mc)
-	// Match subgroup equal to condition match by default
-	result := mc
-	// Then match any subgroup
-	if group.subGroup != nil {
-		switch {
-		case !mc && group.operatorSub == '&':
-			result = false
-			break
-		case mc && group.operatorSub == '|':
-			result = true
-			break
-		default:
-			switch group.operatorSub {
-			case '&':
-				result = mc && er.matchGroup(group.subGroup, event)
-			case '|':
-				result = mc || er.matchGroup(group.subGroup, event)
-			default:
-				panic(ErrUnkOperator)
-			}
-		}
-	}
-
-	if group.next != nil {
-		switch group.operatorNext {
-		case '&':
-			if !result {
-				return result
-			}
-			ngm := er.matchGroup(group.next, event)
-			return result && ngm
-		case '|':
-			if result {
-				return result
-			}
-			ngm := er.matchGroup(group.next, event)
-			return result || ngm
-		default:
-			panic(ErrUnkOperator)
-		}
-	}
-	// If no more group we return the value of msg
-	return result
-}
-
-func (er *CompiledRule) matchCondition(cond *Condition, event *evtx.GoEvtxMap) bool {
-	if a, ok := er.AtomMap.Get(cond.Operand); ok {
-		// If there is not other continuation in the condition
-		if cond.Next == nil {
-			am := a.(*AtomRule).Match(event)
-			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
-			if cond.Negate {
-				log.Debugf("Return:%t", !am)
-				return !am
-			}
-			log.Debugf("Return:%t", am)
-			return am
-		}
-
-		switch cond.Operator {
-		case '&':
-			am := a.(*AtomRule).Match(event)
-			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
-			//log.Debugf("MatchNext:%t Cond.Next:%s", er.match(cond.Next, event), cond.Next)
-			nm := er.matchCondition(cond.Next, event)
-			if cond.Negate {
-				log.Debugf("Return:%t", !am && nm)
-				return !am && nm
-			}
-			log.Debugf("Return:%t", am && nm)
-			return am && nm
-		case '|':
-			am := a.(*AtomRule).Match(event)
-			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
-			//log.Debugf("MatchNext:%t Cond.Next:%s", er.match(cond.Next, event), cond.Next)
-			nm := er.matchCondition(cond.Next, event)
-			if cond.Negate {
-				log.Debugf("Return:%t", !am || nm)
-				return !am || nm
-			}
-			log.Debugf("Return:%t", am || nm)
-			return am || nm
-		default:
-			//case '\x00':
-			am := a.(*AtomRule).Match(event)
-			log.Debugf("Testing:%s Result:%t", a.(*AtomRule), am)
-			if cond.Negate {
-				log.Debugf("Return:%t", !am)
-				return !am
-			}
-			log.Debugf("Return:%t", am)
-			return am
-		}
-	} else {
-		log.Errorf("Unknown Operand: %s", cond.Operand)
-		return false
-	}
-}
-
 //Match returns whether the CompiledRule matches the EVTX event
 func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
 	if !er.metaMatch(event) {
@@ -488,14 +413,22 @@ func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
 	}
 
 	// If there is no rule and the condition is empty we return true
-	if *(er.Conditions.condition) == defaultCondition && er.AtomMap.Len() == 0 {
+	if *er.Conditions == defaultCondition && er.AtomMap.Len() == 0 {
 		return true
 	}
 
 	// We proceed with AtomicRule mathing
-	//return er.matchCondition(er.Condition, event)
 	log.Debug(er.Conditions)
-	return er.matchGroup(er.Conditions, event)
+	return Compute(er.Conditions, er.operandValuesFromAtoms(event))
+}
+
+func (er *CompiledRule) operandValuesFromAtoms(event *evtx.GoEvtxMap) map[string]bool {
+	operands := make(map[string]bool)
+	for operand := range er.AtomMap.Keys() {
+		ari, _ := er.AtomMap.Get(operand)
+		operands[operand.(string)] = ari.(*AtomRule).Match(event)
+	}
+	return operands
 }
 
 //////////////////////////////// String Rule ///////////////////////////////////
@@ -587,8 +520,7 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 		return nil, err
 	}
-	//rule.Condition = &cond
-	rule.Conditions = NewCondGroup(&cond)
+	rule.Conditions = &cond
 
 	return &rule, nil
 }
@@ -596,7 +528,6 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 // Load loads rule to EvtxRule
 func Load(b []byte) (*CompiledRule, error) {
 	var jr Rule
-	//rule := NewCompiledRule()
 	err := json.Unmarshal(b, &jr)
 	if err != nil {
 		return nil, err

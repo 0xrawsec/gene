@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	log.InitLogger(log.LDebug)
+	//log.InitLogger(log.LDebug)
 }
 
 func ToJSON(data interface{}) []byte {
