@@ -157,11 +157,12 @@ The above rule is useless and is a showcase just to introduce you the concept.
   * `Computers` is the list of computer names the rule should match on. If empty the rule applies to all events.
   * The `Criticality` is a criticality level attributed to the event matching the rule. If an event matches several rules the `Criticality` fields are added between them.
 * The `Matches` contains the different matches you can use later in the `Condition`
-* A `Match` is in a form of `$NAME: OPERAND OPERATOR 'VALUE'`
-  * So far the operator only applies on `string` so the value cannot by `typed`
-* There are three types of operators for the `Matches`
-  * `=` strict match
-  * `~=` regexp match (following [Go regexp syntax](https://github.com/google/re2/wiki/Syntax))
+* A `Match` is in a form of `$VAR_NAME: OPERAND OPERATOR 'VALUE'`
+  * The `OPERAND` is the field in the `EventData` section of the event that will be checked against the `VALUE`
+  * So far the `OPERATOR` only applies on `string` so the value cannot by `typed`
+  * There are two types of `OPERATOR` for the `Matches`
+    * `=` strict match
+    * `~=` regexp match (following [Go regexp syntax](https://github.com/google/re2/wiki/Syntax))
 * The `Condition` is the logic applied to the `Matches` in order to trigger the rule
 
 NB: The `\` characters have to be escaped while using regexp matches.
