@@ -50,6 +50,10 @@ Here are some of our motivations:
 gene: gene -r RULES [OPTIONS] FILES...
   -all
     	Print all events (even the one not matching rules)
+  -c int
+    	Criticality treshold. Prints only if criticality above threshold
+  -cpuprofile string
+    	Profile CPU
   -d	Enable debug mode
   -e value
     	Rule file extensions to load (default [.gen .gene])
@@ -62,6 +66,10 @@ gene: gene -r RULES [OPTIONS] FILES...
     	Rule file or directory
   -t value
     	Tags to search for (comma separated)
+  -template
+    	Prints a rule template
+  -trace
+    	Tells the engine to use the trace function of the rules
   -ts
     	Show the timestamp of the event when printing
 ```
@@ -134,7 +142,7 @@ We can build up an example rule to match it.
   },
 "Matches": [
   "$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'",
-  "$b: ImageLoaded = 'C:\\\\Windows\\\\System32\\\\DataExchange\.dll'",
+  "$b: ImageLoaded = 'C:\\Windows\\System32\\DataExchange.dll'",
   "$c: Signed = 'false'"
   ],
 "Condition": "($a or $b) and !$c"
@@ -143,16 +151,20 @@ We can build up an example rule to match it.
 
 The above rule is useless and is a showcase just to introduce you the concept.
 
-* The `Meta` part of the rule matches what is under the `System` part of the event
-* The `Criticality` is a criticality level attributed to the event matching the rule
+* The `Meta` part of the rule contains information used to identify the events the rule should apply on. The more precise is this section the quicker the engine is.
+  * `Channels` is the list of Windows channels where we can find the events to match the rule against. If empty the rule applies to all channels.
+  * `EventIDs` is the list of Event IDs the rule applies on. If empty the rule applies to all event ids.
+  * `Computers` is the list of computer names the rule should match on. If empty the rule applies to all events.
+  * The `Criticality` is a criticality level attributed to the event matching the rule. If an event matches several rules the `Criticality` fields are added between them.
 * The `Matches` contains the different matches you can use later in the `Condition`
 * A `Match` is in a form of `$NAME: OPERAND OPERATOR 'VALUE'`
-  * So far the operatior only applies on `string` so the value cannot by `typed`
+  * So far the operator only applies on `string` so the value cannot by `typed`
 * There are three types of operators for the `Matches`
   * `=` strict match
-  * `!=` don't match (I am thinking about removing this one since we can negate `=` in the condition)
-  * `~=` regexp match (following Go regexp syntax)
+  * `~=` regexp match (following [Go regexp syntax](https://github.com/google/re2/wiki/Syntax))
 * The `Condition` is the logic applied to the `Matches` in order to trigger the rule
+
+NB: The `\` characters have to be escaped while using regexp matches.
 
 # Notes
 
