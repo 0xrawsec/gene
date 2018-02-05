@@ -1,6 +1,6 @@
 RELEASE=release
 MAIN_BASEN_SRC=gene
-VERSION=beta-v0.1
+VERSION=v1.0
 # Strips symbols and dwarf to make binary smaller
 OPTS=-ldflags "-s -w"
 ifdef DEBUG

@@ -89,6 +89,7 @@ var (
 		"(($a and !$b) and $a)":                          true,
 		"(!($a and $b) and $b)":                          false,
 		"(!($a and $b) and $b) or (($a and !$b) and $a)": true,
+		"!(!($a or $b)) and !(!$a and !$b)":              true,
 	}
 )
 

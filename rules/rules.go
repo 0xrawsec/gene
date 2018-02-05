@@ -274,15 +274,23 @@ func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*Co
 
 	case TypeNegate:
 		// Assume next is operand
-		if v, ok := operands[ce.Next.Operand]; ok {
-			if ce.Next.Level == ce.Level && ce.Next.Group == ce.Group {
-				return compute(!v, ce.Next.Next, operands)
+		switch ce.Next.Type {
+		case TypeOperand:
+			if v, ok := operands[ce.Next.Operand]; ok {
+				if ce.Next.Level == ce.Level && ce.Next.Group == ce.Group {
+					return compute(!v, ce.Next.Next, operands)
+				} else {
+					nce, v := compute(false, ce.Next, operands)
+					return compute(!v, nce, operands)
+				}
 			} else {
-				nce, v := compute(false, ce.Next, operands)
-				return compute(!v, nce, operands)
+				panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
 			}
-		} else {
-			panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
+		case TypeNegate:
+			nce, v := compute(false, ce.Next, operands)
+			return compute(!v, nce, operands)
+		default:
+			panic(fmt.Sprintf("%s cannot follow ! token"))
 		}
 	//!:0|0  $a:1|0  :1|0 | $b:1|0  :0|1 | $a:0|1
 	case TypeOperator:
