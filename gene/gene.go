@@ -21,33 +21,7 @@ import (
 	"github.com/0xrawsec/golang-utils/progress"
 )
 
-const (
-	exitFail    = 1
-	exitSuccess = 0
-)
-
-var (
-	debug         bool
-	showTimestamp bool
-	allEvents     bool
-	showProgress  bool
-	inJSONFmt     bool
-	trace         bool
-	template      bool
-	cpuprofile    string
-	tags          []string
-	names         []string
-	tagsVar       args.ListVar
-	namesVar      args.ListVar
-
-	criticalityThresh int
-
-	rulesPath string
-	ruleExts  = args.ListVar{".gen", ".gene"}
-)
-
 func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
-	//if len(tags) == 0 && len(names) == 0 {
 	if n, crit := e.Match(event); len(n) > 0 {
 		// Prints out the events with timestamp or not
 		if showTimestamp && crit >= criticalityThresh {
@@ -64,39 +38,35 @@ func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
 			fmt.Println(string(evtx.ToJSON(event)))
 		}
 	}
-
-	/*} else if len(tags) > 0 {
-		if n, _ := e.MatchByTag(&tags, event); len(n) > 0 {
-			// Prints out the events with timestamp or not
-			if showTimestamp {
-				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-			} else {
-				fmt.Println(string(evtx.ToJSON(event)))
-			}
-		} else if allEvents {
-			if showTimestamp {
-				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-			} else {
-				fmt.Println(string(evtx.ToJSON(event)))
-			}
-		}
-	} else if len(names) > 0 {
-		if n, _ := e.MatchByNames(&names, event); len(n) > 0 {
-			// Prints out the events with timestamp or not
-			if showTimestamp {
-				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-			} else {
-				fmt.Println(string(evtx.ToJSON(event)))
-			}
-		} else if allEvents {
-			if showTimestamp {
-				fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
-			} else {
-				fmt.Println(string(evtx.ToJSON(event)))
-			}
-		}
-	}*/
 }
+
+/////////////////////////////// Main //////////////////////////////////
+
+const (
+	exitFail    = 1
+	exitSuccess = 0
+)
+
+var (
+	debug         bool
+	showTimestamp bool
+	allEvents     bool
+	showProgress  bool
+	inJSONFmt     bool
+	trace         bool
+	template      bool
+	verify        bool
+	cpuprofile    string
+	tags          []string
+	names         []string
+	tagsVar       args.ListVar
+	namesVar      args.ListVar
+
+	criticalityThresh int
+
+	rulesPath string
+	ruleExts  = args.ListVar{".gen", ".gene"}
+)
 
 func main() {
 	flag.BoolVar(&debug, "d", debug, "Enable debug mode")
@@ -106,6 +76,7 @@ func main() {
 	flag.BoolVar(&inJSONFmt, "j", inJSONFmt, "Input is in JSON format")
 	flag.BoolVar(&trace, "trace", trace, "Tells the engine to use the trace function of the rules")
 	flag.BoolVar(&template, "template", template, "Prints a rule template")
+	flag.BoolVar(&verify, "verify", verify, "Verify the rules and exit.")
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
 	flag.IntVar(&criticalityThresh, "c", criticalityThresh, "Criticality treshold. Prints only if criticality above threshold")
@@ -176,6 +147,7 @@ func main() {
 	}
 
 	// Handle both rules argument as file or directory
+	cntFailure := 0
 	switch {
 	case fsutil.IsFile(realPath):
 		err := e.Load(realPath)
@@ -192,12 +164,23 @@ func main() {
 					err := e.Load(rulefile)
 					if err != nil {
 						log.Errorf("Error loading %s: %s", rulefile, err)
+						cntFailure++
 					}
 				}
 			}
 		}
 	default:
 		log.LogErrorAndExit(fmt.Errorf("Cannot resolve %s to file or dir", rulesPath), exitFail)
+	}
+
+	// If we just wanted to verify the rules, we should exit whatever
+	// the status of the compilation
+	if verify {
+		if cntFailure > 0 {
+			log.LogErrorAndExit(fmt.Errorf("Rule(s) compilation (%d files failed): FAILURE", cntFailure), exitFail)
+		}
+		log.Infof("Rule(s) compilation: SUCCESSFUL")
+		os.Exit(exitSuccess)
 	}
 
 	log.Infof("Loaded %d rules", e.Count())

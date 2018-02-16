@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"globals"
 	"io"
+	"io/ioutil"
 	"os"
 	"rules"
 	"sync"
@@ -15,6 +16,57 @@ import (
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/log"
 )
+
+/////////////////////////// Utility functions //////////////////////////////////
+
+func seekerGoto(reader io.ReadSeeker, offset int64, flag int) int64 {
+	off, err := reader.Seek(offset, flag)
+	if err != nil {
+		panic(err)
+	}
+	return off
+}
+
+func nextRuleOffset(endLastRuleOffset int64, reader io.ReadSeeker) int64 {
+	var char [1]byte
+	var cnt int64
+	cur := seekerGoto(reader, 0, os.SEEK_CUR)
+	seekerGoto(reader, endLastRuleOffset, os.SEEK_SET)
+	for read, err := reader.Read(char[:]); read == 1 && err == nil; read, err = reader.Read(char[:]) {
+		if char[0] == '{' {
+			break
+		}
+		cnt++
+	}
+	seekerGoto(reader, cur, os.SEEK_SET)
+	return endLastRuleOffset + cnt
+}
+
+func findLineError(ruleOffset int64, reader io.ReadSeeker) (int64, int64) {
+	var line, offset int64
+	var buf [4096]byte
+
+	// Go back to beginning of reader
+	seekerGoto(reader, 0, os.SEEK_SET)
+
+ReadLoop:
+	for read, err := reader.Read(buf[:]); read > 0 && err == nil; read, err = reader.Read(buf[:]) {
+		for _, c := range buf[:read] {
+			if offset == ruleOffset {
+				break ReadLoop
+			}
+			if c == '\n' {
+				line++
+			}
+			offset++
+		}
+	}
+	// Line number always starts at 1
+	line++
+	return line, offset
+}
+
+////////////////////////////////// Engine /////////////////////////////////////
 
 var (
 	geneInfoPath = evtx.Path("/Event/GeneInfo")
@@ -67,6 +119,7 @@ func NewEngine(trace bool) (e Engine) {
 	return
 }
 
+//SetFilters sets the filters to use in the engine
 func (e *Engine) SetFilters(names, tags []string) {
 	for _, n := range names {
 		e.nameFilters.Add(n)
@@ -81,19 +134,31 @@ func (e *Engine) Count() int {
 	return len(e.rules)
 }
 
-func (e *Engine) loadReader(reader io.Reader) error {
+func (e *Engine) loadReader(reader io.ReadSeeker) error {
+	var decerr error
 	dec := json.NewDecoder(reader)
+
 	for {
 		var jRule rules.Rule
-		if err := dec.Decode(&jRule); err != nil {
-			if err == io.EOF {
-				break
+		decoderOffset := seekerGoto(reader, 0, os.SEEK_CUR)
+		// We don't handle error here
+		decBuffer, _ := ioutil.ReadAll(dec.Buffered())
+		ruleOffset := nextRuleOffset(decoderOffset-int64(len(decBuffer)), reader)
+
+		decerr = dec.Decode(&jRule)
+		if decerr != nil {
+			if decerr != io.EOF {
+				ruleLine, offInLine := findLineError(ruleOffset, reader)
+				return fmt.Errorf("JSON parsing (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, decerr)
 			}
-			return err
+			// We got EOF if we go there
+			break
 		}
+
 		er, err := jRule.Compile()
 		if err != nil {
-			return err
+			ruleLine, offInLine := findLineError(ruleOffset, reader)
+			return fmt.Errorf("Failed to compile rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
 		}
 		if err := e.AddRule(er); err != nil {
 			return err
@@ -103,7 +168,8 @@ func (e *Engine) loadReader(reader io.Reader) error {
 
 }
 
-func (e *Engine) LoadReader(reader io.Reader) error {
+//LoadReader loads rule from a ReadSeeker
+func (e *Engine) LoadReader(reader io.ReadSeeker) error {
 	return e.loadReader(reader)
 }
 
@@ -113,26 +179,11 @@ func (e *Engine) Load(rulefile string) error {
 	if err != nil {
 		return err
 	}
-	return e.loadReader(f)
-	/*
-		dec := json.NewDecoder(f)
-		for {
-			var jRule rules.Rule
-			if err := dec.Decode(&jRule); err != nil {
-				if err == io.EOF {
-					break
-				}
-				return err
-			}
-			er, err := jRule.Compile()
-			if err != nil {
-				return err
-			}
-			if err := e.AddRule(er); err != nil {
-				return err
-			}
-		}
-		return nil*/
+	err = e.loadReader(f)
+	if err != nil {
+		return fmt.Errorf("Failed to load rule file \"%s\": %s", rulefile, err)
+	}
+	return nil
 }
 
 //AddRule adds a rule to the current engine
@@ -184,6 +235,7 @@ func (e *Engine) addRule(r *rules.CompiledRule, k string) error {
 	return nil
 }
 
+//AddTraceRules adds rules generated on the flight when trace mode is enabled
 func (e *Engine) AddTraceRules(ruleList ...*rules.CompiledRule) {
 	for _, r := range ruleList {
 		if err := e.addRule(r, randRuleName()); err != nil {

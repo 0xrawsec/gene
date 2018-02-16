@@ -17,7 +17,7 @@ var (
 	//ErrUnkOperator error to return when an operator is not known
 	ErrUnkOperator = fmt.Errorf("Unknown operator")
 	//Regexp and its helper to ease AtomRule parsing
-	atomRuleRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|!=|~=))\s+(?P<value>.*)`)
+	atomRuleRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=))\s+'(?P<value>.*)'`)
 	atomRuleRegexpHelper = submatch.NewSubmatchHelper(atomRuleRegexp)
 )
 
@@ -33,6 +33,11 @@ type AtomRule struct {
 
 // ParseAtomRule parses a string and returns an AtomRule
 func ParseAtomRule(rule string) (ar AtomRule, err error) {
+	// Check if the syntax of the match is valid
+	if !atomRuleRegexp.Match([]byte(rule)) {
+		return ar, fmt.Errorf("Syntax error in \"%s\"", rule)
+	}
+	// Continues
 	sm := atomRuleRegexp.FindSubmatch([]byte(rule))
 	err = atomRuleRegexpHelper.Unmarshal(&sm, &ar)
 	// it is normal not to set private fields
@@ -47,7 +52,12 @@ func ParseAtomRule(rule string) (ar AtomRule, err error) {
 	}
 	ar.Operand = strings.Trim(ar.Operand, `"'`)
 	ar.Value = strings.Trim(ar.Value, `"'`)
-	return
+	// Compile the rule into a Regexp
+	err = ar.Compile()
+	if err != nil {
+		return ar, fmt.Errorf("Failed to compile \"%s\" to a regexp", rule)
+	}
+	return ar, err
 }
 
 // NewAtomRule creates a new atomic rule from data
@@ -60,23 +70,21 @@ func (a *AtomRule) String() string {
 }
 
 // Compile  AtomRule into a regexp
-func (a *AtomRule) Compile() {
+func (a *AtomRule) Compile() error {
 	var err error
 	if !a.compiled {
 		switch a.Operator {
 		case "=":
 			a.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(a.Value)))
-		/*case "!=":
-		a.cRule, err = regexp.Compile(fmt.Sprintf("(%s){0}", regexp.QuoteMeta(a.Value)))
-		*/
 		case "~=":
 			a.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", a.Value))
 		}
 		a.compiled = true
 	}
 	if err != nil {
-		log.LogError(err)
+		return err
 	}
+	return nil
 }
 
 // Utility that converts the operand into a path to search into EVTX
@@ -183,6 +191,7 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 	return "", ErrUnexpectedToken
 }
 
+//ParseCondition parses a condition from a Tokenizer object
 func (t *Tokenizer) ParseCondition(group, level int) (c ConditionElement, err error) {
 	var token string
 	log.Debugf("Tokens: %v", t.tokens[t.i:])
@@ -239,8 +248,11 @@ func (t *Tokenizer) ParseCondition(group, level int) (c ConditionElement, err er
 ///////////////////////////////// Condition ////////////////////////////////////
 
 const (
+	//TypeOperand constant to type a ConditionElement
 	TypeOperand = 0x1 << iota
+	//TypeOperator constant to type a ConditionElement
 	TypeOperator
+	//TypeNegate constant to type a ConditionElement
 	TypeNegate
 )
 
@@ -255,6 +267,24 @@ type ConditionElement struct {
 	Next     *ConditionElement
 }
 
+//GetOperands retrieves all the operands involed in a condition
+func GetOperands(ce *ConditionElement) []string {
+	out := make([]string, 0)
+	set := datastructs.NewSyncedSet()
+	e := ce
+	for e != nil {
+		if e.Type == TypeOperand {
+			if !set.Contains(e.Operand) {
+				out = append(out, e.Operand)
+			}
+			set.Add(e.Operand)
+		}
+		e = e.Next
+	}
+	return out
+}
+
+//Compute computes a given condition given the operands
 func Compute(ce *ConditionElement, operands map[string]bool) bool {
 	nce, ret := compute(false, ce, operands)
 	for nce != nil {
@@ -279,20 +309,18 @@ func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*Co
 			if v, ok := operands[ce.Next.Operand]; ok {
 				if ce.Next.Level == ce.Level && ce.Next.Group == ce.Group {
 					return compute(!v, ce.Next.Next, operands)
-				} else {
-					nce, v := compute(false, ce.Next, operands)
-					return compute(!v, nce, operands)
 				}
-			} else {
-				panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
+				nce, v := compute(false, ce.Next, operands)
+				return compute(!v, nce, operands)
 			}
+			panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
 		case TypeNegate:
 			nce, v := compute(false, ce.Next, operands)
 			return compute(!v, nce, operands)
 		default:
-			panic(fmt.Sprintf("%s cannot follow ! token"))
+			panic(fmt.Sprintf("%s cannot follow ! token", ce.Next))
 		}
-	//!:0|0  $a:1|0  :1|0 | $b:1|0  :0|1 | $a:0|1
+
 	case TypeOperator:
 		switch ce.Operator {
 		case '&':
@@ -311,15 +339,14 @@ func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*Co
 				return ce.Next, v
 			}
 			return compute(v, ce.Next, operands)
-		} else {
-			panic(fmt.Sprintf("Unkown Operand: %s", ce.Operand))
 		}
+		panic(fmt.Sprintf("Unkown Operand: %s", ce.Operand))
 
 	default:
 		panic("Unkown type")
 	}
 	panic("Should not go there")
-	return nil, false
+	//return nil, false
 }
 
 func (c *ConditionElement) String() string {
@@ -335,6 +362,7 @@ func (c *ConditionElement) String() string {
 	return fmt.Sprintf("%s:%d|%d", c.Operand, c.Level, c.Group)
 }
 
+//DebugString formats a ConditionElement to be nicely printed
 func (c *ConditionElement) DebugString() string {
 	if c.Negate {
 		if c.Next != nil {
@@ -461,6 +489,7 @@ type Rule struct {
 	Condition string
 }
 
+//NewRule creates a new rule used to deserialize from JSON
 func NewRule() Rule {
 	r := Rule{
 		Name: "",
@@ -504,10 +533,9 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 		var tr *Trace
 		trName := fmt.Sprintf("Trace#%d", i)
 		if tr, err = ParseTrace(trName, st); err != nil {
-			log.Errorf("Cannot parse trace \"%s\" in \"%s\": %s", st, jr.Name, err)
-		} else {
-			rule.Traces = append(rule.Traces, tr)
+			return nil, fmt.Errorf("Cannot parse trace \"%s\" in \"%s\": %s", st, jr.Name, err)
 		}
+		rule.Traces = append(rule.Traces, tr)
 	}
 
 	// Parse predicates
@@ -515,7 +543,6 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 		var a AtomRule
 		a, err = ParseAtomRule(p)
 		if err != nil {
-			log.Errorf("Failed to parse predicate \"%s\": %s", p, err)
 			return nil, err
 		}
 		rule.AddAtom(&a)
@@ -525,15 +552,30 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 	tokenizer := NewTokenizer(jr.Condition)
 	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil && err != EOT {
-		log.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
-		return nil, err
+		return nil, fmt.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 	}
+
 	rule.Conditions = &cond
+	operands := GetOperands(&cond)
+	operandsSet := datastructs.NewInitSyncedSet(datastructs.ToInterfaceSlice(GetOperands(&cond))...)
+	// We control that all the operands are known
+	for _, op := range operands {
+		if !rule.AtomMap.Contains(op) {
+			return nil, fmt.Errorf("Unkown operand %s in condition \"%s\"", op, jr.Condition)
+		}
+	}
+
+	// Check for unknown operands and display warnings
+	for iOp := range rule.AtomMap.Keys() {
+		if !operandsSet.Contains(iOp.(string)) {
+			log.Infof("Rule \"%s\" operand %s not used", rule.Name, iOp.(string))
+		}
+	}
 
 	return &rule, nil
 }
 
-// Load loads rule to EvtxRule
+//Load loads rule to EvtxRule
 func Load(b []byte) (*CompiledRule, error) {
 	var jr Rule
 	err := json.Unmarshal(b, &jr)

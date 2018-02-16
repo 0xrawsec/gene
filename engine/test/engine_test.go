@@ -1,9 +1,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"engine"
+	"fmt"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
@@ -58,16 +60,68 @@ const (
       "Version": "5"
     }
   }
-}
-	`
+}`
 )
 
 var (
-	event          = make(evtx.GoEvtxMap)
-	singleRuleFile = "./data/rule1.json"
-	bigRuleFile    = "./data/1000rules.json"
-	evtxFile       = "sysmon.evtx"
+	event       = make(evtx.GoEvtxMap)
+	bigRuleFile = "./data/1000rules.json"
 )
+
+var (
+	ErrBufferOutOfBounds = fmt.Errorf("Buffer out of bound")
+)
+
+type SeekBuffer struct {
+	i    int
+	buff []byte
+}
+
+func NewSeekBuffer(b []byte) *SeekBuffer {
+	sb := &SeekBuffer{}
+	sb.buff = make([]byte, len(b))
+	copy(sb.buff, b)
+	return sb
+}
+
+func (sb *SeekBuffer) Read(p []byte) (n int, err error) {
+	if sb.i+len(p) < sb.Len() {
+		n = copy(p, sb.buff[sb.i:sb.i+len(p)])
+		sb.i += n
+		return n, nil
+	}
+	n = copy(p, sb.buff[sb.i:])
+	sb.i += n
+	return n, io.EOF
+}
+
+func (sb *SeekBuffer) Len() int {
+	return len(sb.buff)
+}
+
+func (sb *SeekBuffer) Seek(offset int64, whence int) (int64, error) {
+	switch whence {
+	case os.SEEK_CUR:
+		if sb.i+int(offset) <= sb.Len() {
+			sb.i += int(offset)
+			break
+		}
+		return 0, ErrBufferOutOfBounds
+	case os.SEEK_SET:
+		if int(offset) <= sb.Len() && offset >= 0 {
+			sb.i = int(offset)
+			break
+		}
+		return 0, ErrBufferOutOfBounds
+	case os.SEEK_END:
+		if sb.Len()-int(offset) > 0 {
+			sb.i = sb.Len() - int(offset)
+			break
+		}
+		return 0, ErrBufferOutOfBounds
+	}
+	return int64(sb.i), nil
+}
 
 func init() {
 	err := json.Unmarshal([]byte(eventStr), &event)
@@ -76,17 +130,24 @@ func init() {
 	}
 }
 
-func openEvtx(path string) evtx.File {
+func openEvtx(path string) *evtx.File {
 	f, err := evtx.New(path)
 	if err != nil {
 		panic(err)
 	}
-	return f
+	return &f
 }
 
 func TestLoad(t *testing.T) {
+	rule := `{
+	"Name": "ShouldMatch",
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}`
 	e := engine.NewEngine(false)
-	if err := e.Load(singleRuleFile); err != nil {
+	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -94,40 +155,71 @@ func TestLoad(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
+	rule := `{
+	"Name": "ShouldMatch",
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}`
+
 	e := engine.NewEngine(false)
-	if err := e.Load(singleRuleFile); err != nil {
+	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-
-	f := openEvtx(evtxFile)
-	for event := range f.FastEvents() {
-		m, c := e.Match(event)
-		if len(m) > 0 {
-			t.Logf("matches:%v criticality:%d", m, c)
-		}
+	if m, _ := e.Match(&event); len(m) == 0 {
+		t.Fail()
+	} else {
+		t.Log(m)
 	}
 }
 
 func TestMatchByTag(t *testing.T) {
+	rules := `{
+	"Name": "ShouldMatch",
+	"Tags": ["foo"],
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}
+	{
+	"Name": "ShouldNotMatch",
+	"Tags": ["bar"],
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}
+	`
+
 	e := engine.NewEngine(false)
-	if err := e.Load(singleRuleFile); err != nil {
+	tags := []string{"foo"}
+	e.SetFilters([]string{}, tags)
+
+	if err := e.LoadReader(NewSeekBuffer([]byte(rules))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 
-	f := openEvtx(evtxFile)
-	tags := []string{"foo"}
-	e.SetFilters([]string{}, tags)
-	for event := range f.FastEvents() {
-		m, c := e.Match(event)
-		if len(m) > 0 {
-			t.Logf("matches:%v criticality:%d", m, c)
-			t.Logf(string(evtx.ToJSON(event)))
-		}
+	if m, _ := e.Match(&event); len(m) == 0 {
+		t.Fail()
+	} else {
+		t.Log(m)
 	}
+
 }
 
 func TestSimpleRule(t *testing.T) {
@@ -143,11 +235,12 @@ func TestSimpleRule(t *testing.T) {
 	}
 	`
 	e := engine.NewEngine(false)
-	err := e.LoadReader(bytes.NewBuffer([]byte(rule)))
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
 		t.Log(err)
 	}
+	t.Logf("Engine loaded %d rule", e.Count())
 	if m, _ := e.Match(&event); len(m) == 0 {
 		t.Fail()
 	} else {
@@ -187,7 +280,7 @@ func TestNotOrRule(t *testing.T) {
 	}
 	`
 	e := engine.NewEngine(false)
-	err := e.LoadReader(bytes.NewBuffer([]byte(rule)))
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
 		t.Log(err)
@@ -232,7 +325,7 @@ func TestNotAndRule(t *testing.T) {
 	}
 	`
 	e := engine.NewEngine(false)
-	err := e.LoadReader(bytes.NewBuffer([]byte(rule)))
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
 		t.Log(err)
@@ -281,11 +374,12 @@ func TestComplexRule(t *testing.T) {
 	}
 	`
 	e := engine.NewEngine(false)
-	err := e.LoadReader(bytes.NewBuffer([]byte(rule)))
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
 		t.Log(err)
 	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
 	if m, _ := e.Match(&event); len(m) == 0 {
 		t.Fail()

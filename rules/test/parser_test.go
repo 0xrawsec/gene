@@ -101,6 +101,7 @@ func TestCondition(t *testing.T) {
 			t.Logf("%s Error:%v", &cond, err)
 			t.FailNow()
 		}
+		t.Logf("Condition: %s", strCond)
 		t.Logf("Parsed Condition: %s", &cond)
 		result := rules.Compute(&cond, operands)
 		t.Logf("Cond: %s With: %v => Result: %t", &cond, operands, result)
