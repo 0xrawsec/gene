@@ -256,6 +256,20 @@ const (
 	TypeNegate
 )
 
+// OperandReader interface
+type OperandReader interface {
+	// Return operand value and ok (true if operand found false otherwise)
+	Read(string) (bool, bool)
+}
+
+// OperandMap defines a simple structure to implement OperandReader
+type OperandMap map[string]bool
+
+func (om OperandMap) Read(operand string) (value, ok bool) {
+	value, ok = om[operand]
+	return
+}
+
 //ConditionElement structure definition
 type ConditionElement struct {
 	Operand  string
@@ -285,7 +299,7 @@ func GetOperands(ce *ConditionElement) []string {
 }
 
 //Compute computes a given condition given the operands
-func Compute(ce *ConditionElement, operands map[string]bool) bool {
+func Compute(ce *ConditionElement, operands OperandReader) bool {
 	nce, ret := compute(false, ce, operands)
 	for nce != nil {
 		nce, ret = compute(ret, nce, operands)
@@ -293,7 +307,18 @@ func Compute(ce *ConditionElement, operands map[string]bool) bool {
 	return ret
 }
 
-func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*ConditionElement, bool) {
+func nextCondEltLowerLevel(ce *ConditionElement) *ConditionElement {
+	e := ce
+	for e.Next != nil {
+		if e.Next.Level < e.Level {
+			return e.Next
+		}
+		e = e.Next
+	}
+	return e.Next
+}
+
+func compute(computed bool, ce *ConditionElement, operands OperandReader) (*ConditionElement, bool) {
 	// Stop Condition
 	if ce == nil {
 		log.Debug("Any computation should finish here")
@@ -306,7 +331,7 @@ func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*Co
 		// Assume next is operand
 		switch ce.Next.Type {
 		case TypeOperand:
-			if v, ok := operands[ce.Next.Operand]; ok {
+			if v, ok := operands.Read(ce.Next.Operand); ok {
 				if ce.Next.Level == ce.Level && ce.Next.Group == ce.Group {
 					return compute(!v, ce.Next.Next, operands)
 				}
@@ -324,17 +349,27 @@ func compute(computed bool, ce *ConditionElement, operands map[string]bool) (*Co
 	case TypeOperator:
 		switch ce.Operator {
 		case '&':
+			// Shortcut if computed is false
+			if !computed {
+				nce := nextCondEltLowerLevel(ce)
+				return nce, false
+			}
 			nce, ret := compute(false, ce.Next, operands)
 			ret = computed && ret
 			return nce, ret
 		case '|':
+			// Shortcut if computed is true
+			if computed {
+				nce := nextCondEltLowerLevel(ce)
+				return nce, true
+			}
 			nce, ret := compute(false, ce.Next, operands)
 			ret = computed || ret
 			return nce, ret
 		}
 
 	case TypeOperand:
-		if v, ok := operands[ce.Operand]; ok {
+		if v, ok := operands.Read(ce.Operand); ok {
 			if ce.Next != nil && ce.Next.Level != ce.Level {
 				return ce.Next, v
 			}
@@ -455,16 +490,29 @@ func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
 
 	// We proceed with AtomicRule mathing
 	log.Debug(er.Conditions)
-	return Compute(er.Conditions, er.operandValuesFromAtoms(event))
+	//return Compute(er.Conditions, er.operandValuesFromAtoms(event))
+	return Compute(er.Conditions, er.operandReader(event))
+	//return true
 }
 
-func (er *CompiledRule) operandValuesFromAtoms(event *evtx.GoEvtxMap) map[string]bool {
-	operands := make(map[string]bool)
-	for operand := range er.AtomMap.Keys() {
-		ari, _ := er.AtomMap.Get(operand)
-		operands[operand.(string)] = ari.(*AtomRule).Match(event)
+func (er *CompiledRule) operandReader(event *evtx.GoEvtxMap) *EventOpReader {
+	return &EventOpReader{event, er}
+}
+
+//////////////////////////// EventOpStore /////////////////////////////////////
+
+// EventOpReader OperandReader interface to access operand value of a rule on an event
+type EventOpReader struct {
+	event *evtx.GoEvtxMap
+	rule  *CompiledRule
+}
+
+// Read OperandStore interface definition
+func (oe *EventOpReader) Read(operand string) (value bool, ok bool) {
+	if ari, ok := oe.rule.AtomMap.Get(operand); ok {
+		return ari.(*AtomRule).Match(oe.event), true
 	}
-	return operands
+	return
 }
 
 //////////////////////////////// String Rule ///////////////////////////////////
@@ -478,6 +526,7 @@ type MetaSection struct {
 	Computers   []string
 	Traces      []string
 	Criticality int
+	Disable     bool
 }
 
 //Rule is a JSON parsable rule
@@ -503,6 +552,11 @@ func NewRule() Rule {
 		Matches:   make([]string, 0),
 		Condition: ""}
 	return r
+}
+
+// IsDisabled returns true if the rule has been disabled
+func (jr *Rule) IsDisabled() bool {
+	return jr.Meta.Disable
 }
 
 //Compile a JSONRule into CompiledRule

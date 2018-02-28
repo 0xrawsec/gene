@@ -1,12 +1,12 @@
 package engine
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"globals"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"rules"
 	"sync"
@@ -97,7 +97,7 @@ type Engine struct {
 	names    map[string]int   // will be map[name][]int with index referencing rule in rules
 	channels map[string][]int
 	eventIDs map[int64][]int
-	// Filters used to choose which rule to compile if case of match by tag/name
+	// Filters used to choose which rule to compile in case of match by tag/name
 	tagFilters  datastructs.SyncedSet
 	nameFilters datastructs.SyncedSet
 	trace       bool
@@ -134,6 +134,14 @@ func (e *Engine) Count() int {
 	return len(e.rules)
 }
 
+//Tags returns the tags of the rules currently loaded into the engine
+func (e *Engine) Tags() []string {
+	tn := make([]string, 0, len(e.tags))
+	for t := range e.tags {
+		tn = append(tn, t)
+	}
+	return tn
+}
 func (e *Engine) loadReader(reader io.ReadSeeker) error {
 	var decerr error
 	dec := json.NewDecoder(reader)
@@ -154,12 +162,18 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 			// We got EOF if we go there
 			break
 		}
-
+		// Check if the rule is disabled
+		if jRule.IsDisabled() {
+			log.Infof("Rule \"%s\" has been disabled", jRule.Name)
+			continue
+		}
+		// We compile the rule
 		er, err := jRule.Compile()
 		if err != nil {
 			ruleLine, offInLine := findLineError(ruleOffset, reader)
 			return fmt.Errorf("Failed to compile rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
 		}
+		// We add the rule to the engine
 		if err := e.AddRule(er); err != nil {
 			return err
 		}
@@ -271,6 +285,89 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 							} else {
 								log.Errorf("Failed to compile trace rule i=%d for \"%s\" ", i, r.Name)
 							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Unlock so that we can update engine
+	e.RUnlock()
+
+	// We can update with the traces since we released the lock
+	e.AddTraceRules(traces...)
+
+	// Bound criticality
+	criticality = globals.Bound(criticality)
+	// Update event with signature information
+	genInfo := map[string]interface{}{
+		"Signature":   names,
+		"Criticality": criticality}
+	event.Set(&geneInfoPath, genInfo)
+	return
+}
+
+//FastMatch checks if there is a match in any rule of the engine
+func (e *Engine) FastMatch(event *evtx.GoEvtxMap) (names []string, criticality int) {
+	const numQueues = 2
+	wg := sync.WaitGroup{}
+	traces := make([]*rules.CompiledRule, 0)
+	names = make([]string, 0)
+	queues := make([]chan *rules.CompiledRule, numQueues)
+	matched := make([]*rules.CompiledRule, 0, 100)
+
+	for i := range queues {
+		//TODO: change chan size
+		queues[i] = make(chan *rules.CompiledRule, 100)
+	}
+
+	e.RLock()
+	// Pushing the rules in the different queues
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for _, r := range e.rules {
+			queues[rand.Intn(numQueues)] <- r
+		}
+		for _, q := range queues {
+			close(q)
+		}
+	}()
+
+	for i := range queues {
+		q := queues[i]
+		wg.Add(1)
+		go func() {
+			for r := range q {
+				if r.Match(event) {
+					matched = append(matched, r)
+				}
+			}
+			defer wg.Done()
+		}()
+	}
+
+	// We wait all the rules have been tested
+	wg.Wait()
+	for _, r := range matched {
+		names = append(names, r.Name)
+		criticality += r.Criticality
+		// If we decide to trace the other events matching the rules
+		if e.trace {
+			for i, tr := range r.Traces {
+				value, err := event.GetString(tr.Path())
+				// If we find the appropriate element in the event we matched
+				if err == nil {
+					// Hashing the trace
+					h := tr.HashWithValue(value)
+					if !e.markedTraces.Contains(h) {
+						// We add the hash of the current trace not to recompile it again
+						e.markedTraces.Add(h)
+						// We compile the trace into a rule and append it to the list of traces
+						if tRule, err := tr.Compile(r, value); err == nil {
+							traces = append(traces, tRule)
+						} else {
+							log.Errorf("Failed to compile trace rule i=%d for \"%s\" ", i, r.Name)
 						}
 					}
 				}

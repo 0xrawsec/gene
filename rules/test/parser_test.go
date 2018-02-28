@@ -68,7 +68,7 @@ func TestParseCondition(t *testing.T) {
 }
 
 var (
-	operands = map[string]bool{"$a": true, "$b": false}
+	operands = rules.OperandMap{"$a": true, "$b": false}
 	// Key: condition Value: expected result according to operands
 	conditionMap = map[string]bool{
 		"$a":                                             true,
