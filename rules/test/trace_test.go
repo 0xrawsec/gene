@@ -52,7 +52,7 @@ var (
 	"Condition": "$a"
 	}`
 
-	trigger, _ = rules.Load([]byte(triggerRule))
+	trigger, _ = rules.Load([]byte(triggerRule), nil)
 )
 
 func TestParseTrace(t *testing.T) {
@@ -90,7 +90,7 @@ func TestRuleWithTrace(t *testing.T) {
 		t.Fail()
 	}
 	e := engine.NewEngine(true)
-	if trigger, err := rules.Load([]byte(triggerRule)); err != nil {
+	if trigger, err := rules.Load([]byte(triggerRule), nil); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else {

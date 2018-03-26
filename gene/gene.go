@@ -22,6 +22,7 @@ import (
 	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
 	"github.com/0xrawsec/golang-utils/progress"
+	"github.com/0xrawsec/golang-utils/readers"
 )
 
 //////////////////////////// Utilities //////////////////////////////
@@ -165,6 +166,9 @@ var (
 
 	criticalityThresh int
 
+	whitelist string
+	blacklist string
+
 	rulesPath string
 	ruleExts  = args.ListVar{".gen", ".gene"}
 	jobs      = 1
@@ -183,6 +187,8 @@ func main() {
 	flag.BoolVar(&versionFlag, "version", versionFlag, "Show version information and exit")
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
+	flag.StringVar(&whitelist, "wl", whitelist, "File containing values to insert into the whitelist")
+	flag.StringVar(&blacklist, "bl", whitelist, "File containing values to insert into the blacklist")
 	flag.IntVar(&criticalityThresh, "c", criticalityThresh, "Criticality treshold. Prints only if criticality above threshold")
 	flag.IntVar(&jobs, "jobs", jobs, "Number of parallel jobs to run. It may result in events printed in different order than provided. If <= 0 takes all available processors")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
@@ -247,6 +253,32 @@ func main() {
 	for _, e := range ruleExts {
 		setRuleExts.Add(e)
 	}
+
+	// We have to load the containers befor the rules
+	// For the Whitelist
+	if whitelist != "" {
+		wlf, err := os.Open(whitelist)
+		if err != nil {
+			log.LogErrorAndExit(err, exitFail)
+		}
+		for line := range readers.Readlines(wlf) {
+			e.Whitelist(string(line))
+		}
+		wlf.Close()
+	}
+	log.Infof("Size of whitelist container: %d", e.WhitelistLen())
+	// For the Blacklist
+	if blacklist != "" {
+		blf, err := os.Open(blacklist)
+		if err != nil {
+			log.LogErrorAndExit(err, exitFail)
+		}
+		for line := range readers.Readlines(blf) {
+			e.Blacklist(string(line))
+		}
+		blf.Close()
+	}
+	log.Infof("Size of blacklist container: %d", e.BlacklistLen())
 
 	// Loading the rules
 	realPath, err := fsutil.ResolveLink(rulesPath)

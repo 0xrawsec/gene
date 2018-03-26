@@ -10,7 +10,7 @@ import (
 
 var (
 	testFile    = "sysmon.evtx"
-	ar          = rules.NewAtomRule("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
+	ar          = rules.NewFieldMatch("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
 	rulesString = [...]string{
 		`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
 		`$test: "Hashes" = "c'est un super test"`,
@@ -46,7 +46,7 @@ func TestAtomRule(t *testing.T) {
 
 func TestParseAtomRule(t *testing.T) {
 	for _, rule := range rulesString {
-		ar, err := rules.ParseAtomRule(rule)
+		ar, err := rules.ParseFieldMatch(rule)
 		if err != nil {
 			t.Log(err)
 			t.Fail()
@@ -81,7 +81,7 @@ var (
 		"((($a and !$b)))":                               true,
 		"$a and ($b or !$b)":                             true,
 		"!($a or $b) or $a":                              true,
-		"$a and !$b and !$a":                             false,
+		"$a && !$b && !$a":                               false,
 		"!($a and $b or !($a and $b))":                   false,
 		"!($a or $b) and ($a or ($b and !$a)) and !$a":   false,
 		"!$b or (!($a or $b) and ($a or ($b and !$a)))":  true,
@@ -89,7 +89,7 @@ var (
 		"(($a and !$b) and $a)":                          true,
 		"(!($a and $b) and $b)":                          false,
 		"(!($a and $b) and $b) or (($a and !$b) and $a)": true,
-		"!(!($a or $b)) and !(!$a and !$b)":              true,
+		"!(!($a || $b)) && !(!$a and !$b)":               true,
 	}
 )
 
@@ -123,21 +123,21 @@ func TestEvtxRule(t *testing.T) {
 	}
 
 	as := `$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`
-	a, err := rules.ParseAtomRule(as)
+	a, err := rules.ParseFieldMatch(as)
 	if err != nil {
 		t.Logf("Failed to parse: %s", as)
 		t.Fail()
 	}
 
 	bs := `$b: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FB'`
-	b, err := rules.ParseAtomRule(bs)
+	b, err := rules.ParseFieldMatch(bs)
 	if err != nil {
 		t.Logf("Failed to parse: %s", bs)
 		t.Fail()
 	}
 
-	er.AddAtom(&a)
-	er.AddAtom(&b)
+	er.AddMatcher(&a)
+	er.AddMatcher(&b)
 
 	condStr := "$b or ($a and $y)"
 	tokenizer := rules.NewTokenizer(condStr)
@@ -181,7 +181,47 @@ func TestLoadRule(t *testing.T) {
 		],
 	"Condition": "$c"
 	}`
-	er, err := rules.Load([]byte(ruleStr))
+	er, err := rules.Load([]byte(ruleStr), nil)
+	if err != nil {
+		t.Logf("Error parsing string rule: %s", err)
+		t.FailNow()
+	}
+
+	count := 0
+	for e := range f.FastEvents() {
+		if er.Match(e) {
+			t.Log(string(evtx.ToJSON(e)))
+		}
+		count++
+	}
+	t.Logf("Scanned events: %d", count)
+}
+
+func TestBlacklist(t *testing.T) {
+	f, err := evtx.New(testFile)
+	if err != nil {
+		log.LogError(err)
+		t.FailNow()
+	}
+
+	ruleStr := `{
+	"Name": "Blacklisted",
+	"Tags": ["Hello", "World"],
+	"Meta": {
+		"EventID": [1,7],
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
+		"Computer": ["Test"],
+		"Action": "warn"
+		},
+	"Matches": [
+		"$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
+		"$inBullshit: extract('(?P<md5>B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA)', Hashes) in bullshit"
+		],
+	"Condition": "$inBlacklist"
+	}`
+	containers := rules.NewContainers()
+	containers.AddToContainer(black, "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
+	er, err := rules.Load([]byte(ruleStr), containers)
 	if err != nil {
 		t.Logf("Error parsing string rule: %s", err)
 		t.FailNow()

@@ -4,417 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"globals"
-	"regexp"
-	"strings"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/log"
-	"github.com/0xrawsec/golang-utils/regexp/submatch"
 )
-
-var (
-	//ErrUnkOperator error to return when an operator is not known
-	ErrUnkOperator = fmt.Errorf("Unknown operator")
-	//Regexp and its helper to ease AtomRule parsing
-	atomRuleRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=))\s+'(?P<value>.*)'`)
-	atomRuleRegexpHelper = submatch.NewSubmatchHelper(atomRuleRegexp)
-)
-
-// AtomRule is the smallest rule we can have
-type AtomRule struct {
-	Name     string `regexp:"name"`
-	Operand  string `regexp:"operand"`
-	Operator string `regexp:"operator"`
-	Value    string `regexp:"value"`
-	compiled bool
-	cRule    *regexp.Regexp
-}
-
-// ParseAtomRule parses a string and returns an AtomRule
-func ParseAtomRule(rule string) (ar AtomRule, err error) {
-	// Check if the syntax of the match is valid
-	if !atomRuleRegexp.Match([]byte(rule)) {
-		return ar, fmt.Errorf("Syntax error in \"%s\"", rule)
-	}
-	// Continues
-	sm := atomRuleRegexp.FindSubmatch([]byte(rule))
-	err = atomRuleRegexpHelper.Unmarshal(&sm, &ar)
-	// it is normal not to set private fields
-	if fse, ok := err.(submatch.FieldNotSetError); ok {
-		switch fse.Field {
-		case "compiled", "cRule":
-			err = nil
-		}
-	}
-	if err != nil {
-		return
-	}
-	ar.Operand = strings.Trim(ar.Operand, `"'`)
-	ar.Value = strings.Trim(ar.Value, `"'`)
-	// Compile the rule into a Regexp
-	err = ar.Compile()
-	if err != nil {
-		return ar, fmt.Errorf("Failed to compile \"%s\" to a regexp", rule)
-	}
-	return ar, err
-}
-
-// NewAtomRule creates a new atomic rule from data
-func NewAtomRule(name, operand, operator, value string) AtomRule {
-	return AtomRule{name, operand, operator, value, false, nil}
-}
-
-func (a *AtomRule) String() string {
-	return fmt.Sprintf("%s: %s %s \"%s\"", a.Name, a.Operand, a.Operator, a.Value)
-}
-
-// Compile  AtomRule into a regexp
-func (a *AtomRule) Compile() error {
-	var err error
-	if !a.compiled {
-		switch a.Operator {
-		case "=":
-			a.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(a.Value)))
-		case "~=":
-			a.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", a.Value))
-		}
-		a.compiled = true
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// Utility that converts the operand into a path to search into EVTX
-func (a *AtomRule) path() *evtx.GoEvtxPath {
-	p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", a.Operand))
-	return &p
-}
-
-// Match checks whether the AtomRule match the SysmonEvent
-func (a *AtomRule) Match(se *evtx.GoEvtxMap) bool {
-	s, err := se.GetString(a.path())
-	if err == nil {
-		a.Compile()
-		return a.cRule.MatchString(s)
-	}
-	return false
-}
-
-/////////////////////////////// Tokenizer //////////////////////////////////////
-
-//Tokenizer structure
-type Tokenizer struct {
-	i        int
-	tokens   []string
-	expected []string
-}
-
-var (
-	//EOT End Of Tokens
-	EOT = fmt.Errorf("End of tokens")
-	//ErrUnexpectedToken definition
-	ErrUnexpectedToken = fmt.Errorf("Unexpected tokens")
-	EmptyToken         = fmt.Errorf("Empty token")
-)
-
-//NewTokenizer creates and inits a new Tokenizer struct
-func NewTokenizer(condition string) (c Tokenizer) {
-	c.tokens = strings.Split(condition, " ")
-	// split parathesis from other tokens
-	for i := 0; i < len(c.tokens); i++ {
-		token := c.tokens[i]
-		if len(token) == 0 {
-			c.tokens = append(c.tokens[:i], c.tokens[i+1:]...)
-		}
-		if len(token) > 1 {
-			if token[0] == '(' {
-				c.tokens[i] = token[1:]
-				c.tokens = append(c.tokens[:i], append([]string{"("}, c.tokens[i:]...)...)
-				continue
-			}
-			log.Debug(token)
-			if token[0] == '!' {
-				c.tokens[i] = token[1:]
-				c.tokens = append(c.tokens[:i], append([]string{"!"}, c.tokens[i:]...)...)
-				continue
-			}
-			brackets := make([]string, 0)
-			for k := len(token) - 1; k > 0; k-- {
-				if token[k] == ')' {
-					brackets = append(brackets, ")")
-					continue
-				}
-				break
-			}
-			c.tokens[i] = token[:len(token)-len(brackets)]
-			c.tokens = append(c.tokens[:i+1], append(brackets, c.tokens[i+1:]...)...)
-		}
-	}
-	return
-}
-
-//NextToken grabs the next token
-func (t *Tokenizer) NextToken() (token string, err error) {
-	if t.i >= len(t.tokens) {
-		err = EOT
-		return
-	}
-	for _, token = range t.tokens[t.i:] {
-		t.i++
-		if token == " " {
-			continue
-		}
-		return
-	}
-	return "", EOT
-}
-
-//NextExpectedToken grabs the next token and returns it. ErrUnexpectedToken is returned
-//if the token returned is not in the list of expected tokens
-func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err error) {
-	etok := datastructs.NewSyncedSet()
-	for _, e := range expects {
-		etok.Add(e)
-	}
-	token, err = t.NextToken()
-	if err == EOT {
-		return
-	}
-	log.Debugf("Token: '%s'", token)
-	if etok.Contains(token) || etok.Contains(string(token[0])) {
-		return
-	}
-	log.Debugf("%s: '%s' not in %v", ErrUnexpectedToken, token, expects)
-	return "", ErrUnexpectedToken
-}
-
-//ParseCondition parses a condition from a Tokenizer object
-func (t *Tokenizer) ParseCondition(group, level int) (c ConditionElement, err error) {
-	var token string
-	log.Debugf("Tokens: %v", t.tokens[t.i:])
-
-	token, err = t.NextExpectedToken("$", "!", "(", ")", "and", "or")
-	if err != nil {
-		return
-	}
-	c.Level = level
-	c.Group = group
-	switch {
-	case token[0] == '!':
-		c.Negate = true
-		c.Type = TypeNegate
-
-	case token[0] == '$':
-		c.Operand = token
-		c.Type = TypeOperand
-
-	case token[0] == '(':
-		level++
-		return t.ParseCondition(group, level)
-
-	case token[0] == ')':
-		group++
-		level--
-		return t.ParseCondition(group, level)
-
-	default:
-		switch token {
-		case "and", "AND", "&&":
-			c.Operator = '&'
-			c.Type = TypeOperator
-		case "or", "OR", "||":
-			c.Operator = '|'
-			c.Type = TypeOperator
-		}
-	}
-
-	// Set the next condition
-	next, err := t.ParseCondition(group, level)
-	switch err {
-	case nil:
-		c.Next = &next
-	case EOT:
-		// Don't set next element if EOT
-		err = nil
-	case ErrUnexpectedToken:
-		return c, err
-	}
-	return
-}
-
-///////////////////////////////// Condition ////////////////////////////////////
-
-const (
-	//TypeOperand constant to type a ConditionElement
-	TypeOperand = 0x1 << iota
-	//TypeOperator constant to type a ConditionElement
-	TypeOperator
-	//TypeNegate constant to type a ConditionElement
-	TypeNegate
-)
-
-// OperandReader interface
-type OperandReader interface {
-	// Return operand value and ok (true if operand found false otherwise)
-	Read(string) (bool, bool)
-}
-
-// OperandMap defines a simple structure to implement OperandReader
-type OperandMap map[string]bool
-
-func (om OperandMap) Read(operand string) (value, ok bool) {
-	value, ok = om[operand]
-	return
-}
-
-//ConditionElement structure definition
-type ConditionElement struct {
-	Operand  string
-	Operator rune
-	Negate   bool
-	Level    int
-	Group    int
-	Type     int
-	Next     *ConditionElement
-}
-
-//GetOperands retrieves all the operands involed in a condition
-func GetOperands(ce *ConditionElement) []string {
-	out := make([]string, 0)
-	set := datastructs.NewSyncedSet()
-	e := ce
-	for e != nil {
-		if e.Type == TypeOperand {
-			if !set.Contains(e.Operand) {
-				out = append(out, e.Operand)
-			}
-			set.Add(e.Operand)
-		}
-		e = e.Next
-	}
-	return out
-}
-
-//Compute computes a given condition given the operands
-func Compute(ce *ConditionElement, operands OperandReader) bool {
-	nce, ret := compute(false, ce, operands)
-	for nce != nil {
-		nce, ret = compute(ret, nce, operands)
-	}
-	return ret
-}
-
-func nextCondEltLowerLevel(ce *ConditionElement) *ConditionElement {
-	e := ce
-	for e.Next != nil {
-		if e.Next.Level < e.Level {
-			return e.Next
-		}
-		e = e.Next
-	}
-	return e.Next
-}
-
-func compute(computed bool, ce *ConditionElement, operands OperandReader) (*ConditionElement, bool) {
-	// Stop Condition
-	if ce == nil {
-		log.Debug("Any computation should finish here")
-		return nil, computed
-	}
-
-	switch ce.Type {
-
-	case TypeNegate:
-		// Assume next is operand
-		switch ce.Next.Type {
-		case TypeOperand:
-			if v, ok := operands.Read(ce.Next.Operand); ok {
-				if ce.Next.Level == ce.Level && ce.Next.Group == ce.Group {
-					return compute(!v, ce.Next.Next, operands)
-				}
-				nce, v := compute(false, ce.Next, operands)
-				return compute(!v, nce, operands)
-			}
-			panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
-		case TypeNegate:
-			nce, v := compute(false, ce.Next, operands)
-			return compute(!v, nce, operands)
-		default:
-			panic(fmt.Sprintf("%s cannot follow ! token", ce.Next))
-		}
-
-	case TypeOperator:
-		switch ce.Operator {
-		case '&':
-			// Shortcut if computed is false
-			if !computed {
-				nce := nextCondEltLowerLevel(ce)
-				return nce, false
-			}
-			nce, ret := compute(false, ce.Next, operands)
-			ret = computed && ret
-			return nce, ret
-		case '|':
-			// Shortcut if computed is true
-			if computed {
-				nce := nextCondEltLowerLevel(ce)
-				return nce, true
-			}
-			nce, ret := compute(false, ce.Next, operands)
-			ret = computed || ret
-			return nce, ret
-		}
-
-	case TypeOperand:
-		if v, ok := operands.Read(ce.Operand); ok {
-			if ce.Next != nil && ce.Next.Level != ce.Level {
-				return ce.Next, v
-			}
-			return compute(v, ce.Next, operands)
-		}
-		panic(fmt.Sprintf("Unkown Operand: %s", ce.Operand))
-
-	default:
-		panic("Unkown type")
-	}
-	panic("Should not go there")
-	//return nil, false
-}
-
-func (c *ConditionElement) String() string {
-	if c.Negate {
-		if c.Next != nil {
-			return fmt.Sprintf("!%s:%d|%d %c %s", c.Operand, c.Level, c.Group, c.Operator, c.Next)
-		}
-		return fmt.Sprintf("!%s:%d|%d", c.Operand, c.Level, c.Group)
-	}
-	if c.Next != nil {
-		return fmt.Sprintf("%s:%d|%d %c %s", c.Operand, c.Level, c.Group, c.Operator, c.Next)
-	}
-	return fmt.Sprintf("%s:%d|%d", c.Operand, c.Level, c.Group)
-}
-
-//DebugString formats a ConditionElement to be nicely printed
-func (c *ConditionElement) DebugString() string {
-	if c.Negate {
-		if c.Next != nil {
-			return fmt.Sprintf("NOT Operand: %s Operator: (%q) Group:%d Next: (%s)",
-				c.Operand, c.Operator, c.Group, c.Next.DebugString())
-		}
-		return fmt.Sprintf("NOT Operand: %s Operator: (%q) Group:%d Next: nil",
-			c.Operand, c.Operator, c.Group)
-	}
-	if c.Next != nil {
-		return fmt.Sprintf("Operand: %s Operator: (%q) Group:%d Next: (%s)",
-			c.Operand, c.Operator, c.Group, c.Next.DebugString())
-
-	}
-	return fmt.Sprintf("Operand: %s Operator: (%q) Group:%d Next: nil",
-		c.Operand, c.Operator, c.Group)
-}
 
 ///////////////////////////////////// Rule /////////////////////////////////////
 
@@ -435,6 +29,7 @@ type CompiledRule struct {
 	AtomMap     datastructs.SyncedMap
 	Traces      []*Trace
 	Conditions  *ConditionElement
+	containers  *ContainerDB
 }
 
 //NewCompiledRule initializes and returns an EvtxRule object
@@ -447,9 +42,15 @@ func NewCompiledRule() (er CompiledRule) {
 	return
 }
 
-//AddAtom adds an atom rule to the CompiledRule
-func (er *CompiledRule) AddAtom(a *AtomRule) {
-	er.AtomMap.Add(a.Name, a)
+//AddMatcher adds an atom rule to the CompiledRule
+//func (er *CompiledRule) AddMatcher(a *AtomRule) {
+func (er *CompiledRule) AddMatcher(m Matcher) {
+	er.AtomMap.Add(m.GetName(), m)
+}
+
+//SetContainers sets the ContainerDB pointer of rule
+func (er *CompiledRule) SetContainers(containers *ContainerDB) {
+	er.containers = containers
 }
 
 func (er *CompiledRule) metaMatch(event *evtx.GoEvtxMap) bool {
@@ -490,9 +91,7 @@ func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
 
 	// We proceed with AtomicRule mathing
 	log.Debug(er.Conditions)
-	//return Compute(er.Conditions, er.operandValuesFromAtoms(event))
 	return Compute(er.Conditions, er.operandReader(event))
-	//return true
 }
 
 func (er *CompiledRule) operandReader(event *evtx.GoEvtxMap) *EventOpReader {
@@ -510,7 +109,8 @@ type EventOpReader struct {
 // Read OperandStore interface definition
 func (oe *EventOpReader) Read(operand string) (value bool, ok bool) {
 	if ari, ok := oe.rule.AtomMap.Get(operand); ok {
-		return ari.(*AtomRule).Match(oe.event), true
+		// Casting to Matcher interface
+		return ari.(Matcher).Match(oe.event), true
 	}
 	return
 }
@@ -560,7 +160,7 @@ func (jr *Rule) IsDisabled() bool {
 }
 
 //Compile a JSONRule into CompiledRule
-func (jr *Rule) Compile() (*CompiledRule, error) {
+func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	var err error
 	rule := NewCompiledRule()
 
@@ -594,18 +194,41 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 
 	// Parse predicates
 	for _, p := range jr.Matches {
-		var a AtomRule
-		a, err = ParseAtomRule(p)
-		if err != nil {
-			return nil, err
+		switch {
+		case IsFieldMatch(p):
+			var a FieldMatch
+			a, err = ParseFieldMatch(p)
+			if err != nil {
+				return nil, err
+			}
+			rule.AddMatcher(&a)
+		case IsContainerMatch(p):
+			var cm *ContainerMatch
+			cm, err = ParseContainerMatch(p)
+			if err != nil {
+				return nil, err
+			}
+			//Set the rules containers only if the rule contains at least ContainerMatch
+			rule.containers = containers
+			if rule.containers != nil {
+				if !rule.containers.Has(cm.Container) {
+					log.Infof("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+				}
+			} else {
+				log.Infof("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+			}
+			cm.SetContainerDB(rule.containers)
+			rule.AddMatcher(cm)
+		default:
+			return nil, fmt.Errorf("Unknown match statement: %s", p)
 		}
-		rule.AddAtom(&a)
+
 	}
 
 	// Parse the condition
 	tokenizer := NewTokenizer(jr.Condition)
 	cond, err := tokenizer.ParseCondition(0, 0)
-	if err != nil && err != EOT {
+	if err != nil && err != ErrEOT {
 		return nil, fmt.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 	}
 
@@ -630,11 +253,11 @@ func (jr *Rule) Compile() (*CompiledRule, error) {
 }
 
 //Load loads rule to EvtxRule
-func Load(b []byte) (*CompiledRule, error) {
+func Load(b []byte, containers *ContainerDB) (*CompiledRule, error) {
 	var jr Rule
 	err := json.Unmarshal(b, &jr)
 	if err != nil {
 		return nil, err
 	}
-	return jr.Compile()
+	return jr.Compile(containers)
 }

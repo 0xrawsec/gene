@@ -30,6 +30,7 @@ type stringTrace struct {
 	Value    string `regexp:"value"`
 }
 
+// ParseTrace parsec a trace string
 func ParseTrace(name, trace string) (*Trace, error) {
 	return parseTrace(name, trace)
 }
@@ -80,6 +81,7 @@ func parseTrace(name, trace string) (*Trace, error) {
 	return c, nil
 }
 
+// Trace structure
 type Trace struct {
 	Name       string
 	EventIDs   []int64
@@ -91,6 +93,7 @@ type Trace struct {
 	anyChannel bool
 }
 
+// NewTrace creates a NewTrace and returns its pointer
 func NewTrace(name string) *Trace {
 	c := Trace{}
 	c.Name = name
@@ -100,23 +103,26 @@ func NewTrace(name string) *Trace {
 }
 
 func (t *Trace) idStr() string {
-	return fmt.Sprintf("%v:%v:%v:%s:%s:%s:%t:%t", t.EventIDs, t.Channels, t.Operand,
-		t.Operator, t.Value, t.anyChannel, t.anyChannel)
+	return fmt.Sprintf("%v:%v:%s:%s:%s:%t:%t", t.EventIDs, t.Channels, t.Operand, t.Operator, t.Value, t.anyEventID, t.anyChannel)
 }
 
+// Hash returns a MD5 hash a trace
 func (t *Trace) Hash() string {
 	return data.Md5([]byte(t.idStr()))
 }
 
+// HashWithValue returns a salted hash
 func (t *Trace) HashWithValue(value string) string {
 	return data.Md5([]byte(fmt.Sprintf("%s:%s", t.idStr(), value)))
 }
 
+// Path returns the path of the
 func (t *Trace) Path() *evtx.GoEvtxPath {
 	p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", t.Value))
 	return &p
 }
 
+// Compile compiles a trace given a trigger rule (rule defining the trace)
 func (t *Trace) Compile(trigger *CompiledRule, value string) (*CompiledRule, error) {
 	cr := NewCompiledRule()
 
@@ -156,9 +162,8 @@ func (t *Trace) Compile(trigger *CompiledRule, value string) (*CompiledRule, err
 
 	cr.Traces = trigger.Traces
 
-	// Create a simple atom
-	a := NewAtomRule("$a", t.Operand, t.Operator, value)
-	cr.AddAtom(&a)
+	// Create a simple FieldMatch
+	cr.AddMatcher(NewFieldMatch("$a", t.Operand, t.Operator, value))
 
 	// Create the condition only matching the atom previously created
 	//cr.Conditions = NewCondGroup(&ConditionElement{Operand: "$a"})
