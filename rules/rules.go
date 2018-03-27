@@ -28,6 +28,7 @@ type CompiledRule struct {
 	EventIDs    datastructs.SyncedSet
 	AtomMap     datastructs.SyncedMap
 	Traces      []*Trace
+	Disabled    bool // Way to deal with no container issue
 	Conditions  *ConditionElement
 	containers  *ContainerDB
 }
@@ -80,6 +81,11 @@ func (er *CompiledRule) metaMatch(event *evtx.GoEvtxMap) bool {
 
 //Match returns whether the CompiledRule matches the EVTX event
 func (er *CompiledRule) Match(event *evtx.GoEvtxMap) bool {
+	// Check if the rule is disabled, if yes match returns false
+	if er.Disabled {
+		return false
+	}
+
 	if !er.metaMatch(event) {
 		return false
 	}
@@ -212,17 +218,22 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 			rule.containers = containers
 			if rule.containers != nil {
 				if !rule.containers.Has(cm.Container) {
-					log.Infof("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+					log.Warnf("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+					rule.Disabled = true
+					log.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
+					return &rule, nil
 				}
 			} else {
-				log.Infof("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+				log.Warnf("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+				rule.Disabled = true
+				log.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
+				return &rule, nil
 			}
 			cm.SetContainerDB(rule.containers)
 			rule.AddMatcher(cm)
 		default:
 			return nil, fmt.Errorf("Unknown match statement: %s", p)
 		}
-
 	}
 
 	// Parse the condition
@@ -245,10 +256,9 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	// Check for unknown operands and display warnings
 	for iOp := range rule.AtomMap.Keys() {
 		if !operandsSet.Contains(iOp.(string)) {
-			log.Infof("Rule \"%s\" operand %s not used", rule.Name, iOp.(string))
+			log.Warnf("Rule \"%s\" operand %s not used", rule.Name, iOp.(string))
 		}
 	}
-
 	return &rule, nil
 }
 

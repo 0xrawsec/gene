@@ -1,6 +1,6 @@
 RELEASE=$(GOPATH)/release
 MAIN_BASEN_SRC=gene
-VERSION=v1.2
+VERSION=v1.3
 # Strips symbols and dwarf to make binary smaller
 OPTS=-ldflags "-s -w"
 ifdef DEBUG

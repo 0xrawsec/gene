@@ -123,8 +123,9 @@ func NewEngine(trace bool) (e Engine) {
 	e.trace = trace
 	e.markedTraces = datastructs.NewSyncedSet()
 	e.containers = rules.NewContainers()
-	e.containers.AddNewContainer("blacklist")
-	e.containers.AddNewContainer("whitelist")
+	// We do not create the containers so that they are not considered as empty
+	//e.containers.AddNewContainer("blacklist")
+	//e.containers.AddNewContainer("whitelist")
 	return
 }
 

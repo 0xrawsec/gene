@@ -142,7 +142,7 @@ func printInfo(writer io.Writer) {
 const (
 	exitFail    = 1
 	exitSuccess = 0
-	version     = "1.2"
+	version     = "1.3"
 	copyright   = "Gene Copyright (C) 2017 RawSec SARL (@0xrawsec)"
 	license     = "License GPLv3: This program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions;"
 )
@@ -188,7 +188,7 @@ func main() {
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
 	flag.StringVar(&whitelist, "wl", whitelist, "File containing values to insert into the whitelist")
-	flag.StringVar(&blacklist, "bl", whitelist, "File containing values to insert into the blacklist")
+	flag.StringVar(&blacklist, "bl", blacklist, "File containing values to insert into the blacklist")
 	flag.IntVar(&criticalityThresh, "c", criticalityThresh, "Criticality treshold. Prints only if criticality above threshold")
 	flag.IntVar(&jobs, "jobs", jobs, "Number of parallel jobs to run. It may result in events printed in different order than provided. If <= 0 takes all available processors")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
