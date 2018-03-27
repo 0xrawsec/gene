@@ -44,36 +44,6 @@ Here are some of our motivations:
     * Unusual DLL loaded by a given process
     * ...
 
-# Command line
-
-```
-gene: gene -r RULES [OPTIONS] FILES...
-  -all
-    	Print all events (even the one not matching rules)
-  -c int
-    	Criticality treshold. Prints only if criticality above threshold
-  -cpuprofile string
-    	Profile CPU
-  -d	Enable debug mode
-  -e value
-    	Rule file extensions to load (default [.gen .gene])
-  -j	Input is in JSON format
-  -n value
-    	Rule names to match against (comma separated)
-  -progress
-    	Show progress
-  -r string
-    	Rule file or directory
-  -t value
-    	Tags to search for (comma separated)
-  -template
-    	Prints a rule template
-  -trace
-    	Tells the engine to use the trace function of the rules
-  -ts
-    	Show the timestamp of the event when printing
-```
-
 # Rule Example
 
 In order not to add an additional layer of parsing to our tool, we decided to rely
@@ -125,7 +95,6 @@ Considering the following Sysmon event (converted to JSON)
     }
   }
 }
-
 ```
 
 We can build up an example rule to match it.
