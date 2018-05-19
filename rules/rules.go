@@ -165,6 +165,19 @@ func (jr *Rule) IsDisabled() bool {
 	return jr.Meta.Disable
 }
 
+//ReplaceTemplate the regexp templates found in the matches
+func (jr *Rule) ReplaceTemplate(tm *TemplateMap) {
+	for i, match := range jr.Matches {
+		jr.Matches[i] = tm.ReplaceAll(match)
+	}
+}
+
+//JSON returns the JSON string corresponding to the rule
+func (jr *Rule) JSON() (string, error) {
+	b, err := json.Marshal(jr)
+	return string(b), err
+}
+
 //Compile a JSONRule into CompiledRule
 func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	var err error

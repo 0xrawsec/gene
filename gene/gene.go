@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reducer"
 	"rules"
 	"runtime"
 	"runtime/pprof"
@@ -137,12 +138,54 @@ func printInfo(writer io.Writer) {
 
 }
 
+var (
+	criticalityPath = evtx.Path("/Event/GeneInfo/Criticality")
+	sigPath         = evtx.Path("/Event/GeneInfo/Signature")
+	computerPath    = evtx.Path("/Event/System/Computer")
+)
+
+func reduce() {
+	reducer := reducer.NewReducer()
+	wg := sync.WaitGroup{}
+	events := jsonEventGenerator()
+	for i := 0; i < jobs; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for e := range events {
+				computer, err := e.GetString(&computerPath)
+				if err != nil {
+					continue
+				}
+
+				iArray, err := e.Get(&sigPath)
+				if err != nil {
+					continue
+				}
+
+				crit, err := e.Get(&criticalityPath)
+				if err != nil {
+					continue
+				}
+
+				sigs := make([]string, 0, len((*iArray).([]interface{})))
+				for _, s := range (*iArray).([]interface{}) {
+					sigs = append(sigs, s.(string))
+				}
+				reducer.Update(computer, int((*crit).(float64)), sigs)
+			}
+		}()
+	}
+	wg.Wait()
+	reducer.Print()
+}
+
 /////////////////////////////// Main //////////////////////////////////
 
 const (
 	exitFail    = 1
 	exitSuccess = 0
-	version     = "1.3"
+	version     = "1.4"
 	copyright   = "Gene Copyright (C) 2017 RawSec SARL (@0xrawsec)"
 	license     = "License GPLv3: This program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions;"
 )
@@ -158,11 +201,13 @@ var (
 	verify        bool
 	listTags      bool
 	versionFlag   bool
+	reduceFlag    bool
 	cpuprofile    string
 	tags          []string
 	names         []string
 	tagsVar       args.ListVar
 	namesVar      args.ListVar
+	dumpsVar      args.ListVar
 
 	criticalityThresh int
 
@@ -172,6 +217,8 @@ var (
 	rulesPath string
 	ruleExts  = args.ListVar{".gen", ".gene"}
 	jobs      = 1
+
+	tplExt = ".tpl"
 )
 
 func main() {
@@ -185,6 +232,7 @@ func main() {
 	flag.BoolVar(&verify, "verify", verify, "Verify the rules and exit.")
 	flag.BoolVar(&listTags, "lt", listTags, "List tags of rules loaded into the engine")
 	flag.BoolVar(&versionFlag, "version", versionFlag, "Show version information and exit")
+	flag.BoolVar(&reduceFlag, "reduce", reduceFlag, "Aggregate the results of already processed events and outputs condensed information")
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
 	flag.StringVar(&whitelist, "wl", whitelist, "File containing values to insert into the whitelist")
@@ -194,6 +242,7 @@ func main() {
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Var(&tagsVar, "t", "Tags to search for (comma separated)")
 	flag.Var(&namesVar, "n", "Rule names to match against (comma separated)")
+	flag.Var(&dumpsVar, "dump", "Dumps the rules matching the regex provided (comma separated) and then exits. Usefull to verify if regexp template is correctly applied.")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s: %[1]s -r RULES [OPTIONS] FILES...\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
@@ -222,6 +271,22 @@ func main() {
 		os.Exit(exitSuccess)
 	}
 
+	// Handling job parameter
+	// If jobs is not in affordable range
+	if jobs <= 0 || jobs > runtime.NumCPU() {
+		jobs = runtime.NumCPU()
+
+	}
+	// If trace mode is enabled, it is better to process events in order
+	if trace {
+		jobs = 1
+	}
+
+	if reduceFlag {
+		reduce()
+		os.Exit(exitSuccess)
+	}
+
 	// Display rule template and exit if template flag
 	if template {
 		b, err := json.Marshal(rules.NewRule())
@@ -242,6 +307,8 @@ func main() {
 	setRuleExts := datastructs.NewSyncedSet()
 	tags = []string(tagsVar)
 	names = []string(namesVar)
+	// Enable rule dumping on engine side
+	e.SetDumpRaw(len(dumpsVar) > 0)
 
 	// Validation
 	if len(tags) > 0 && len(names) > 0 {
@@ -280,10 +347,29 @@ func main() {
 	}
 	log.Infof("Size of blacklist container: %d", e.BlacklistLen())
 
-	// Loading the rules
+	// Loading the rules and templates
 	realPath, err := fsutil.ResolveLink(rulesPath)
 	if err != nil {
 		log.LogErrorAndExit(err, exitFail)
+	}
+
+	// Loading the templates first
+	templateDir := realPath
+	if fsutil.IsFile(realPath) {
+		templateDir = filepath.Dir(realPath)
+	}
+	for wi := range fswalker.Walk(templateDir) {
+		for _, fi := range wi.Files {
+			ext := filepath.Ext(fi.Name())
+			templateFile := filepath.Join(wi.Dirpath, fi.Name())
+			if ext == tplExt {
+				log.Infof("Loading regexp templates from file: %s", templateFile)
+				err := e.LoadTemplate(templateFile)
+				if err != nil {
+					log.Errorf("Error loading %s: %s", templateFile, err)
+				}
+			}
+		}
 	}
 
 	// Handle both rules argument as file or directory
@@ -312,6 +398,7 @@ func main() {
 	default:
 		log.LogErrorAndExit(fmt.Errorf("Cannot resolve %s to file or dir", rulesPath), exitFail)
 	}
+
 	// Show message about successfuly compiled rules
 	log.Infof("Loaded %d rules", e.Count())
 
@@ -325,6 +412,16 @@ func main() {
 		os.Exit(exitSuccess)
 	}
 
+	// If we want to dump rules
+	if len(dumpsVar) > 0 {
+		for _, nameRegex := range dumpsVar {
+			for json := range e.GetRawRule(nameRegex) {
+				fmt.Println(json)
+			}
+		}
+		os.Exit(exitSuccess)
+	}
+
 	// If we list the tags available
 	if listTags {
 		fmt.Println("Tags of rules loaded:")
@@ -334,17 +431,6 @@ func main() {
 			fmt.Println(fmt.Sprintf("\t%s", t))
 		}
 		os.Exit(exitSuccess)
-	}
-
-	// Handling job parameter
-	// If jobs is not in affordable range
-	if jobs <= 0 || jobs > runtime.NumCPU() {
-		jobs = runtime.NumCPU()
-
-	}
-	// If trace mode is enabled, it is better to process events in order
-	if trace {
-		jobs = 1
 	}
 
 	// Scanning the files

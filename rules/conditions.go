@@ -209,6 +209,7 @@ func Compute(ce *ConditionElement, operands OperandReader) bool {
 	nce, ret := compute(false, ce, operands)
 	for nce != nil {
 		nce, ret = compute(ret, nce, operands)
+		log.Debug("We go out")
 	}
 	return ret
 }
@@ -230,6 +231,7 @@ func compute(computed bool, ce *ConditionElement, operands OperandReader) (*Cond
 		log.Debug("Any computation should finish here")
 		return nil, computed
 	}
+	log.Debugf("computed:%t ce: %v", computed, ce)
 
 	switch ce.Type {
 
@@ -242,6 +244,14 @@ func compute(computed bool, ce *ConditionElement, operands OperandReader) (*Cond
 					return compute(!v, ce.Next.Next, operands)
 				}
 				nce, v := compute(false, ce.Next, operands)
+				// before going on with negation we have to be sure that the
+				// next element is a level down otherwise it means we are
+				// in a parenthesis
+				if nce != nil {
+					if nce.Level > ce.Level {
+						nce, v = compute(v, nce, operands)
+					}
+				}
 				return compute(!v, nce, operands)
 			}
 			panic(fmt.Sprintf("Unkown Operand: %s", ce.Next.Operand))
@@ -275,6 +285,7 @@ func compute(computed bool, ce *ConditionElement, operands OperandReader) (*Cond
 		}
 
 	case TypeOperand:
+		log.Debugf("Computing operand: %s", ce.Operand)
 		if v, ok := operands.Read(ce.Operand); ok {
 			if ce.Next != nil && ce.Next.Level != ce.Level {
 				return ce.Next, v

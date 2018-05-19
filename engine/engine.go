@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"regexp"
 	"rules"
 	"sync"
 
@@ -97,15 +98,18 @@ func (e ErrRuleExist) Error() string {
 //Engine defines the engine managing several rules
 type Engine struct {
 	sync.RWMutex
-	rules    []*rules.CompiledRule
-	tags     map[string][]int // will be map[tag][]int with index referencing rule in rules
-	names    map[string]int   // will be map[name][]int with index referencing rule in rules
-	channels map[string][]int
-	eventIDs map[int64][]int
+	templates *rules.TemplateMap
+	rules     []*rules.CompiledRule
+	rawRules  map[string]string
+	tags      map[string][]int // will be map[tag][]int with index referencing rule in rules
+	names     map[string]int   // will be map[name][]int with index referencing rule in rules
+	channels  map[string][]int
+	eventIDs  map[int64][]int
 	// Filters used to choose which rule to compile in case of match by tag/name
 	tagFilters  datastructs.SyncedSet
 	nameFilters datastructs.SyncedSet
 	trace       bool
+	dumpRaw     bool
 	// Used to mark the traces and not duplicate those
 	markedTraces datastructs.SyncedSet
 	containers   *rules.ContainerDB
@@ -113,7 +117,9 @@ type Engine struct {
 
 //NewEngine creates a new engine
 func NewEngine(trace bool) (e Engine) {
+	e.templates = rules.NewTemplateMap()
 	e.rules = make([]*rules.CompiledRule, 0)
+	e.rawRules = make(map[string]string)
 	e.tags = make(map[string][]int)
 	e.names = make(map[string]int)
 	e.channels = make(map[string][]int)
@@ -127,6 +133,11 @@ func NewEngine(trace bool) (e Engine) {
 	//e.containers.AddNewContainer("blacklist")
 	//e.containers.AddNewContainer("whitelist")
 	return
+}
+
+//SetDumpRaw setter for dumpRaw flag
+func (e *Engine) SetDumpRaw(value bool) {
+	e.dumpRaw = value
 }
 
 //SetFilters sets the filters to use in the engine
@@ -198,6 +209,20 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 			log.Infof("Rule \"%s\" has been disabled", jRule.Name)
 			continue
 		}
+
+		//We replace the regexp templates in the rule
+		jRule.ReplaceTemplate(e.templates)
+
+		// We store the rule in raw rules
+		if e.dumpRaw {
+			json, err := jRule.JSON()
+			if err == nil {
+				e.rawRules[jRule.Name] = json
+			} else {
+				e.rawRules[jRule.Name] = "Rule encoding issue"
+			}
+		}
+
 		// We compile the rule
 		er, err := jRule.Compile(e.containers)
 		if err != nil {
@@ -212,9 +237,34 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 	return nil
 }
 
+//GetRawRule returns the raw rule according to its name
+//it is convenient to get the rule after template replacement
+func (e *Engine) GetRawRule(regex string) (cs chan string) {
+	cs = make(chan string)
+	nameRegexp := regexp.MustCompile(regex)
+	go func() {
+		defer close(cs)
+		for name := range e.rawRules {
+			if nameRegexp.MatchString(name) {
+				cs <- e.rawRules[name]
+			}
+		}
+	}()
+	return cs
+}
+
 //LoadReader loads rule from a ReadSeeker
 func (e *Engine) LoadReader(reader io.ReadSeeker) error {
 	return e.loadReader(reader)
+}
+
+//LoadTemplate loads a template from a file
+func (e *Engine) LoadTemplate(templatefile string) error {
+	f, err := os.Open(templatefile)
+	if err != nil {
+		return err
+	}
+	return e.templates.LoadReader(f)
 }
 
 //Load loads a rule file into the current engine

@@ -27,7 +27,7 @@ var (
 )
 
 func init() {
-	//log.InitLogger(log.LDebug)
+	log.InitLogger(log.LDebug)
 }
 
 func TestAtomRule(t *testing.T) {
@@ -90,6 +90,8 @@ var (
 		"(!($a and $b) and $b)":                          false,
 		"(!($a and $b) and $b) or (($a and !$b) and $a)": true,
 		"!(!($a || $b)) && !(!$a and !$b)":               true,
+		"!(($b and $a) or $a)":                           false,
+		"!($a or ($b and $a))":                           false,
 	}
 )
 

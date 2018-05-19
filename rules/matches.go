@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
@@ -20,7 +21,7 @@ var (
 	//ErrUnkOperator error to return when an operator is not known
 	ErrUnkOperator = fmt.Errorf("Unknown operator")
 	//Regexp and its helper to ease AtomRule parsing
-	fieldMatchRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=))\s+'(?P<value>.*)'`)
+	fieldMatchRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>))\s+'(?P<value>.*)'`)
 	fieldMatchRegexpHelper = submatch.NewSubmatchHelper(fieldMatchRegexp)
 )
 
@@ -33,6 +34,7 @@ type FieldMatch struct {
 	compiled bool
 	path     *evtx.GoEvtxPath
 	cRule    *regexp.Regexp
+	iValue   interface{} // interface to store Value in another form as string
 }
 
 // IsFieldMatch returns true if s compiliant with FieldMatch syntax
@@ -64,14 +66,15 @@ func ParseFieldMatch(rule string) (ar FieldMatch, err error) {
 	// Compile the rule into a Regexp
 	err = ar.Compile()
 	if err != nil {
-		return ar, fmt.Errorf("Failed to compile \"%s\" to a regexp", rule)
+		log.Debugf("Compiling error in \"%s\": %s", rule, err)
+		return ar, fmt.Errorf("Failed to compile \"%s\"", rule)
 	}
 	return ar, err
 }
 
 // NewFieldMatch creates a new FieldMatch rule from data
 func NewFieldMatch(name, operand, operator, value string) *FieldMatch {
-	return &FieldMatch{name, operand, operator, value, false, nil, nil}
+	return &FieldMatch{name, operand, operator, value, false, nil, nil, 0}
 }
 
 // Compile  AtomRule into a regexp
@@ -83,6 +86,9 @@ func (f *FieldMatch) Compile() error {
 			f.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(f.Value)))
 		case "~=":
 			f.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", f.Value))
+		case "&=", ">", "<":
+			log.Debugf("f.Value: %s", f.Value)
+			f.iValue, err = strconv.ParseInt(f.Value, 0, 64)
 		}
 		p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", f.Operand))
 		f.path = &p
@@ -105,7 +111,26 @@ func (f *FieldMatch) Match(se *evtx.GoEvtxMap) bool {
 	f.Compile()
 	s, err := se.GetString(f.path)
 	if err == nil {
-		return f.cRule.MatchString(s)
+		switch f.Operator {
+		case "&=", ">", "<":
+			rValue, err := strconv.ParseInt(s, 0, 64)
+			if err != nil {
+				return false
+			}
+			switch f.Operator {
+			case "&=":
+				flag := f.iValue.(int64)
+				if (flag & rValue) == flag {
+					return true
+				}
+			case ">":
+				return rValue > f.iValue.(int64)
+			case "<":
+				return rValue < f.iValue.(int64)
+			}
+		default:
+			return f.cRule.MatchString(s)
+		}
 	}
 	return false
 }
