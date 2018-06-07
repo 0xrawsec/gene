@@ -216,6 +216,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     rule_cnt = 0
+    rule_names = set([])
     for path in args.rules:
         for f in crawl(path, SIGMA_EXTS):
             skeleton = None
@@ -226,6 +227,12 @@ if __name__ == "__main__":
                         continue
                 gene = sigma2gene(sigma_rule, skeleton, f)
                 if gene is not None:
+                    if gene["Name"] in rule_names:
+                        i = 2
+                        while "{0}#{1}".format(gene["Name"],i) in rule_names:
+                            i += 1
+                        gene["Name"] = "{0}#{1}".format(gene["Name"],i)
                     print(json.dumps(gene))
+                    rule_names.add(gene["Name"])
                     rule_cnt += 1
     log("[+] Rules converted with success: {0}".format(rule_cnt))
