@@ -45,7 +45,7 @@ Here are some of our motivations:
     * ...
 
 # Documentation
-Please visit: https://rawsec.lu/doc/gene/1.3/
+Please visit: https://rawsec.lu/doc/gene/1.4/
 
 # Notes
 
