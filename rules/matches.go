@@ -21,7 +21,7 @@ var (
 	//ErrUnkOperator error to return when an operator is not known
 	ErrUnkOperator = fmt.Errorf("Unknown operator")
 	//Regexp and its helper to ease AtomRule parsing
-	fieldMatchRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>))\s+'(?P<value>.*)'`)
+	fieldMatchRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`)
 	fieldMatchRegexpHelper = submatch.NewSubmatchHelper(fieldMatchRegexp)
 )
 
@@ -77,6 +77,16 @@ func NewFieldMatch(name, operand, operator, value string) *FieldMatch {
 	return &FieldMatch{name, operand, operator, value, false, nil, nil, 0}
 }
 
+func parseToFloat(s string) (f float64, err error) {
+	if i, err := strconv.ParseInt(s, 0, 64); err == nil {
+		return float64(i), err
+	}
+	if f, err := strconv.ParseFloat(s, 64); err == nil {
+		return f, err
+	}
+	return 0, fmt.Errorf("Unknown type to parse")
+}
+
 // Compile  AtomRule into a regexp
 func (f *FieldMatch) Compile() error {
 	var err error
@@ -86,9 +96,10 @@ func (f *FieldMatch) Compile() error {
 			f.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(f.Value)))
 		case "~=":
 			f.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", f.Value))
-		case "&=", ">", "<":
-			log.Debugf("f.Value: %s", f.Value)
+		case "&=":
 			f.iValue, err = strconv.ParseInt(f.Value, 0, 64)
+		case ">", "<", ">=", "<=":
+			f.iValue, err = parseToFloat(f.Value)
 		}
 		p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", f.Operand))
 		f.path = &p
@@ -112,21 +123,33 @@ func (f *FieldMatch) Match(se *evtx.GoEvtxMap) bool {
 	s, err := se.GetString(f.path)
 	if err == nil {
 		switch f.Operator {
-		case "&=", ">", "<":
+		case "&=":
+			// This operator treats values as integers
 			rValue, err := strconv.ParseInt(s, 0, 64)
 			if err != nil {
 				return false
 			}
+			flag := f.iValue.(int64)
+			if (flag & rValue) == flag {
+				return true
+			}
+
+		case ">", "<", "<=", ">=":
+			// This operator treats values as floats
+			rValue, err := parseToFloat(s)
+			if err != nil {
+				return false
+			}
+
 			switch f.Operator {
-			case "&=":
-				flag := f.iValue.(int64)
-				if (flag & rValue) == flag {
-					return true
-				}
 			case ">":
-				return rValue > f.iValue.(int64)
+				return rValue > f.iValue.(float64)
+			case ">=":
+				return rValue >= f.iValue.(float64)
 			case "<":
-				return rValue < f.iValue.(int64)
+				return rValue < f.iValue.(float64)
+			case "<=":
+				return rValue <= f.iValue.(float64)
 			}
 		default:
 			return f.cRule.MatchString(s)
