@@ -215,12 +215,13 @@ func Compute(ce *ConditionElement, operands OperandReader) bool {
 }
 
 func nextCondEltLowerLevel(ce *ConditionElement) *ConditionElement {
-	e := ce
-	for e.Next != nil {
-		if e.Next.Level < e.Level {
+	var e *ConditionElement
+	// original condition element
+	oe := ce
+	for e = oe; e.Next != nil; e = e.Next {
+		if e.Next.Level < oe.Level {
 			return e.Next
 		}
-		e = e.Next
 	}
 	return e.Next
 }
@@ -277,6 +278,7 @@ func compute(computed bool, ce *ConditionElement, operands OperandReader) (*Cond
 			// Shortcut if computed is true
 			if computed {
 				nce := nextCondEltLowerLevel(ce)
+				log.Debugf("Shortcut taken: ce=%s nce=%s", ce, nce)
 				return nce, true
 			}
 			nce, ret := compute(false, ce.Next, operands)

@@ -144,8 +144,8 @@ var (
 	computerPath    = evtx.Path("/Event/System/Computer")
 )
 
-func reduce() {
-	reducer := reducer.NewReducer()
+func reduce(e *engine.Engine) {
+	reducer := reducer.NewReducer(e)
 	wg := sync.WaitGroup{}
 	events := jsonEventGenerator()
 	for i := 0; i < jobs; i++ {
@@ -163,16 +163,12 @@ func reduce() {
 					continue
 				}
 
-				crit, err := e.Get(&criticalityPath)
-				if err != nil {
-					continue
-				}
-
 				sigs := make([]string, 0, len((*iArray).([]interface{})))
 				for _, s := range (*iArray).([]interface{}) {
 					sigs = append(sigs, s.(string))
 				}
-				reducer.Update(computer, int((*crit).(float64)), sigs)
+
+				reducer.Update(computer, sigs)
 			}
 		}()
 	}
@@ -280,11 +276,6 @@ func main() {
 	// If trace mode is enabled, it is better to process events in order
 	if trace {
 		jobs = 1
-	}
-
-	if reduceFlag {
-		reduce()
-		os.Exit(exitSuccess)
 	}
 
 	// Display rule template and exit if template flag
@@ -409,6 +400,12 @@ func main() {
 			log.LogErrorAndExit(fmt.Errorf("Rule(s) compilation (%d files failed): FAILURE", cntFailure), exitFail)
 		}
 		log.Infof("Rule(s) compilation: SUCCESSFUL")
+		os.Exit(exitSuccess)
+	}
+
+	// If we want to reduce
+	if reduceFlag {
+		reduce(&e)
 		os.Exit(exitSuccess)
 	}
 

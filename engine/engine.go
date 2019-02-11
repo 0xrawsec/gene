@@ -253,6 +253,13 @@ func (e *Engine) GetRawRule(regex string) (cs chan string) {
 	return cs
 }
 
+func (e *Engine) GetCRuleByName(name string) (r *rules.CompiledRule) {
+	if idx, ok := e.names[name]; ok {
+		return e.rules[idx]
+	}
+	return
+}
+
 //LoadReader loads rule from a ReadSeeker
 func (e *Engine) LoadReader(reader io.ReadSeeker) error {
 	return e.loadReader(reader)
