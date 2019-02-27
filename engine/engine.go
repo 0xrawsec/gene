@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"regexp"
 	"rules"
 	"sync"
@@ -15,6 +16,8 @@ import (
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/crypto/data"
 	"github.com/0xrawsec/golang-utils/datastructs"
+	"github.com/0xrawsec/golang-utils/fsutil"
+	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
 )
 
@@ -76,6 +79,11 @@ const (
 
 var (
 	geneInfoPath = evtx.Path("/Event/GeneInfo")
+
+	// DefaultRuleExtensions default extensions for rule files
+	DefaultRuleExtensions = datastructs.NewInitSyncedSet(".gen", ".gene")
+	// DefaultTplExtensions default extensions for template files
+	DefaultTplExtensions = datastructs.NewInitSyncedSet(".tpl")
 )
 
 // generates a random string that can be used as rulename
@@ -113,6 +121,9 @@ type Engine struct {
 	// Used to mark the traces and not duplicate those
 	markedTraces datastructs.SyncedSet
 	containers   *rules.ContainerDB
+	// Control allowed file extensions
+	ruleExtensions datastructs.SyncedSet
+	tplExtensions  datastructs.SyncedSet
 }
 
 //NewEngine creates a new engine
@@ -132,6 +143,8 @@ func NewEngine(trace bool) (e Engine) {
 	// We do not create the containers so that they are not considered as empty
 	//e.containers.AddNewContainer("blacklist")
 	//e.containers.AddNewContainer("whitelist")
+	e.ruleExtensions = DefaultRuleExtensions
+	e.tplExtensions = DefaultTplExtensions
 	return
 }
 
@@ -272,6 +285,66 @@ func (e *Engine) LoadTemplate(templatefile string) error {
 		return err
 	}
 	return e.templates.LoadReader(f)
+}
+
+// LoadDirectory loads all the templates and rules inside a directory
+func (e *Engine) LoadDirectory(rulesDir string) error {
+	// Loading the rules
+	realPath, err := fsutil.ResolveLink(rulesDir)
+	if err != nil {
+		return err
+	}
+
+	// Loading the templates first, we assume templates are located under rulesDir
+	templateDir := realPath
+	if fsutil.IsFile(realPath) {
+		templateDir = filepath.Dir(realPath)
+	}
+
+	if fsutil.IsDir(templateDir) {
+		for wi := range fswalker.Walk(templateDir) {
+			for _, fi := range wi.Files {
+				ext := filepath.Ext(fi.Name())
+				templateFile := filepath.Join(wi.Dirpath, fi.Name())
+				if e.tplExtensions.Contains(ext) {
+					log.Debugf("Loading regexp templates from file: %s", templateFile)
+					err := e.LoadTemplate(templateFile)
+					if err != nil {
+						log.Errorf("Error loading %s: %s", templateFile, err)
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	// Handle both rules argument as file or directory
+	switch {
+	case fsutil.IsFile(realPath):
+		err := e.Load(realPath)
+		if err != nil {
+			log.Errorf("Error loading %s: %s", realPath, err)
+			return err
+		}
+
+	case fsutil.IsDir(realPath):
+		for wi := range fswalker.Walk(realPath) {
+			for _, fi := range wi.Files {
+				ext := filepath.Ext(fi.Name())
+				rulefile := filepath.Join(wi.Dirpath, fi.Name())
+				log.Debug(ext)
+				// Check if the file extension is in the list of valid rule extension
+				if e.ruleExtensions.Contains(ext) {
+					err := e.Load(rulefile)
+					if err != nil {
+						log.Errorf("Error loading %s: %s", rulefile, err)
+						return err
+					}
+				}
+			}
+		}
+	}
+	return nil
 }
 
 //Load loads a rule file into the current engine

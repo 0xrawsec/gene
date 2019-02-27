@@ -388,6 +388,15 @@ func TestComplexRule(t *testing.T) {
 	}
 }
 
+func TestLoadDirectory(t *testing.T) {
+	e := engine.NewEngine(false)
+	err := e.LoadDirectory("./")
+	if err != nil {
+		t.Errorf("Failed to load rules in directory: %s", err)
+	}
+	t.Logf("Loaded %d rules", e.Count())
+}
+
 /////////////////////////////// Benchmarks /////////////////////////////////////
 
 func BenchmarkLoadThousand(b *testing.B) {
