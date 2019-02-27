@@ -22,7 +22,7 @@ var (
 	ErrUnkOperator = fmt.Errorf("Unknown operator")
 	//Regexp and its helper to ease AtomRule parsing
 	fieldMatchRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`)
-	fieldMatchRegexpHelper = submatch.NewSubmatchHelper(fieldMatchRegexp)
+	fieldMatchRegexpHelper = submatch.NewHelper(fieldMatchRegexp)
 )
 
 // FieldMatch is the smallest rule we can have
@@ -49,8 +49,8 @@ func ParseFieldMatch(rule string) (ar FieldMatch, err error) {
 		return ar, fmt.Errorf("Syntax error in \"%s\"", rule)
 	}
 	// Continues
-	sm := fieldMatchRegexp.FindSubmatch([]byte(rule))
-	err = fieldMatchRegexpHelper.Unmarshal(&sm, &ar)
+	fieldMatchRegexpHelper.Prepare([]byte(rule))
+	err = fieldMatchRegexpHelper.Unmarshal(&ar)
 	// it is normal not to set private fields
 	if fse, ok := err.(submatch.FieldNotSetError); ok {
 		switch fse.Field {
@@ -166,7 +166,7 @@ func (f *FieldMatch) String() string {
 
 var (
 	atomContainerMatchRegexp = regexp.MustCompile(`(?P<name>\$\w+):\s+extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>.*)\s*\)\s+in\s+(?P<container>\w+)`)
-	atomContainerMatchHelper = submatch.NewSubmatchHelper(atomContainerMatchRegexp)
+	atomContainerMatchHelper = submatch.NewHelper(atomContainerMatchRegexp)
 )
 
 // ContainerMatch atomic extract structure
@@ -178,7 +178,7 @@ type ContainerMatch struct {
 	Container      string `regexp:"container"`
 	path           *evtx.GoEvtxPath
 	compiled       bool
-	subMatchHelper *submatch.SubmatchHelper
+	subMatchHelper *submatch.Helper
 	cExtract       *regexp.Regexp
 	containerDB    *ContainerDB
 }
@@ -189,8 +189,8 @@ func ParseContainerMatch(extract string) (ae *ContainerMatch, err error) {
 	if !atomContainerMatchRegexp.MatchString(extract) {
 		return nil, fmt.Errorf("Syntax error in \"%s\"", extract)
 	}
-	sm := atomContainerMatchRegexp.FindSubmatch([]byte(extract))
-	atomContainerMatchHelper.Unmarshal(&sm, ae)
+	atomContainerMatchHelper.Prepare([]byte(extract))
+	atomContainerMatchHelper.Unmarshal(ae)
 	// We prepend with a dolar so that it is complient with the syntax already defined
 	p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", ae.Operand))
 	ae.path = &p
@@ -220,7 +220,7 @@ func (c *ContainerMatch) Compile() (err error) {
 	if !c.compiled {
 		c.cExtract, err = regexp.Compile(c.Regexp)
 		if err == nil {
-			smh := submatch.NewSubmatchHelper(c.cExtract)
+			smh := submatch.NewHelper(c.cExtract)
 			c.subMatchHelper = &smh
 		}
 		c.compiled = true
@@ -230,8 +230,8 @@ func (c *ContainerMatch) Compile() (err error) {
 
 // ExtractFromString uses the AtomExtract to extract a substring from s
 func (c *ContainerMatch) ExtractFromString(s string) (string, bool) {
-	sm := c.cExtract.FindSubmatch([]byte(s))
-	extract, err := c.subMatchHelper.GetBytes(c.RexName, &sm)
+	c.subMatchHelper.Prepare([]byte(s))
+	extract, err := c.subMatchHelper.GetBytes(c.RexName)
 	if err == nil {
 		return string(extract), true
 	}

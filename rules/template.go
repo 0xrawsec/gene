@@ -15,7 +15,7 @@ import (
 
 var (
 	templateRegexp       = regexp.MustCompile(`^\s*(?P<name>[^\s]+)\s*:\s*(?P<value>'.*?'\s*$)`)
-	templateRegexpHelper = submatch.NewSubmatchHelper(templateRegexp)
+	templateRegexpHelper = submatch.NewHelper(templateRegexp)
 )
 
 //Template structure definition
@@ -29,8 +29,8 @@ func ParseTemplate(tplString string) (tpl Template, err error) {
 	if !templateRegexp.MatchString(tplString) {
 		return tpl, fmt.Errorf("Syntax error in \"%s\"", tplString)
 	}
-	sm := templateRegexp.FindSubmatch([]byte(tplString))
-	err = templateRegexpHelper.Unmarshal(&sm, &tpl)
+	templateRegexpHelper.Prepare([]byte(tplString))
+	err = templateRegexpHelper.Unmarshal(&tpl)
 	tpl.Value = strings.Trim(tpl.Value, "'")
 	return
 }

@@ -19,7 +19,7 @@ const (
 
 var (
 	traceRE       = regexp.MustCompile(`^(?P<eventids>([0-9,]*)|(any|ANY|\*)):(?P<channels>[^:.]*):\s*(?P<operand>\w+)\s+(?P<operator>(=|~=))\s+(?P<value>\w+)$`)
-	traceREHelper = submatch.NewSubmatchHelper(traceRE)
+	traceREHelper = submatch.NewHelper(traceRE)
 )
 
 type stringTrace struct {
@@ -41,8 +41,8 @@ func parseTrace(name, trace string) (*Trace, error) {
 	if !traceRE.MatchString(trace) {
 		return nil, fmt.Errorf("Invalid trace syntax")
 	}
-	sm := traceRE.FindSubmatch([]byte(trace))
-	if err := traceREHelper.Unmarshal(&sm, &st); err != nil {
+	traceREHelper.Prepare([]byte(trace))
+	if err := traceREHelper.Unmarshal(&st); err != nil {
 		log.Debug(err)
 		return nil, err
 	}

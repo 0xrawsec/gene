@@ -13,7 +13,7 @@ var (
 	ar          = rules.NewFieldMatch("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
 	rulesString = [...]string{
 		`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
-		`$test: "Hashes" = "c'est un super test"`,
+		`$test: "Hashes" = 'c'est un super test'`,
 		`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`}
 	conditions = []string{
 		`$a or $b`,
@@ -27,7 +27,7 @@ var (
 )
 
 func init() {
-	log.InitLogger(log.LDebug)
+	//log.InitLogger(log.LDebug)
 }
 
 func TestAtomRule(t *testing.T) {
@@ -71,29 +71,29 @@ var (
 	operands = rules.OperandMap{"$a": true, "$b": false}
 	// Key: condition Value: expected result according to operands
 	conditionMap = map[string]bool{
-		"$a":                                                                                     true,
-		"$b":                                                                                     false,
-		"!$a":                                                                                    false,
-		"!$b":                                                                                    true,
-		"$a or $b":                                                                               true,
-		"$a and $b":                                                                              false,
-		"($a and !$b)":                                                                           true,
-		"((($a and !$b)))":                                                                       true,
-		"$a and ($b or !$b)":                                                                     true,
-		"!($a or $b) or $a":                                                                      true,
-		"$a && !$b && !$a":                                                                       false,
-		"!($a and $b or !($a and $b))":                                                           false,
-		"!($a or $b) and ($a or ($b and !$a)) and !$a":                                           false,
-		"!$b or (!($a or $b) and ($a or ($b and !$a)))":                                          true,
-		"(!($a or $b) and ($a or ($b and !$a)))":                                                 false,
-		"(($a and !$b) and $a)":                                                                  true,
-		"(!($a and $b) and $b)":                                                                  false,
-		"(!($a and $b) and $b) or (($a and !$b) and $a)":                                         true,
-		"!(!($a || $b)) && !(!$a and !$b)":                                                       true,
-		"!(($b and $a) or $a)":                                                                   false,
-		"!($a or ($b and $a))":                                                                   false,
-		"(($a or $b) and $b)":                                                                    false,
-		"$a or $b or ( $b and ($a or $b) and $b)":                                                true,
+		"$a":                           true,
+		"$b":                           false,
+		"!$a":                          false,
+		"!$b":                          true,
+		"$a or $b":                     true,
+		"$a and $b":                    false,
+		"($a and !$b)":                 true,
+		"((($a and !$b)))":             true,
+		"$a and ($b or !$b)":           true,
+		"!($a or $b) or $a":            true,
+		"$a && !$b && !$a":             false,
+		"!($a and $b or !($a and $b))": false,
+		"!($a or $b) and ($a or ($b and !$a)) and !$a":   false,
+		"!$b or (!($a or $b) and ($a or ($b and !$a)))":  true,
+		"(!($a or $b) and ($a or ($b and !$a)))":         false,
+		"(($a and !$b) and $a)":                          true,
+		"(!($a and $b) and $b)":                          false,
+		"(!($a and $b) and $b) or (($a and !$b) and $a)": true,
+		"!(!($a || $b)) && !(!$a and !$b)":               true,
+		"!(($b and $a) or $a)":                           false,
+		"!($a or ($b and $a))":                           false,
+		"(($a or $b) and $b)":                            false,
+		"$a or $b or ( $b and ($a or $b) and $b)":        true,
 		"$a and ($a or $b) and !($a or $b or $a or $b or $a or $b or $a or (($a or $b) and $b))": false,
 	}
 )
