@@ -2,8 +2,9 @@ package main
 
 import (
 	"bytes"
-	"rules"
 	"testing"
+
+	"github.com/0xrawsec/gene/rules"
 )
 
 var (

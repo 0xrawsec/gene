@@ -2,11 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"engine"
 	"fmt"
-	"rules"
 	"testing"
 
+	"github.com/0xrawsec/gene/engine"
+	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/log"
 )

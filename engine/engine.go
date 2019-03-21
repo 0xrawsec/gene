@@ -1,18 +1,18 @@
 package engine
 
 import (
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"globals"
 	"io"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"regexp"
-	"rules"
 	"sync"
 
+	"github.com/0xrawsec/gene/globals"
+	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/crypto/data"
 	"github.com/0xrawsec/golang-utils/datastructs"

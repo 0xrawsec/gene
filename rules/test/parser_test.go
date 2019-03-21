@@ -1,9 +1,9 @@
 package main
 
 import (
-	"rules"
 	"testing"
 
+	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/log"
 )

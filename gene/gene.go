@@ -2,20 +2,20 @@ package main
 
 import (
 	"encoding/json"
-	"engine"
 	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"reducer"
-	"rules"
 	"runtime"
 	"runtime/pprof"
 	"sort"
 	"sync"
 	"time"
 
+	"github.com/0xrawsec/gene/engine"
+	"github.com/0xrawsec/gene/reducer"
+	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/args"
 	"github.com/0xrawsec/golang-utils/datastructs"

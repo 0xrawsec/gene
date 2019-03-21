@@ -3,8 +3,8 @@ package rules
 import (
 	"encoding/json"
 	"fmt"
-	"globals"
 
+	"github.com/0xrawsec/gene/globals"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/log"

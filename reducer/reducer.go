@@ -1,10 +1,10 @@
 package reducer
 
 import (
-	"engine"
 	"fmt"
 	"sync"
 
+	"github.com/0xrawsec/gene/engine"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/stats"
 )

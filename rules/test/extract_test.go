@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"rules"
 	"testing"
 
+	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 )
 

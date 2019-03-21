@@ -6,10 +6,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/0xrawsec/golang-utils/readers"
-
 	"github.com/0xrawsec/golang-utils/datastructs"
-
+	"github.com/0xrawsec/golang-utils/readers"
 	"github.com/0xrawsec/golang-utils/regexp/submatch"
 )
 
