@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"encoding/json"
@@ -146,7 +146,7 @@ func TestLoad(t *testing.T) {
 		],
 	"Condition": "$a"
 	}`
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -166,7 +166,7 @@ func TestMatch(t *testing.T) {
 	"Condition": "$a"
 	}`
 
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -204,7 +204,7 @@ func TestMatchByTag(t *testing.T) {
 	}
 	`
 
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	tags := []string{"foo"}
 	e.SetFilters([]string{}, tags)
 
@@ -234,7 +234,7 @@ func TestSimpleRule(t *testing.T) {
 	"Condition": "$a"
 	}
 	`
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -279,7 +279,7 @@ func TestNotOrRule(t *testing.T) {
 	"Condition": "!($a or $b)"
 	}
 	`
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -324,7 +324,7 @@ func TestNotAndRule(t *testing.T) {
 	"Condition": "!($a and !$b)"
 	}
 	`
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -373,7 +373,7 @@ func TestComplexRule(t *testing.T) {
 	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and !$f"
 	}
 	`
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -389,7 +389,7 @@ func TestComplexRule(t *testing.T) {
 }
 
 func TestLoadDirectory(t *testing.T) {
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	err := e.LoadDirectory("./")
 	if err != nil {
 		t.Errorf("Failed to load rules in directory: %s", err)
@@ -400,7 +400,7 @@ func TestLoadDirectory(t *testing.T) {
 /////////////////////////////// Benchmarks /////////////////////////////////////
 
 func BenchmarkLoadThousand(b *testing.B) {
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	if err := e.Load(bigRuleFile); err != nil {
 		b.Logf("Loading failed: %s", err)
 		b.FailNow()

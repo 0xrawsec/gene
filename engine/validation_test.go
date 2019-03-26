@@ -1,4 +1,4 @@
-package main
+package engine
 
 import (
 	"engine"
@@ -51,7 +51,7 @@ var (
 )
 
 func TestValidation(t *testing.T) {
-	e := engine.NewEngine(false)
+	e := NewEngine(false)
 	for k, v := range corruptedRules {
 		err := e.LoadReader(NewSeekBuffer([]byte(v)))
 		if err != nil {

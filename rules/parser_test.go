@@ -1,16 +1,15 @@
-package main
+package rules
 
 import (
 	"testing"
 
-	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/log"
 )
 
 var (
-	testFile    = "sysmon.evtx"
-	ar          = rules.NewFieldMatch("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
+	testFile    = "./test/sysmon.evtx"
+	ar          = NewFieldMatch("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
 	rulesString = [...]string{
 		`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
 		`$test: "Hashes" = 'c'est un super test'`,
@@ -46,7 +45,7 @@ func TestAtomRule(t *testing.T) {
 
 func TestParseAtomRule(t *testing.T) {
 	for _, rule := range rulesString {
-		ar, err := rules.ParseFieldMatch(rule)
+		ar, err := ParseFieldMatch(rule)
 		if err != nil {
 			t.Log(err)
 			t.Fail()
@@ -58,7 +57,7 @@ func TestParseAtomRule(t *testing.T) {
 func TestParseCondition(t *testing.T) {
 	for _, cond := range conditions {
 		t.Log(cond)
-		tokenizer := rules.NewTokenizer(cond)
+		tokenizer := NewTokenizer(cond)
 		cond, err := tokenizer.ParseCondition(0, 0)
 		if err != nil {
 			t.FailNow()
@@ -68,7 +67,7 @@ func TestParseCondition(t *testing.T) {
 }
 
 var (
-	operands = rules.OperandMap{"$a": true, "$b": false}
+	operands = OperandMap{"$a": true, "$b": false}
 	// Key: condition Value: expected result according to operands
 	conditionMap = map[string]bool{
 		"$a":                           true,
@@ -100,7 +99,7 @@ var (
 
 func TestCondition(t *testing.T) {
 	for strCond, expectRes := range conditionMap {
-		tokenizer := rules.NewTokenizer(strCond)
+		tokenizer := NewTokenizer(strCond)
 		cond, err := tokenizer.ParseCondition(0, 0)
 		if err != nil {
 			t.Logf("%s Error:%v", &cond, err)
@@ -108,7 +107,7 @@ func TestCondition(t *testing.T) {
 		}
 		t.Logf("Condition: %s", strCond)
 		t.Logf("Parsed Condition: %s", &cond)
-		result := rules.Compute(&cond, operands)
+		result := Compute(&cond, operands)
 		t.Logf("Cond: %s With: %v => Result: %t", &cond, operands, result)
 		if result != expectRes {
 			t.Log("Unexpected result")
@@ -118,7 +117,7 @@ func TestCondition(t *testing.T) {
 }
 
 func TestEvtxRule(t *testing.T) {
-	er := rules.NewCompiledRule()
+	er := NewCompiledRule()
 	er.EventIDs.Add(int(1), int(7))
 
 	f, err := evtx.New(testFile)
@@ -128,14 +127,14 @@ func TestEvtxRule(t *testing.T) {
 	}
 
 	as := `$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`
-	a, err := rules.ParseFieldMatch(as)
+	a, err := ParseFieldMatch(as)
 	if err != nil {
 		t.Logf("Failed to parse: %s", as)
 		t.Fail()
 	}
 
 	bs := `$b: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FB'`
-	b, err := rules.ParseFieldMatch(bs)
+	b, err := ParseFieldMatch(bs)
 	if err != nil {
 		t.Logf("Failed to parse: %s", bs)
 		t.Fail()
@@ -145,7 +144,7 @@ func TestEvtxRule(t *testing.T) {
 	er.AddMatcher(&b)
 
 	condStr := "$b or ($a and $y)"
-	tokenizer := rules.NewTokenizer(condStr)
+	tokenizer := NewTokenizer(condStr)
 	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil {
 		t.Logf("Failed to parse: %s", condStr)
@@ -186,7 +185,7 @@ func TestLoadRule(t *testing.T) {
 		],
 	"Condition": "$c"
 	}`
-	er, err := rules.Load([]byte(ruleStr), nil)
+	er, err := Load([]byte(ruleStr), nil)
 	if err != nil {
 		t.Logf("Error parsing string rule: %s", err)
 		t.FailNow()
@@ -224,9 +223,9 @@ func TestBlacklist(t *testing.T) {
 		],
 	"Condition": "$inBlacklist"
 	}`
-	containers := rules.NewContainers()
+	containers := NewContainers()
 	containers.AddToContainer(black, "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
-	er, err := rules.Load([]byte(ruleStr), containers)
+	er, err := Load([]byte(ruleStr), containers)
 	if err != nil {
 		t.Logf("Error parsing string rule: %s", err)
 		t.FailNow()

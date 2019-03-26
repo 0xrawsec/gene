@@ -1,10 +1,8 @@
-package main
+package rules
 
 import (
 	"bytes"
 	"testing"
-
-	"github.com/0xrawsec/gene/rules"
 )
 
 var (
@@ -26,14 +24,14 @@ suspicious: '(?i:(rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|certuti
 func TestParseTemplate(t *testing.T) {
 	for _, match := range toReplace {
 		for _, tplStr := range templates {
-			tpl, err := rules.ParseTemplate(tplStr)
+			tpl, err := ParseTemplate(tplStr)
 			if err != nil {
 				t.Log(err)
 				t.Fail()
 			}
 			match = tpl.Replace(match)
 		}
-		_, err := rules.ParseFieldMatch(match)
+		_, err := ParseFieldMatch(match)
 		if err != nil {
 			t.Errorf("Failed to compile \"%s\": %s", match, err)
 			t.Fail()
@@ -44,9 +42,9 @@ func TestParseTemplate(t *testing.T) {
 }
 
 func TestTemplateMap(t *testing.T) {
-	tm := rules.NewTemplateMap()
+	tm := NewTemplateMap()
 	for _, tplStr := range templates {
-		tpl, err := rules.ParseTemplate(tplStr)
+		tpl, err := ParseTemplate(tplStr)
 		if err != nil {
 			t.Error(err)
 			t.Fail()
@@ -56,7 +54,7 @@ func TestTemplateMap(t *testing.T) {
 
 	for _, s := range toReplace {
 		match := tm.ReplaceAll(s)
-		_, err := rules.ParseFieldMatch(match)
+		_, err := ParseFieldMatch(match)
 		if err != nil {
 			t.Errorf("Failed to compile \"%s\": %s", match, err)
 			t.Fail()
@@ -67,7 +65,7 @@ func TestTemplateMap(t *testing.T) {
 }
 
 func TestLoadTemplateMap(t *testing.T) {
-	tm := rules.NewTemplateMap()
+	tm := NewTemplateMap()
 	t.Log(templatesFile)
 	r := bytes.NewBufferString(templatesFile)
 	err := tm.LoadReader(r)
@@ -78,7 +76,7 @@ func TestLoadTemplateMap(t *testing.T) {
 
 	for _, s := range toReplace {
 		match := tm.ReplaceAll(s)
-		_, err := rules.ParseFieldMatch(match)
+		_, err := ParseFieldMatch(match)
 		if err != nil {
 			t.Errorf("Failed to compile \"%s\": %s", match, err)
 			t.Fail()

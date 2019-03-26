@@ -295,9 +295,9 @@ func (e *Engine) LoadTemplate(templatefile string) error {
 }
 
 // LoadContainer loads every line found in reader into the container
-func (e *Engine) LoadContainer(container string, reader io.Reader) error {
+func (e *Engine) LoadContainer(container string, reader io.Reader) {
 	for line := range readers.Readlines(reader) {
-		e.AddToContainer(container, line)
+		e.AddToContainer(container, string(line))
 	}
 }
 

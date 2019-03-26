@@ -1,14 +1,10 @@
-package main
+package rules
 
 import (
 	"encoding/json"
 	"fmt"
 	"testing"
 
-	"github.com/0xrawsec/gene/engine"
-	"github.com/0xrawsec/gene/rules"
-	"github.com/0xrawsec/golang-evtx/evtx"
-	"github.com/0xrawsec/golang-utils/log"
 )
 
 func init() {
@@ -52,13 +48,13 @@ var (
 	"Condition": "$a"
 	}`
 
-	trigger, _ = rules.Load([]byte(triggerRule), nil)
+	trigger, _ = Load([]byte(triggerRule), nil)
 )
 
 func TestParseTrace(t *testing.T) {
 	for i, st := range traces {
 		trName := fmt.Sprintf("Trace#%d", i)
-		if tr, err := rules.ParseTrace(trName, st); err != nil {
+		if tr, err := ParseTrace(trName, st); err != nil {
 			t.Log(err)
 			t.Fail()
 		} else {
@@ -70,7 +66,7 @@ func TestParseTrace(t *testing.T) {
 func TestCompileTrace(t *testing.T) {
 	for i, st := range traces {
 		trName := fmt.Sprintf("Trace#%d", i)
-		if tr, err := rules.ParseTrace(trName, st); err != nil {
+		if tr, err := ParseTrace(trName, st); err != nil {
 			t.Log(err)
 			t.Fail()
 		} else {
@@ -83,14 +79,14 @@ func TestCompileTrace(t *testing.T) {
 	}
 }
 
-func TestRuleWithTrace(t *testing.T) {
+/*func TestRuleWithTrace(t *testing.T) {
 	ef, err := evtx.New(testFile)
 	if err != nil {
 		t.Log(err)
 		t.Fail()
 	}
 	e := engine.NewEngine(true)
-	if trigger, err := rules.Load([]byte(triggerRule), nil); err != nil {
+	if trigger, err := Load([]byte(triggerRule), nil); err != nil {
 		t.Log(err)
 		t.Fail()
 	} else {
@@ -103,4 +99,4 @@ func TestRuleWithTrace(t *testing.T) {
 			t.Log(string(evtx.ToJSON(event)))
 		}
 	}
-}
+    }*/
