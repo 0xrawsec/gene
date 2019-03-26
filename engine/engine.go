@@ -177,6 +177,11 @@ func (e *Engine) Tags() []string {
 	return tn
 }
 
+// AddToContainer adds a value to a given container and creates it if needed
+func (e *Engine) AddToContainer(container, value string) {
+	e.containers.AddToContainer(container, value)
+}
+
 // Blacklist insert a value to be blacklisted
 func (e *Engine) Blacklist(value string) {
 	e.containers.AddToContainer(blacklistContainer, value)

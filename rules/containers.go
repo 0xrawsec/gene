@@ -35,7 +35,8 @@ func (c *ContainerDB) AddContainer(name string, container *datastructs.SyncedSet
 	return ErrContainerAlreadyExists
 }
 
-//AddToContainer adds a new value into a container
+// AddToContainer adds a new value into a container and creates a
+// new container if it does not exist yet
 func (c *ContainerDB) AddToContainer(name string, values ...interface{}) {
 	if !c.Has(name) {
 		c.AddNewContainer(name)
