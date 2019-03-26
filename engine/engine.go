@@ -19,6 +19,7 @@ import (
 	"github.com/0xrawsec/golang-utils/fsutil"
 	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
+	"github.com/0xrawsec/golang-utils/readers"
 )
 
 /////////////////////////// Utility functions //////////////////////////////////
@@ -271,6 +272,7 @@ func (e *Engine) GetRawRule(regex string) (cs chan string) {
 	return cs
 }
 
+// GetCRuleByName gets a compile rule by its name
 func (e *Engine) GetCRuleByName(name string) (r *rules.CompiledRule) {
 	if idx, ok := e.names[name]; ok {
 		return e.rules[idx]
@@ -290,6 +292,13 @@ func (e *Engine) LoadTemplate(templatefile string) error {
 		return err
 	}
 	return e.templates.LoadReader(f)
+}
+
+// LoadContainer loads every line found in reader into the container
+func (e *Engine) LoadContainer(container string, reader io.Reader) error {
+	for line := range readers.Readlines(reader) {
+		e.AddToContainer(container, line)
+	}
 }
 
 // LoadDirectory loads all the templates and rules inside a directory
