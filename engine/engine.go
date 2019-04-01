@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"sync"
 
 	"github.com/0xrawsec/gene/globals"
@@ -263,7 +264,12 @@ func (e *Engine) GetRawRule(regex string) (cs chan string) {
 	nameRegexp := regexp.MustCompile(regex)
 	go func() {
 		defer close(cs)
+		sorted := make([]string, len(e.rawRules))
 		for name := range e.rawRules {
+			sorted = append(sorted, name)
+		}
+		sort.Strings(sorted)
+		for _, name := range sorted {
 			if nameRegexp.MatchString(name) {
 				cs <- e.rawRules[name]
 			}
