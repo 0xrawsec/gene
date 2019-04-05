@@ -264,7 +264,7 @@ func (e *Engine) GetRawRule(regex string) (cs chan string) {
 	nameRegexp := regexp.MustCompile(regex)
 	go func() {
 		defer close(cs)
-		sorted := make([]string, len(e.rawRules))
+		sorted := make([]string, 0, len(e.rawRules))
 		for name := range e.rawRules {
 			sorted = append(sorted, name)
 		}
