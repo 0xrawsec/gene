@@ -31,6 +31,8 @@ type CompiledRule struct {
 	Disabled    bool // Way to deal with no container issue
 	Conditions  *ConditionElement
 	containers  *ContainerDB
+	// ATT&CK information
+	Attck []Attack
 }
 
 //NewCompiledRule initializes and returns an EvtxRule object
@@ -40,6 +42,7 @@ func NewCompiledRule() (er CompiledRule) {
 	er.Computers = datastructs.NewSyncedSet()
 	er.EventIDs = datastructs.NewSyncedSet()
 	er.AtomMap = datastructs.NewSyncedMap()
+	er.Attck = make([]Attack, 0)
 	return
 }
 
@@ -125,12 +128,21 @@ func (oe *EventOpReader) Read(operand string) (value bool, ok bool) {
 // Temporary: we use JSON for easy parsing right now, lets see if we need to
 // switch to another format in the future
 
+// Attack structure definiton to encode information from ATT&CK Mitre
+type Attack struct {
+	ID          string
+	Tactic      string
+	Description string `json:",omitempty"`
+	Reference   string
+}
+
 //MetaSection defines the section holding the metadata of the rule
 type MetaSection struct {
 	EventIDs    []int64 // GoEvtxMap.EventID returns int64
 	Channels    []string
 	Computers   []string
 	Traces      []string
+	Attack      []Attack `json:"ATTACK"`
 	Criticality int
 	Disable     bool
 }
@@ -154,6 +166,7 @@ func NewRule() Rule {
 			Channels:    make([]string, 0),
 			Computers:   make([]string, 0),
 			Traces:      make([]string, 0),
+			Attack:      make([]Attack, 0),
 			Criticality: 0},
 		Matches:   make([]string, 0),
 		Condition: ""}
@@ -185,6 +198,8 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 
 	rule.Name = jr.Name
 	rule.Criticality = globals.Bound(jr.Meta.Criticality)
+	// Pass ATT&CK information to compiled rule
+	rule.Attck = jr.Meta.Attack
 	for _, t := range jr.Tags {
 		rule.Tags.Add(t)
 	}

@@ -2,7 +2,12 @@ package reducer
 
 import (
 	"fmt"
+	"math"
 	"sync"
+	"time"
+
+	"github.com/0xrawsec/golang-utils/datastructs"
+	"github.com/0xrawsec/golang-utils/log"
 
 	"github.com/0xrawsec/gene/engine"
 	"github.com/0xrawsec/golang-evtx/evtx"
@@ -11,22 +16,25 @@ import (
 
 //////////////////////////// Reducer ////////////////////////////////
 
-// ReducedStats structrur definition
+// ReducedStats structrure definition
 type ReducedStats struct {
 	Computer              string
 	CntEvents             int
 	CntBySig              map[string]int
-	UniqSigs              []string
+	UniqSigs              []string `json:"Signatures"`
 	SumRuleCrit           int
 	SumEvtCrit            int
 	TotalSigs             int
 	AvgEvtsCrit           float64
 	AvgSigCrit            float64
 	StdDevCrit            float64
-	SigDiv                float64
+	SigDiv                float64 `json:"SignatureDiversity"`
 	CntUniqSigs           int
-	CntUniqByAvgCritBySig int     `json:"Metric0"`
-	AvgEvtCritBySigDiv    float64 `json:"Metric1"`
+	CntUniqByAvgCritBySig int     `json:"AugmentedSigCriticality"`
+	AvgEvtCritBySigDiv    float64 `json:"WeightedEventsCriticality"`
+	StartTime             time.Time
+	MedianTime            time.Time
+	StopTime              time.Time
 	sigCrits              []float64
 	evtCrits              []float64
 	eng                   *engine.Engine
@@ -34,12 +42,27 @@ type ReducedStats struct {
 
 // NewReducedStats structure
 func NewReducedStats(e *engine.Engine, computer string) *ReducedStats {
-	return &ReducedStats{Computer: computer, CntBySig: make(map[string]int), UniqSigs: make([]string, 0), sigCrits: make([]float64, 0), eng: e}
+	return &ReducedStats{Computer: computer,
+		CntBySig: make(map[string]int),
+		UniqSigs: make([]string, 0),
+		sigCrits: make([]float64, 0),
+		eng:      e}
 }
 
 // Update ReducedStats with data
-func (rs *ReducedStats) Update(matches []string) {
+func (rs *ReducedStats) Update(t time.Time, matches []string) {
 	evtCrit := 0
+
+	// Set StartTime
+	if t.Before(rs.StartTime) || rs.StartTime.IsZero() {
+		rs.StartTime = t
+	}
+
+	// Set StopTime
+	if t.After(rs.StopTime) {
+		rs.StopTime = t
+	}
+
 	for _, m := range matches {
 		rs.CntBySig[m]++
 		rs.TotalSigs++
@@ -61,30 +84,33 @@ func (rs *ReducedStats) Update(matches []string) {
 	}
 
 	rs.CntEvents++
-	//rs.SumCriticalities += criticality
-	//rs.criticalities = append(rs.criticalities, float64(criticality))
 }
 
 // Finalize the computation of the statistics
-func (rs *ReducedStats) Finalize() {
+func (rs *ReducedStats) Finalize(cntSigs int) {
 	rs.AvgEvtsCrit = stats.Truncate(float64(rs.SumEvtCrit)/float64(rs.CntEvents), 2)
 
 	rs.AvgSigCrit = stats.Truncate(float64(rs.SumRuleCrit)/float64(rs.TotalSigs), 2)
 	rs.CntUniqSigs = len(rs.CntBySig)
-	rs.CntUniqByAvgCritBySig = rs.CntUniqSigs * int(rs.AvgSigCrit)
+	rs.CntUniqByAvgCritBySig = rs.CntUniqSigs * int(math.Round(rs.AvgSigCrit))
 
 	// Compute Standard Dev
 	rs.StdDevCrit = stats.Truncate(stats.StdDev(rs.sigCrits), 2)
-	rs.SigDiv = float64(rs.CntUniqSigs) * 100 / float64(rs.eng.Count())
-	rs.AvgEvtCritBySigDiv = stats.Truncate((rs.AvgEvtsCrit * rs.SigDiv), 2)
+
+	// The diversity is relative to the number of signatures observed
+	// accross the dataset
+	rs.SigDiv = stats.Truncate(float64(rs.CntUniqSigs)*100/float64(cntSigs), 2)
+	rs.AvgEvtCritBySigDiv = math.Round((rs.AvgEvtsCrit * rs.SigDiv))
 
 	for s := range rs.CntBySig {
 		rs.UniqSigs = append(rs.UniqSigs, s)
 	}
+
+	rs.MedianTime = rs.StartTime.Add((rs.StopTime.Sub(rs.StartTime)) / 2)
 }
 
 func (rs ReducedStats) String() string {
-	rs.Finalize()
+	//rs.Finalize()
 	return string(evtx.ToJSON(rs))
 }
 
@@ -101,19 +127,34 @@ func NewReducer(e *engine.Engine) *Reducer {
 }
 
 // Update a ReducedStats stored in Reducer with data
-func (r *Reducer) Update(computer string, matches []string) {
+func (r *Reducer) Update(t time.Time, computer string, matches []string) {
 	r.Lock()
 	if _, ok := r.m[computer]; !ok {
 		r.m[computer] = NewReducedStats(r.e, computer)
 	}
 	rs := r.m[computer]
-	rs.Update(matches)
+	rs.Update(t, matches)
 	r.Unlock()
+}
+
+// CountUniqSigs counts all the uniq signatures seen in the reduced stats
+func (r *Reducer) CountUniqSigs() int {
+	uniqSigs := datastructs.NewSyncedSet()
+	for comp := range r.m {
+		for sig := range r.m[comp].CntBySig {
+			uniqSigs.Add(sig)
+		}
+	}
+	return uniqSigs.Len()
 }
 
 // Print prints out all the informations stored in the Reducer
 func (r *Reducer) Print() {
+	cnt := r.CountUniqSigs()
+	log.Infof("cnt:%d", cnt)
+	//cnt := r.e.Count()
 	for computer := range r.m {
+		r.m[computer].Finalize(cnt)
 		fmt.Println(r.m[computer])
 	}
 }

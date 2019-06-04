@@ -120,6 +120,7 @@ type Engine struct {
 	nameFilters datastructs.SyncedSet
 	trace       bool
 	dumpRaw     bool
+	showAttck   bool
 	// Used to mark the traces and not duplicate those
 	markedTraces datastructs.SyncedSet
 	containers   *rules.ContainerDB
@@ -163,6 +164,11 @@ func (e *Engine) SetFilters(names, tags []string) {
 	for _, t := range tags {
 		e.tagFilters.Add(t)
 	}
+}
+
+// SetShowAttck sets engine flag to display ATT&CK information in matching events
+func (e *Engine) SetShowAttck(value bool) {
+	e.showAttck = value
 }
 
 //Count returns the number of rules successfuly loaded
@@ -442,11 +448,13 @@ func (e *Engine) AddTraceRules(ruleList ...*rules.CompiledRule) {
 func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) {
 	traces := make([]*rules.CompiledRule, 0)
 	names = make([]string, 0)
+	attcks := make([]rules.Attack, 0)
 
 	e.RLock()
 	for _, r := range e.rules {
 		if r.Match(event) {
 			names = append(names, r.Name)
+			attcks = append(attcks, r.Attck...)
 			criticality += r.Criticality
 			// If we decide to trace the other events matching the rules
 			if e.trace {
@@ -483,6 +491,12 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 	genInfo := map[string]interface{}{
 		"Signature":   names,
 		"Criticality": criticality}
+
+	// Update ATT&CK information if needed
+	if e.showAttck && len(attcks) > 0 {
+		genInfo["ATTACK"] = attcks
+	}
+
 	event.Set(&geneInfoPath, genInfo)
 	return
 }

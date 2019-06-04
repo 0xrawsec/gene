@@ -2,7 +2,6 @@ package engine
 
 import (
 	"encoding/json"
-	"engine"
 	"fmt"
 	"io"
 	"os"
@@ -130,6 +129,14 @@ func init() {
 	}
 }
 
+func prettyJSON(i interface{}) string {
+	b, err := json.MarshalIndent(i, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
+}
+
 func openEvtx(path string) *evtx.File {
 	f, err := evtx.New(path)
 	if err != nil {
@@ -176,6 +183,44 @@ func TestMatch(t *testing.T) {
 		t.Fail()
 	} else {
 		t.Log(m)
+	}
+}
+
+func TestMatchAttck(t *testing.T) {
+	rule := `{
+	"Name": "ShouldMatch",
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
+		"ATTACK": [
+			{
+				"ID": "T666",
+				"Tactic": "Blow everything up",
+				"Reference": "https://attack.mitre.org/"
+			},
+			{
+				"ID": "S4242",
+				"Description": "Super nasty software",
+				"Reference": "https://attack.mitre.org/"
+			}
+		]	
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}`
+
+	e := NewEngine(false)
+	e.SetShowAttck(true)
+	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+		t.Logf("Loading failed: %s", err)
+		t.FailNow()
+	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
+	if m, _ := e.Match(&event); len(m) == 0 {
+		t.Fail()
+	} else {
+		t.Log(prettyJSON(event))
 	}
 }
 

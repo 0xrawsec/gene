@@ -168,7 +168,7 @@ func reduce(e *engine.Engine) {
 					sigs = append(sigs, s.(string))
 				}
 
-				reducer.Update(computer, sigs)
+				reducer.Update(e.TimeCreated(), computer, sigs)
 			}
 		}()
 	}
@@ -198,6 +198,7 @@ var (
 	listTags      bool
 	versionFlag   bool
 	reduceFlag    bool
+	showAttckFlag bool
 	cpuprofile    string
 	tags          []string
 	names         []string
@@ -229,6 +230,7 @@ func main() {
 	flag.BoolVar(&listTags, "lt", listTags, "List tags of rules loaded into the engine")
 	flag.BoolVar(&versionFlag, "version", versionFlag, "Show version information and exit")
 	flag.BoolVar(&reduceFlag, "reduce", reduceFlag, "Aggregate the results of already processed events and outputs condensed information")
+	flag.BoolVar(&showAttckFlag, "a", showAttckFlag, "Show Mitre ATT&CK information in matching events")
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
 	flag.StringVar(&whitelist, "wl", whitelist, "File containing values to insert into the whitelist")
@@ -280,7 +282,9 @@ func main() {
 
 	// Display rule template and exit if template flag
 	if template {
-		b, err := json.Marshal(rules.NewRule())
+		r := rules.NewRule()
+		r.Meta.Attack = append(r.Meta.Attack, rules.Attack{})
+		b, err := json.Marshal(r)
 		if err != nil {
 			log.LogErrorAndExit(err, exitFail)
 		}
@@ -300,6 +304,8 @@ func main() {
 	names = []string(namesVar)
 	// Enable rule dumping on engine side
 	e.SetDumpRaw(len(dumpsVar) > 0)
+	// Enable showing Mitre ATT&CK information
+	e.SetShowAttck(showAttckFlag)
 
 	// Validation
 	if len(tags) > 0 && len(names) > 0 {
