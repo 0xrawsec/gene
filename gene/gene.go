@@ -134,7 +134,7 @@ func evtxEventGenerator() (ec chan *evtx.GoEvtxMap) {
 }
 
 func printInfo(writer io.Writer) {
-	fmt.Fprintf(writer, "Version: %s\nCopyright: %s\nLicense: %s\n\n", version, copyright, license)
+	fmt.Fprintf(writer, "Version: %s\nCommit: %s\nCopyright: %s\nLicense: %s\n\n", version, commitID, copyright, license)
 
 }
 
@@ -181,9 +181,8 @@ func reduce(e *engine.Engine) {
 const (
 	exitFail    = 1
 	exitSuccess = 0
-	//version     = "1.5.0"
-	copyright = "Gene Copyright (C) 2017 RawSec SARL (@0xrawsec)"
-	license   = "License GPLv3: This program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions;"
+	copyright   = "Gene Copyright (C) 2017 RawSec SARL (@0xrawsec)"
+	license     = "License GPLv3: This program comes with ABSOLUTELY NO WARRANTY.\nThis is free software, and you are welcome to redistribute it under certain conditions;"
 )
 
 var (

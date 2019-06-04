@@ -45,7 +45,10 @@ Here are some of our motivations:
     * ...
 
 # Documentation
-Please visit: https://rawsec.lu/doc/gene/1.4/
+In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/1.4/
+
+Where to find rules ? [there](https://github.com/0xrawsec/gene-rules)
+
 
 # Changelog
 
