@@ -47,7 +47,8 @@ Here are some of our motivations:
 # Documentation
 Please visit: https://rawsec.lu/doc/gene/1.4/
 
-# Notes
+# Changelog
 
-This project is quite new and may still have little bugs, so do not hesitate to
-open issues for those.
+## v1.5.0
+  * Support for Mitre ATT&CK framework
+  * Changes in the reducer function
