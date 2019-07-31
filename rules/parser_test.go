@@ -13,7 +13,9 @@ var (
 	rulesString = [...]string{
 		`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
 		`$test: "Hashes" = 'c'est un super test'`,
-		`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`}
+		`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
+		`$indmatch: SourceProcessGuid = @TargetProcessGuid`,
+	}
 	conditions = []string{
 		`$a or $b`,
 		`$a and ( $b or $c )`,
@@ -173,7 +175,7 @@ func TestLoadRule(t *testing.T) {
 	"Name": "Test",
 	"Tags": ["Hello", "World"],
 	"Meta": {
-		"EventID": [1,7],
+		"EventIDs": [1,7],
 		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
 		"Computer": ["Test"],
 		"Action": "warn"
@@ -212,7 +214,7 @@ func TestBlacklist(t *testing.T) {
 	"Name": "Blacklisted",
 	"Tags": ["Hello", "World"],
 	"Meta": {
-		"EventID": [1,7],
+		"EventIDs": [1,7],
 		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
 		"Computer": ["Test"],
 		"Action": "warn"
@@ -239,5 +241,52 @@ func TestBlacklist(t *testing.T) {
 		count++
 	}
 	t.Logf("Scanned events: %d", count)
+}
 
+func TestIndirectMatch(t *testing.T) {
+	eventCnt, matchCnt := 0, 0
+
+	f, err := evtx.New(testFile)
+	if err != nil {
+		log.LogError(err)
+		t.FailNow()
+	}
+
+	ruleStr := `{
+	"Name": "IndirectMatch",
+	"Meta": {
+		"EventIDs": [1, 6, 7],
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
+		"Computer": ["Test"],
+		"Action": "warn"
+		},
+	"Matches": [
+		"$dummyIndirect: Hashes = @Hashes"
+		],
+	"Condition": "$dummyIndirect"
+	}`
+	er, err := Load([]byte(ruleStr), nil)
+	if err != nil {
+		t.Logf("Error parsing string rule: %s", err)
+		t.FailNow()
+	}
+
+	count := 0
+	for e := range f.FastEvents() {
+		switch e.EventID() {
+		case 1, 6, 7:
+			eventCnt++
+		}
+		if er.Match(e) {
+			matchCnt++
+			t.Log(string(evtx.ToJSON(e)))
+		}
+		count++
+	}
+
+	if eventCnt != matchCnt {
+		t.Errorf("Unexpected number of matched events expected %d VS %d matched", eventCnt, matchCnt)
+	}
+
+	t.Logf("Scanned events: %d", count)
 }

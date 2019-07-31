@@ -141,8 +141,8 @@ type MetaSection struct {
 	EventIDs    []int64 // GoEvtxMap.EventID returns int64
 	Channels    []string
 	Computers   []string
-	Traces      []string
-	Attack      []Attack `json:"ATTACK"`
+	Traces      []string `json:",omitempty"`
+	Attack      []Attack `json:"ATTACK,omitempty"`
 	Criticality int
 	Disable     bool
 }

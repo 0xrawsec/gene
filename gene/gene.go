@@ -29,7 +29,8 @@ import (
 //////////////////////////// Utilities //////////////////////////////
 
 func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
-	if n, crit := e.Match(event); len(n) > 0 {
+	// We print only if we are not in test mode
+	if n, crit := e.Match(event); len(n) > 0 && !test {
 		// Prints out the events with timestamp or not
 		if showTimestamp && crit >= criticalityThresh {
 			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
@@ -38,7 +39,7 @@ func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
 				fmt.Println(string(evtx.ToJSON(event)))
 			}
 		}
-	} else if allEvents {
+	} else if allEvents || test {
 		if showTimestamp {
 			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
 		} else {
@@ -94,7 +95,6 @@ func jsonEventGenerator() (ec chan *evtx.GoEvtxMap) {
 			}
 			//log.Infof("Count Rules Used (loaded + generated): %d", e.Count())
 		}
-		log.Infof("Count Event Scanned: %d", eventCnt)
 	}()
 	return
 }
@@ -128,7 +128,6 @@ func evtxEventGenerator() (ec chan *evtx.GoEvtxMap) {
 
 			}
 		}
-		log.Infof("Count Event Scanned: %d", eventCnt)
 	}()
 	return
 }
@@ -198,6 +197,7 @@ var (
 	versionFlag   bool
 	reduceFlag    bool
 	showAttckFlag bool
+	test          bool
 	cpuprofile    string
 	tags          []string
 	names         []string
@@ -230,6 +230,7 @@ func main() {
 	flag.BoolVar(&versionFlag, "version", versionFlag, "Show version information and exit")
 	flag.BoolVar(&reduceFlag, "reduce", reduceFlag, "Aggregate the results of already processed events and outputs condensed information")
 	flag.BoolVar(&showAttckFlag, "a", showAttckFlag, "Show Mitre ATT&CK information in matching events")
+	flag.BoolVar(&test, "test", test, "Test mode. Prints non matching events and returns a non zero status code if not all events match.")
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
 	flag.StringVar(&whitelist, "wl", whitelist, "File containing values to insert into the whitelist")
@@ -456,5 +457,25 @@ func main() {
 	}
 	// Waiting all the jobs to finish
 	wg.Wait()
+
 	log.Infof("Count Rules Used (loaded + generated): %d", e.Count())
+	log.Infof("Event Scanned: %d", e.Stats.Scanned)
+	log.Infof("Positives: %d", e.Stats.Positives)
+
+	// if we were in test mode
+	if test {
+		if e.Count() == 0 {
+			log.Error("Test: UNSUCCESSFUL")
+			log.Infof("No rule loaded")
+			os.Exit(exitFail)
+		}
+		if e.Stats.Scanned != e.Stats.Positives {
+			log.Error("Test: UNSUCCESSFUL")
+			log.Infof("Some events did not match any rule, events not passing the test have been printed")
+			os.Exit(exitFail)
+		} else {
+			log.Infof("Test: SUCCESSFULL")
+		}
+	}
+
 }

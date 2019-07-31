@@ -433,6 +433,57 @@ func TestComplexRule(t *testing.T) {
 	}
 }
 
+func TestContainer(t *testing.T) {
+	/*
+	   "CommandLine": "C:\\Windows\\system32\\devicecensus.exe",
+	   "CurrentDirectory": "C:\\Windows\\system32\\",
+	   "Hashes": "SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,MD5=83514D9AAF0E168944B6D3C01110C393,SHA256=03324E67244312360FF089CF61175DEF2031BE513457BB527AE0ABF925E72319,IMPHASH=D9EA1DE97F43E8F8608832D8E83DA2CF",
+	   "Image": "C:\\Windows\\System32\\DeviceCensus.exe",
+	   "IntegrityLevel": "System",
+	   "LogonGuid": "B2796A13-618F-5881-0000-0020E7030000",
+	   "LogonId": "0x000003e7",
+	   "ParentCommandLine": "C:\\Windows\\system32\\svchost.exe -k netsvcs",
+	   "ParentImage": "C:\\Windows\\System32\\svchost.exe",
+	   "ParentProcessGuid": "B2796A13-6191-5881-0000-00100FD80000",
+	   "ParentProcessId": "828",
+	   "ProcessGuid": "B2796A13-E4BA-5880-0000-00102BC01100",
+	   "ProcessId": "3516",
+	   "TerminalSessionId": "0",
+	   "User": "NT AUTHORITY\\SYSTEM",
+	   "UtcTime": "2017-01-19 16:09:30.252"
+	*/
+	rule := `{
+	"Name": "ContainerConditions",
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		},
+	"Matches": [
+		"$md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
+		"$sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
+		"$sha256: extract('SHA256=(?P<sha1>[A-F0-9]{64})', Hashes) in blacklist"
+		],
+	"Condition": "$md5 and $sha1 and $sha256"
+	}
+	`
+	e := NewEngine(false)
+	// Container update has to be done before loading rules
+	e.AddToContainer("blacklist", "83514d9aaf0e168944b6d3c01110c393")
+	e.AddToContainer("blacklist", "65894b0162897f2a6bb8d2eb13684bf2b451fdee")
+	e.AddToContainer("blacklist", "03324e67244312360ff089cf61175def2031be513457bb527ae0abf925e72319")
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
+	if err != nil {
+		t.Fail()
+		t.Log(err)
+	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
+	// The match should fail
+	if m, _ := e.Match(&event); len(m) == 0 {
+		t.Fail()
+	} else {
+		t.Log(m)
+	}
+}
+
 func TestLoadDirectory(t *testing.T) {
 	e := NewEngine(false)
 	err := e.LoadDirectory("./")

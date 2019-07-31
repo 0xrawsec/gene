@@ -105,6 +105,11 @@ func (e ErrRuleExist) Error() string {
 	return fmt.Sprintf("Rule \"%s\" already exists", e.ruleName)
 }
 
+type Stats struct {
+	Scanned   uint64
+	Positives uint64
+}
+
 //Engine defines the engine managing several rules
 type Engine struct {
 	sync.RWMutex
@@ -127,6 +132,8 @@ type Engine struct {
 	// Control allowed file extensions
 	ruleExtensions datastructs.SyncedSet
 	tplExtensions  datastructs.SyncedSet
+	// engine statistics
+	Stats Stats
 }
 
 //NewEngine creates a new engine
@@ -186,8 +193,10 @@ func (e *Engine) Tags() []string {
 }
 
 // AddToContainer adds a value to a given container and creates it if needed
+// the string pushed to the container is lower cased (behaviour of
+// AddSTringToContainer)
 func (e *Engine) AddToContainer(container, value string) {
-	e.containers.AddToContainer(container, value)
+	e.containers.AddStringToContainer(container, value)
 }
 
 // Blacklist insert a value to be blacklisted
@@ -446,15 +455,26 @@ func (e *Engine) AddTraceRules(ruleList ...*rules.CompiledRule) {
 
 //Match checks if there is a match in any rule of the engine
 func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) {
+	var matched bool
+
 	traces := make([]*rules.CompiledRule, 0)
 	names = make([]string, 0)
 	attcks := make([]rules.Attack, 0)
+	markedAttcks := datastructs.NewSyncedSet()
 
 	e.RLock()
 	for _, r := range e.rules {
 		if r.Match(event) {
+			matched = true
 			names = append(names, r.Name)
-			attcks = append(attcks, r.Attck...)
+			// Updating ATT&CK information
+			for _, attck := range r.Attck {
+				if !markedAttcks.Contains(attck.ID) {
+					attcks = append(attcks, attck)
+					markedAttcks.Add(attck.ID)
+				}
+			}
+
 			criticality += r.Criticality
 			// If we decide to trace the other events matching the rules
 			if e.trace {
@@ -498,5 +518,12 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 	}
 
 	event.Set(&geneInfoPath, genInfo)
+	// Update engine's statistics
+	e.Lock()
+	e.Stats.Scanned++
+	if matched {
+		e.Stats.Positives++
+	}
+	e.Unlock()
 	return
 }

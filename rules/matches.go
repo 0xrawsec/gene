@@ -21,8 +21,10 @@ var (
 	//ErrUnkOperator error to return when an operator is not known
 	ErrUnkOperator = fmt.Errorf("Unknown operator")
 	//Regexp and its helper to ease AtomRule parsing
-	fieldMatchRegexp       = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`)
-	fieldMatchRegexpHelper = submatch.NewHelper(fieldMatchRegexp)
+	fieldMatchRegexp        = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`)
+	fieldMatchRegexpHlpr    = submatch.NewHelper(fieldMatchRegexp)
+	indFieldMatchRegexp     = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>=)\s+@(?P<value>.*)`)
+	indFieldMatchRegexpHlpr = submatch.NewHelper(indFieldMatchRegexp)
 )
 
 // FieldMatch is the smallest rule we can have
@@ -31,30 +33,42 @@ type FieldMatch struct {
 	Operand  string `regexp:"operand"`
 	Operator string `regexp:"operator"`
 	Value    string `regexp:"value"`
+	indirect bool
 	compiled bool
 	path     *evtx.GoEvtxPath
+	indPath  *evtx.GoEvtxPath
 	cRule    *regexp.Regexp
 	iValue   interface{} // interface to store Value in another form as string
 }
 
 // IsFieldMatch returns true if s compiliant with FieldMatch syntax
 func IsFieldMatch(s string) bool {
-	return fieldMatchRegexp.MatchString(s)
+	return fieldMatchRegexp.MatchString(s) || indFieldMatchRegexp.MatchString(s)
 }
 
 // ParseFieldMatch parses a string and returns an FieldMatch
 func ParseFieldMatch(rule string) (ar FieldMatch, err error) {
+	var hlpr submatch.Helper
+
 	// Check if the syntax of the match is valid
-	if !fieldMatchRegexp.Match([]byte(rule)) {
+	switch {
+	case fieldMatchRegexp.Match([]byte(rule)):
+		hlpr = fieldMatchRegexpHlpr
+	case indFieldMatchRegexp.Match([]byte(rule)):
+		hlpr = indFieldMatchRegexpHlpr
+		ar.indirect = true
+	default:
 		return ar, fmt.Errorf("Syntax error in \"%s\"", rule)
 	}
+
 	// Continues
-	fieldMatchRegexpHelper.Prepare([]byte(rule))
-	err = fieldMatchRegexpHelper.Unmarshal(&ar)
+	hlpr.Prepare([]byte(rule))
+
+	err = hlpr.Unmarshal(&ar)
 	// it is normal not to set private fields
 	if fse, ok := err.(submatch.FieldNotSetError); ok {
 		switch fse.Field {
-		case "compiled", "cRule":
+		case "compiled", "cRule", "indirect":
 			err = nil
 		}
 	}
@@ -74,7 +88,7 @@ func ParseFieldMatch(rule string) (ar FieldMatch, err error) {
 
 // NewFieldMatch creates a new FieldMatch rule from data
 func NewFieldMatch(name, operand, operator, value string) *FieldMatch {
-	return &FieldMatch{name, operand, operator, value, false, nil, nil, 0}
+	return &FieldMatch{name, operand, operator, value, false, false, nil, nil, nil, 0}
 }
 
 func parseToFloat(s string) (f float64, err error) {
@@ -91,15 +105,20 @@ func parseToFloat(s string) (f float64, err error) {
 func (f *FieldMatch) Compile() error {
 	var err error
 	if !f.compiled {
-		switch f.Operator {
-		case "=":
-			f.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(f.Value)))
-		case "~=":
-			f.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", f.Value))
-		case "&=":
-			f.iValue, err = strconv.ParseInt(f.Value, 0, 64)
-		case ">", "<", ">=", "<=":
-			f.iValue, err = parseToFloat(f.Value)
+		if !f.indirect {
+			switch f.Operator {
+			case "=":
+				f.cRule, err = regexp.Compile(fmt.Sprintf("(^%s$)", regexp.QuoteMeta(f.Value)))
+			case "~=":
+				f.cRule, err = regexp.Compile(fmt.Sprintf("(%s)", f.Value))
+			case "&=":
+				f.iValue, err = strconv.ParseInt(f.Value, 0, 64)
+			case ">", "<", ">=", "<=":
+				f.iValue, err = parseToFloat(f.Value)
+			}
+		} else {
+			p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", f.Value))
+			f.indPath = &p
 		}
 		p := evtx.Path(fmt.Sprintf("/Event/EventData/%s", f.Operand))
 		f.path = &p
@@ -122,37 +141,44 @@ func (f *FieldMatch) Match(se *evtx.GoEvtxMap) bool {
 	f.Compile()
 	s, err := se.GetString(f.path)
 	if err == nil {
-		switch f.Operator {
-		case "&=":
-			// This operator treats values as integers
-			rValue, err := strconv.ParseInt(s, 0, 64)
-			if err != nil {
-				return false
+		// indirect match means we compare with the value of another field
+		if f.indirect {
+			if is, err := se.GetString(f.indPath); err == nil {
+				return is == s
 			}
-			flag := f.iValue.(int64)
-			if (flag & rValue) == flag {
-				return true
-			}
-
-		case ">", "<", "<=", ">=":
-			// This operator treats values as floats
-			rValue, err := parseToFloat(s)
-			if err != nil {
-				return false
-			}
-
+		} else {
 			switch f.Operator {
-			case ">":
-				return rValue > f.iValue.(float64)
-			case ">=":
-				return rValue >= f.iValue.(float64)
-			case "<":
-				return rValue < f.iValue.(float64)
-			case "<=":
-				return rValue <= f.iValue.(float64)
+			case "&=":
+				// This operator treats values as integers
+				rValue, err := strconv.ParseInt(s, 0, 64)
+				if err != nil {
+					return false
+				}
+				flag := f.iValue.(int64)
+				if (flag & rValue) == flag {
+					return true
+				}
+
+			case ">", "<", "<=", ">=":
+				// This operator treats values as floats
+				rValue, err := parseToFloat(s)
+				if err != nil {
+					return false
+				}
+
+				switch f.Operator {
+				case ">":
+					return rValue > f.iValue.(float64)
+				case ">=":
+					return rValue >= f.iValue.(float64)
+				case "<":
+					return rValue < f.iValue.(float64)
+				case "<=":
+					return rValue <= f.iValue.(float64)
+				}
+			default:
+				return f.cRule.MatchString(s)
 			}
-		default:
-			return f.cRule.MatchString(s)
 		}
 	}
 	return false
@@ -246,13 +272,15 @@ func (c *ContainerMatch) Extract(ev *evtx.GoEvtxMap) (string, bool) {
 	return "", false
 }
 
-// Match matches the extract rule against a ContainerDB and implements Matcher interface
+// Match matches the extract rule against a ContainerDB and implements
+// Matcher interface the string matched against the container are converted
+// to lower case (default behaviour of ContainsString method)
 func (c *ContainerMatch) Match(ev *evtx.GoEvtxMap) bool {
 	c.Compile()
 	if extract, ok := c.Extract(ev); ok {
 		log.Debugf("Extracted: %s", extract)
 		if c.containerDB != nil {
-			return c.containerDB.Contains(c.Container, extract)
+			return c.containerDB.ContainsString(c.Container, extract)
 		}
 	}
 	return false

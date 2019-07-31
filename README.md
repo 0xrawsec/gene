@@ -45,12 +45,17 @@ Here are some of our motivations:
     * ...
 
 # Documentation
-In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/1.4/
+
+In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/1.6/
 
 Where to find rules ? [there](https://github.com/0xrawsec/gene-rules)
 
-
 # Changelog
+
+## v1.6.0
+  * Indirect Match Support (we can now compare two fields of the same event)
+  * Containers are now case insensitive
+  * New `-test` command line switch to create easy Gene unit testing
 
 ## v1.5.0
   * Support for Mitre ATT&CK framework

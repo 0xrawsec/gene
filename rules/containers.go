@@ -2,6 +2,7 @@ package rules
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/0xrawsec/golang-utils/datastructs"
 )
@@ -45,6 +46,18 @@ func (c *ContainerDB) AddToContainer(name string, values ...interface{}) {
 	container.Add(values...)
 }
 
+// AddStringToContainer adds new strings (converted to lower case)
+// into a container and creates a new container if it does not exist yet.
+func (c *ContainerDB) AddStringToContainer(name string, values ...string) {
+	if !c.Has(name) {
+		c.AddNewContainer(name)
+	}
+	container, _ := c.Get(name)
+	for _, s := range values {
+		container.Add(strings.ToLower(s))
+	}
+}
+
 // Len gives the size of a Container
 func (c *ContainerDB) Len(name string) int {
 	if c.Has(name) {
@@ -71,4 +84,23 @@ func (c *ContainerDB) Contains(name string, value string) bool {
 		return cont.Contains(value)
 	}
 	return false
+}
+
+// ContainsString checks if named container contains value ignoring value case
+func (c *ContainerDB) ContainsString(name string, value string) bool {
+	if cont, ok := (*c)[name]; ok {
+		return cont.Contains(strings.ToLower(value))
+	}
+	return false
+}
+
+func (c *ContainerDB) String() string {
+	out := make([]string, 0)
+	for name := range *c {
+		out = append(out, fmt.Sprintf("Container: %s", name))
+		for _, v := range *((*c)[name].List()) {
+			out = append(out, fmt.Sprintf("\tType:%T Value:%[1]v", v))
+		}
+	}
+	return strings.Join(out, "\n")
 }
