@@ -28,7 +28,7 @@ var (
 )
 
 func init() {
-	//log.InitLogger(log.LDebug)
+	log.InitLogger(log.LDebug)
 }
 
 func TestAtomRule(t *testing.T) {
@@ -63,58 +63,55 @@ func TestParseCondition(t *testing.T) {
 		cond, err := tokenizer.ParseCondition(0, 0)
 		if err != nil {
 			t.FailNow()
-			t.Logf("%s Error:%v", &cond, err)
+			t.Logf("%s Error:%v", cond, err)
 		}
 	}
 }
-
-var (
-	operands = OperandMap{"$a": true, "$b": false}
-	// Key: condition Value: expected result according to operands
-	conditionMap = map[string]bool{
-		"$a":                           true,
-		"$b":                           false,
-		"!$a":                          false,
-		"!$b":                          true,
-		"$a or $b":                     true,
-		"$a and $b":                    false,
-		"($a and !$b)":                 true,
-		"((($a and !$b)))":             true,
-		"$a and ($b or !$b)":           true,
-		"!($a or $b) or $a":            true,
-		"$a && !$b && !$a":             false,
-		"!($a and $b or !($a and $b))": false,
-		"!($a or $b) and ($a or ($b and !$a)) and !$a":   false,
-		"!$b or (!($a or $b) and ($a or ($b and !$a)))":  true,
-		"(!($a or $b) and ($a or ($b and !$a)))":         false,
-		"(($a and !$b) and $a)":                          true,
-		"(!($a and $b) and $b)":                          false,
-		"(!($a and $b) and $b) or (($a and !$b) and $a)": true,
-		"!(!($a || $b)) && !(!$a and !$b)":               true,
-		"!(($b and $a) or $a)":                           false,
-		"!($a or ($b and $a))":                           false,
-		"(($a or $b) and $b)":                            false,
-		"$a or $b or ( $b and ($a or $b) and $b)":        true,
-		"$a and ($a or $b) and !($a or $b or $a or $b or $a or $b or $a or (($a or $b) and $b))": false,
-	}
-)
 
 func TestCondition(t *testing.T) {
 	for strCond, expectRes := range conditionMap {
 		tokenizer := NewTokenizer(strCond)
 		cond, err := tokenizer.ParseCondition(0, 0)
 		if err != nil {
-			t.Logf("%s Error:%v", &cond, err)
+			t.Logf("%s Error:%v", cond, err)
 			t.FailNow()
 		}
 		t.Logf("Condition: %s", strCond)
-		t.Logf("Parsed Condition: %s", &cond)
-		result := Compute(&cond, operands)
-		t.Logf("Cond: %s With: %v => Result: %t", &cond, operands, result)
+		t.Logf("Pretty Co: %s", cond.Pretty(false))
+		t.Logf("Parsed Condition: %s", cond)
+		cond.Prioritize()
+		//t.Logf("Priori Condition: %s", cond)
+		t.Logf("Pretty Pr: %s", cond.Pretty(false))
+		result := Compute(cond, operands)
+		t.Logf("Cond: %s With: %v => Result: %t", cond, operands, result)
 		if result != expectRes {
 			t.Log("Unexpected result")
 			t.FailNow()
 		}
+	}
+}
+
+func TestBuggyCondition(t *testing.T) {
+	//buggy := "(!$b and !(!($b or !$a) or $a))"
+	buggy := "!(!($a and $b and $a and !$a and !$b or !$b) and !$a)"
+	expectRes := true
+	tokenizer := NewTokenizer(buggy)
+	cond, err := tokenizer.ParseCondition(0, 0)
+	if err != nil {
+		t.Logf("%s Error:%v", cond, err)
+		t.FailNow()
+	}
+	t.Logf("Condition: %s", buggy)
+	t.Logf("Pretty Co: %s", cond.Pretty(false))
+	t.Logf("Parsed Condition: %s", cond)
+	cond.Prioritize()
+	//t.Logf("Priori Condition: %s", cond)
+	t.Logf("Pretty Pr: %s", cond.Pretty(false))
+	result := Compute(cond, operands)
+	t.Logf("Cond: %s With: %v => Result: %t", cond, operands, result)
+	if result != expectRes {
+		t.Log("Unexpected result")
+		t.FailNow()
 	}
 }
 
@@ -152,7 +149,7 @@ func TestEvtxRule(t *testing.T) {
 		t.Logf("Failed to parse: %s", condStr)
 		t.Fail()
 	}
-	er.Conditions = &cond
+	er.Conditions = cond
 
 	count := 0
 	for e := range f.FastEvents() {

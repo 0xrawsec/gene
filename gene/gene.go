@@ -29,8 +29,9 @@ import (
 //////////////////////////// Utilities //////////////////////////////
 
 func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
+	n, crit := e.Match(event)
 	// We print only if we are not in test mode
-	if n, crit := e.Match(event); len(n) > 0 && !test {
+	if len(n) > 0 && !test {
 		// Prints out the events with timestamp or not
 		if showTimestamp && crit >= criticalityThresh {
 			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
@@ -39,7 +40,7 @@ func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
 				fmt.Println(string(evtx.ToJSON(event)))
 			}
 		}
-	} else if allEvents || test {
+	} else if allEvents || (test && len(n) == 0) {
 		if showTimestamp {
 			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
 		} else {
@@ -467,6 +468,11 @@ func main() {
 		if e.Count() == 0 {
 			log.Error("Test: UNSUCCESSFUL")
 			log.Infof("No rule loaded")
+			os.Exit(exitFail)
+		}
+		if e.Stats.Scanned == 0 {
+			log.Error("Test: UNSUCCESSFUL")
+			log.Infof("No event scanned")
 			os.Exit(exitFail)
 		}
 		if e.Stats.Scanned != e.Stats.Positives {

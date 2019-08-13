@@ -271,9 +271,9 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 		return nil, fmt.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
 	}
 
-	rule.Conditions = &cond
-	operands := GetOperands(&cond)
-	operandsSet := datastructs.NewInitSyncedSet(datastructs.ToInterfaceSlice(GetOperands(&cond))...)
+	rule.Conditions = cond
+	operands := GetOperands(cond)
+	operandsSet := datastructs.NewInitSyncedSet(datastructs.ToInterfaceSlice(GetOperands(cond))...)
 	// We control that all the operands are known
 	for _, op := range operands {
 		if !rule.AtomMap.Contains(op) {
