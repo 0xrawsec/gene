@@ -12,13 +12,13 @@ Here are some of our motivations:
   ones left on the system.
   3. To the best of my knowledge, there is no easy way to query the logs and
   extract directly the interesting events.
-    * because we (at least I) never remember all the interesting events
-    * we cannot benefit of the other's knowledge
+   * because we (at least I) never remember all the interesting events
+   * we cannot benefit of the other's knowledge
   4. You might tell me, "Yeah! But I push all the interesting events to the SIEM
   and can query them very easily". To what I would reply that it is not that easy.
-    * there are events you do not know they exist before you find it in an incident
+   * there are events you do not know they exist before you find it in an incident
     so it is very unlikely you push it into your SIEM
-    * considering the example of Sysmon logs, it would be quite challenging to push
+   * considering the example of Sysmon logs, it would be quite challenging to push
     everything interesting into your SIEM. Either you have few machines on your
     infra or you are very rich (or at least the company you are working for :)).
   5. Before writing that tool I was always ending up implementing a custom piece
@@ -30,19 +30,19 @@ Here are some of our motivations:
 
   1. Gene can be used to quickly grab interesting information from EVTX at whatever
   stage of analysis.
-    * Early compromise information collection
-    * Infected host analysis
-    * IOC scan on all your machines
+   * Early compromise information collection
+   * Infected host analysis
+   * IOC scan on all your machines
   2. If you are forwarding the Windows Event somewhere, you can use it as a
   scheduled task to extract relevant piece of information from those logs.
   3. It can be used to retro search into your EVTX backup
   4. It can be combined with Sysmon in order to build up use cases in a minute
   (the time to write the rule) and it is much more flexible than the Sysmon
   configuration file.
-    * Suspicious process spawned by another one
-    * Suspicious Driver load events
-    * Unusual DLL loaded by a given process
-    * ...
+   * Suspicious process spawned by another one
+   * Suspicious Driver load events
+   * Unusual DLL loaded by a given process
+   * ...
 
 # Documentation
 
