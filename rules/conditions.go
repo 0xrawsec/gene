@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/0xrawsec/golang-utils/datastructs"
-	"github.com/0xrawsec/golang-utils/log"
 )
 
 /////////////////////////////// Tokenizer //////////////////////////////////////
@@ -41,7 +40,7 @@ func NewTokenizer(condition string) (c Tokenizer) {
 				c.tokens = append(c.tokens[:i], append([]string{"("}, c.tokens[i:]...)...)
 				continue
 			}
-			log.Debug(token)
+			//log.Debug(token)
 			if token[0] == '!' {
 				c.tokens[i] = token[1:]
 				c.tokens = append(c.tokens[:i], append([]string{"!"}, c.tokens[i:]...)...)
@@ -89,11 +88,11 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 	if err == ErrEOT {
 		return
 	}
-	log.Debugf("Token: '%s'", token)
+	//log.Debugf("Token: '%s'", token)
 	if etok.Contains(token) || etok.Contains(string(token[0])) {
 		return
 	}
-	log.Debugf("%s: '%s' not in %v", ErrUnexpectedToken, token, expects)
+	//log.Debugf("%s: '%s' not in %v", ErrUnexpectedToken, token, expects)
 	return "", ErrUnexpectedToken
 }
 
@@ -102,7 +101,7 @@ func (t *Tokenizer) ParseCondition(group, level int) (*ConditionElement, error) 
 	var err error
 	var token string
 	c := &ConditionElement{}
-	log.Debugf("Tokens: %v", t.tokens[t.i:])
+	//log.Debugf("Tokens: %v", t.tokens[t.i:])
 
 	token, err = t.NextExpectedToken("$", "!", "(", ")", "and", "&&", "AND", "or", "||", "OR")
 	if err != nil {
@@ -235,8 +234,8 @@ func (ce *ConditionElement) GetLevels(lvl int) [][]*ConditionElement {
 	return levels
 }
 
-// MaxLevel retrieves the maximum level of the condition
-func (ce *ConditionElement) MaxLevel() (lvl int) {
+// maxLevel retrieves the maximum level of the condition
+func (ce *ConditionElement) maxLevel() (lvl int) {
 	for e := ce; e != nil; e = e.Next {
 		if e.Level > lvl {
 			lvl = e.Level
@@ -258,10 +257,10 @@ func (ce *ConditionElement) Simplify() {
 // Prioritize creates precedence between boolean operators
 func (ce *ConditionElement) Prioritize() {
 	ce.Simplify()
-	for i := ce.MaxLevel(); i >= 0; i-- {
+	for i := ce.maxLevel(); i >= 0; i-- {
 		levels := ce.GetLevels(i)
 		for _, lvl := range levels {
-			log.Debugf("Level (%d): %s", i, PrettySplit(lvl))
+			//log.Debugf("Level (%d): %s", i, PrettySplit(lvl))
 			for _, s := range splitLevelsByOr(lvl, i) {
 				if len(s) > 2 {
 					for _, e := range s {
@@ -447,10 +446,8 @@ func Pretty(c *ConditionElement, group bool) string {
 //Compute computes a given condition given the operands
 func Compute(ce *ConditionElement, operands OperandReader) bool {
 	nce, ret := compute(false, ce, operands)
-	log.Debugf("Computing: %s = %t", ce.Pretty(false), ret)
 	for nce != nil {
 		nce, ret = compute(ret, nce, operands)
-		log.Debug("We go out")
 	}
 	return ret
 }
@@ -525,37 +522,29 @@ func compute(computed bool, ce *ConditionElement, operands OperandReader) (*Cond
 		}
 
 	case TypeOperator:
-		log.Debugf("Computing operator %c", ce.Operator)
 		switch ce.Operator {
 		case '&':
 			// Shortcut if computed is false
 			if !computed {
 				nce := nextCondEltLowerLevel(ce)
-				//log.Debugf("Shortcut taken: ce=%s nce=%s", ce.Pretty(false), nce.Pretty(false))
 				return nce, false
 			}
 			nce, ret := compute(false, ce.Next, operands)
 			ret = computed && ret
-			log.Debugf("Computed=%t ret=%t", computed, ret)
-			log.Debugf("And Return: %t", ret)
 			return nce, ret
 		case '|':
 			// Shortcut if computed is true
 			if computed {
 				nce := nextCondEltLowerLevel(ce)
-				log.Debugf("Shortcut taken: ce=%s nce=%s", ce, nce)
 				return nce, true
 			}
 			nce, ret := compute(false, ce.Next, operands)
 			ret = computed || ret
-			log.Debugf("Or Return: %t", ret)
 			return nce, ret
 		}
 
 	case TypeOperand:
-		log.Debugf("Computing operand: %s", ce.Operand)
 		if v, ok := operands.Read(ce.Operand); ok {
-			log.Debugf("%s=%t", ce.Operand, v)
 			if ce.Next != nil && ce.Next.Level != ce.Level {
 				return ce.Next, v
 			}
