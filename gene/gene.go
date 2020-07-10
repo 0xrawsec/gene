@@ -109,7 +109,7 @@ func evtxEventGenerator() (ec chan *evtx.GoEvtxMap) {
 		eventCnt, cntChunk, oldEventCnt := 0, 100, 100
 		for _, evtxFile := range flag.Args() {
 			log.Infof("Processing: %s", evtxFile)
-			ef, err := evtx.New(evtxFile)
+			ef, err := evtx.OpenDirty(evtxFile)
 			if err != nil {
 				log.Error(err)
 			}
