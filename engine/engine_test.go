@@ -138,7 +138,7 @@ func prettyJSON(i interface{}) string {
 }
 
 func openEvtx(path string) *evtx.File {
-	f, err := evtx.New(path)
+	f, err := evtx.OpenDirty(path)
 	if err != nil {
 		panic(err)
 	}
@@ -481,6 +481,97 @@ func TestContainer(t *testing.T) {
 		t.Fail()
 	} else {
 		t.Log(m)
+	}
+}
+
+func TestFiltered(t *testing.T) {
+	/*
+	   "CommandLine": "C:\\Windows\\system32\\devicecensus.exe",
+	   "CurrentDirectory": "C:\\Windows\\system32\\",
+	   "Hashes": "SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,MD5=83514D9AAF0E168944B6D3C01110C393,SHA256=03324E67244312360FF089CF61175DEF2031BE513457BB527AE0ABF925E72319,IMPHASH=D9EA1DE97F43E8F8608832D8E83DA2CF",
+	   "Image": "C:\\Windows\\System32\\DeviceCensus.exe",
+	   "IntegrityLevel": "System",
+	   "LogonGuid": "B2796A13-618F-5881-0000-0020E7030000",
+	   "LogonId": "0x000003e7",
+	   "ParentCommandLine": "C:\\Windows\\system32\\svchost.exe -k netsvcs",
+	   "ParentImage": "C:\\Windows\\System32\\svchost.exe",
+	   "ParentProcessGuid": "B2796A13-6191-5881-0000-00100FD80000",
+	   "ParentProcessId": "828",
+	   "ProcessGuid": "B2796A13-E4BA-5880-0000-00102BC01100",
+	   "ProcessId": "3516",
+	   "TerminalSessionId": "0",
+	   "User": "NT AUTHORITY\\SYSTEM",
+	   "UtcTime": "2017-01-19 16:09:30.252"
+	*/
+	rule := `{
+	"Name": "ProcessCreate",
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
+		"EventIDs": [1],
+		"Filter": true
+		},
+	"Matches": [],
+	"Condition": ""
+	}
+	`
+	e := NewEngine(false)
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
+	if err != nil {
+		t.Fail()
+		t.Log(err)
+	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
+	// The match should fail
+	if _, _, filtered := e.MatchOrFilter(&event); filtered {
+		t.Log("Event correctly filtered")
+		t.Logf("%s", prettyJSON(event))
+	} else {
+		t.Fail()
+	}
+}
+
+func TestNotFiltered(t *testing.T) {
+	/*
+	   "CommandLine": "C:\\Windows\\system32\\devicecensus.exe",
+	   "CurrentDirectory": "C:\\Windows\\system32\\",
+	   "Hashes": "SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,MD5=83514D9AAF0E168944B6D3C01110C393,SHA256=03324E67244312360FF089CF61175DEF2031BE513457BB527AE0ABF925E72319,IMPHASH=D9EA1DE97F43E8F8608832D8E83DA2CF",
+	   "Image": "C:\\Windows\\System32\\DeviceCensus.exe",
+	   "IntegrityLevel": "System",
+	   "LogonGuid": "B2796A13-618F-5881-0000-0020E7030000",
+	   "LogonId": "0x000003e7",
+	   "ParentCommandLine": "C:\\Windows\\system32\\svchost.exe -k netsvcs",
+	   "ParentImage": "C:\\Windows\\System32\\svchost.exe",
+	   "ParentProcessGuid": "B2796A13-6191-5881-0000-00100FD80000",
+	   "ParentProcessId": "828",
+	   "ProcessGuid": "B2796A13-E4BA-5880-0000-00102BC01100",
+	   "ProcessId": "3516",
+	   "TerminalSessionId": "0",
+	   "User": "NT AUTHORITY\\SYSTEM",
+	   "UtcTime": "2017-01-19 16:09:30.252"
+	*/
+	rule := `{
+	"Name": "ProcessCreate",
+	"Meta": {
+		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
+		"EventIDs": [2],
+		"Filter": true
+		},
+	"Matches": [],
+	"Condition": ""
+	}
+	`
+	e := NewEngine(false)
+	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
+	if err != nil {
+		t.Fail()
+		t.Log(err)
+	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
+	// The match should fail
+	if _, _, filtered := e.MatchOrFilter(&event); !filtered {
+		t.Log("Event not filtered")
+	} else {
+		t.Fail()
 	}
 }
 

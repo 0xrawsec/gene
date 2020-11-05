@@ -29,6 +29,7 @@ type CompiledRule struct {
 	AtomMap     datastructs.SyncedMap
 	Traces      []*Trace
 	Disabled    bool // Way to deal with no container issue
+	Filter      bool // whether it is a Filter rule or not
 	Conditions  *ConditionElement
 	containers  *ContainerDB
 	// ATT&CK information
@@ -145,6 +146,7 @@ type MetaSection struct {
 	Attack      []Attack `json:"ATTACK,omitempty"`
 	Criticality int
 	Disable     bool
+	Filter      bool
 }
 
 //Rule is a JSON parsable rule
@@ -215,6 +217,9 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	for _, s := range jr.Meta.Channels {
 		rule.Channels.Add(s)
 	}
+
+	// Set Filter member
+	rule.Filter = jr.Meta.Filter
 
 	// Parses and Initializes the Traces
 	for i, st := range jr.Meta.Traces {

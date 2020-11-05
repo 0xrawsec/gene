@@ -126,6 +126,7 @@ type Engine struct {
 	trace       bool
 	dumpRaw     bool
 	showAttck   bool
+	filter      bool // tells that we should apply Filter rules
 	// Used to mark the traces and not duplicate those
 	markedTraces datastructs.SyncedSet
 	containers   *rules.ContainerDB
@@ -453,7 +454,7 @@ func (e *Engine) AddTraceRules(ruleList ...*rules.CompiledRule) {
 	}
 }
 
-//Match checks if there is a match in any rule of the engine
+//Match (deprecated) checks if there is a match in any rule of the engine
 func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) {
 	var matched bool
 
@@ -461,10 +462,12 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 	names = make([]string, 0)
 	attcks := make([]rules.Attack, 0)
 	markedAttcks := datastructs.NewSyncedSet()
+	filtered := true
 
 	e.RLock()
 	for _, r := range e.rules {
 		if r.Match(event) {
+			filtered = filtered && r.Filter
 			matched = true
 			names = append(names, r.Name)
 			// Updating ATT&CK information
@@ -501,6 +504,107 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 	}
 	// Unlock so that we can update engine
 	e.RUnlock()
+
+	// tells that the only matches are filters
+	if filtered {
+		// we keep original event unmodified
+		return
+	}
+
+	// We can update with the traces since we released the lock
+	e.AddTraceRules(traces...)
+
+	// Bound criticality
+	criticality = globals.Bound(criticality)
+	// Update event with signature information
+	genInfo := map[string]interface{}{
+		"Signature":   names,
+		"Criticality": criticality}
+
+	// Update ATT&CK information if needed
+	if e.showAttck && len(attcks) > 0 {
+		genInfo["ATTACK"] = attcks
+	}
+
+	event.Set(&geneInfoPath, genInfo)
+	// Update engine's statistics
+	e.Lock()
+	e.Stats.Scanned++
+	if matched {
+		e.Stats.Positives++
+	}
+	e.Unlock()
+	return
+}
+
+// MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that
+// it also return a flag indicating if the event is filtered.
+func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticality int, filtered bool) {
+	var matched bool
+
+	// return values
+	names = make([]string, 0)
+	filtered = true
+
+	// initialized variables
+	traces := make([]*rules.CompiledRule, 0)
+	attcks := make([]rules.Attack, 0)
+	markedAttcks := datastructs.NewSyncedSet()
+
+	e.RLock()
+	for _, r := range e.rules {
+		if r.Match(event) {
+			filtered = filtered && r.Filter
+			matched = true
+			names = append(names, r.Name)
+
+			// Do not need to go further if it is a filter rule
+			if r.Filter {
+				continue
+			}
+
+			// Updating ATT&CK information
+			for _, attck := range r.Attck {
+				if !markedAttcks.Contains(attck.ID) {
+					attcks = append(attcks, attck)
+					markedAttcks.Add(attck.ID)
+				}
+			}
+
+			criticality += r.Criticality
+			// If we decide to trace the other events matching the rules
+			if e.trace {
+				for i, tr := range r.Traces {
+					value, err := event.GetString(tr.Path())
+					// If we find the appropriate element in the event we matched
+					if err == nil {
+						// Hashing the trace
+						h := tr.HashWithValue(value)
+						if !e.markedTraces.Contains(h) {
+							// We add the hash of the current trace not to recompile it again
+							e.markedTraces.Add(h)
+							// We compile the trace into a rule and append it to the list of traces
+							if tRule, err := tr.Compile(r, value); err == nil {
+								traces = append(traces, tRule)
+							} else {
+								log.Errorf("Failed to compile trace rule i=%d for \"%s\" ", i, r.Name)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	// Unlock so that we can update engine
+	e.RUnlock()
+
+	// it is an filtered event if at least one rule matched and filtered flag is true
+	filtered = len(names) > 0 && filtered
+	// tells that the only matches are filters
+	if filtered {
+		// we keep original event unmodified
+		return
+	}
 
 	// We can update with the traces since we released the lock
 	e.AddTraceRules(traces...)
