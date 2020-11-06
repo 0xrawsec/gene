@@ -1,7 +1,8 @@
 RELEASE=$(GOPATH)/release
 MAIN_BASEN_SRC=gene
-VERSION=1.6.3
+VERSION=$(shell git tag | tail -1 | sed 's/^v//')
 COMMITID=$(shell git rev-parse HEAD)
+
 # Strips symbols and dwarf to make binary smaller
 OPTS=-ldflags "-s -w"
 ifdef DEBUG
@@ -39,7 +40,7 @@ windows:
 	cd $(RELEASE)/windows; 7z a -tzip ../$(MAIN_BASEN_SRC)-windows-v$(VERSION).zip *
 
 darwin:
-	GOARCH=386 GOOS=darwin go build $(OPTS) -o $(RELEASE)/darwin/$(MAIN_BASEN_SRC)-386 ./
+	#GOARCH=386 GOOS=darwin go build $(OPTS) -o $(RELEASE)/darwin/$(MAIN_BASEN_SRC)-386 ./
 	GOARCH=amd64 GOOS=darwin go build $(OPTS) -o $(RELEASE)/darwin/$(MAIN_BASEN_SRC)-amd64 ./
 	cd $(RELEASE)/darwin; md5sum * > md5.txt
 	cd $(RELEASE)/darwin; tar -cvzf ../$(MAIN_BASEN_SRC)-darwin-v$(VERSION).tar.gz *

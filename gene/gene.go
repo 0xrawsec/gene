@@ -29,14 +29,14 @@ import (
 //////////////////////////// Utilities //////////////////////////////
 
 func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
-	n, crit := e.Match(event)
+	n, crit, filtered := e.MatchOrFilter(event)
 	// We print only if we are not in test mode
-	if len(n) > 0 && !test {
+	if (len(n) > 0 || filtered) && !test {
 		// Prints out the events with timestamp or not
-		if showTimestamp && crit >= criticalityThresh {
+		if showTimestamp && (crit >= criticalityThresh || filtered) {
 			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
 		} else {
-			if crit >= criticalityThresh {
+			if crit >= criticalityThresh || filtered {
 				fmt.Println(string(evtx.ToJSON(event)))
 			}
 		}
