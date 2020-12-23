@@ -190,12 +190,14 @@ func (r *Reducer) Update(t time.Time, identifier string, matches []string) {
 }
 
 // ReduceCopy reduces alerts of a single computer and returns a copy of ReducedStats
-func (r *Reducer) ReduceCopy(identifier string) *ReducedStats {
+func (r *Reducer) ReduceCopy(identifier string) (crs *ReducedStats) {
 	r.RLock()
 	defer r.RUnlock()
-	rs := r.m[identifier].Copy()
-	rs.Finalize(r.uniqSigs.Len())
-	return rs
+	if rs, ok := r.m[identifier]; ok {
+		crs = rs.Copy()
+		crs.Finalize(r.uniqSigs.Len())
+	}
+	return
 
 }
 
