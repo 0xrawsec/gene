@@ -415,7 +415,7 @@ func TestComplexRule(t *testing.T) {
 		"$e: IntegrityLevel = 'Blop'",
 		"$f: LogonGuid = 'B2796A13-618F-5881-0000-0020E7030000'"
 		],
-	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and !$f"
+	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and $f"
 	}
 	`
 	e := NewEngine(false)

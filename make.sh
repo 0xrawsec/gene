@@ -1,3 +1,3 @@
 #!/usr/bin/bash
 cd gene
-make -j 8
+make -j 8 $@

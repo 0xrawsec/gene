@@ -32,7 +32,7 @@ func init() {
 }
 
 func TestAtomRule(t *testing.T) {
-	f, err := evtx.New(testFile)
+	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
 		log.LogError(err)
 		return
@@ -119,7 +119,7 @@ func TestEvtxRule(t *testing.T) {
 	er := NewCompiledRule()
 	er.EventIDs.Add(int(1), int(7))
 
-	f, err := evtx.New(testFile)
+	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
 		log.LogError(err)
 		t.FailNow()
@@ -162,7 +162,7 @@ func TestEvtxRule(t *testing.T) {
 }
 
 func TestLoadRule(t *testing.T) {
-	f, err := evtx.New(testFile)
+	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
 		log.LogError(err)
 		t.FailNow()
@@ -201,7 +201,7 @@ func TestLoadRule(t *testing.T) {
 }
 
 func TestBlacklist(t *testing.T) {
-	f, err := evtx.New(testFile)
+	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
 		log.LogError(err)
 		t.FailNow()
@@ -243,7 +243,7 @@ func TestBlacklist(t *testing.T) {
 func TestIndirectMatch(t *testing.T) {
 	eventCnt, matchCnt := 0, 0
 
-	f, err := evtx.New(testFile)
+	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
 		log.LogError(err)
 		t.FailNow()

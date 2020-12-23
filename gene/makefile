@@ -15,6 +15,9 @@ all:
 	$(MAKE) buildversion
 	$(MAKE) compile
 
+install:
+	go install $(OPTS) ./
+
 init:
 	mkdir -p $(RELEASE)
 	mkdir -p $(RELEASE)/linux

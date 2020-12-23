@@ -471,7 +471,7 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 			matched = true
 			names = append(names, r.Name)
 			// Updating ATT&CK information
-			for _, attck := range r.Attck {
+			for _, attck := range r.Attack {
 				if !markedAttcks.Contains(attck.ID) {
 					attcks = append(attcks, attck)
 					markedAttcks.Add(attck.ID)
@@ -556,15 +556,18 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 		if r.Match(event) {
 			filtered = filtered && r.Filter
 			matched = true
-			names = append(names, r.Name)
 
 			// Do not need to go further if it is a filter rule
 			if r.Filter {
 				continue
 			}
 
+			// we add the name of the rule to the list of signature
+			// match only if it is not a filter
+			names = append(names, r.Name)
+
 			// Updating ATT&CK information
-			for _, attck := range r.Attck {
+			for _, attck := range r.Attack {
 				if !markedAttcks.Contains(attck.ID) {
 					attcks = append(attcks, attck)
 					markedAttcks.Add(attck.ID)
@@ -599,7 +602,8 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 	e.RUnlock()
 
 	// it is an filtered event if at least one rule matched and filtered flag is true
-	filtered = len(names) > 0 && filtered
+	//filtered = len(names) > 0 && filtered
+	filtered = matched && filtered
 	// tells that the only matches are filters
 	if filtered {
 		// we keep original event unmodified

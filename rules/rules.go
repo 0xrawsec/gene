@@ -33,7 +33,7 @@ type CompiledRule struct {
 	Conditions  *ConditionElement
 	containers  *ContainerDB
 	// ATT&CK information
-	Attck []Attack
+	Attack []Attack
 }
 
 //NewCompiledRule initializes and returns an EvtxRule object
@@ -43,7 +43,7 @@ func NewCompiledRule() (er CompiledRule) {
 	er.Computers = datastructs.NewSyncedSet()
 	er.EventIDs = datastructs.NewSyncedSet()
 	er.AtomMap = datastructs.NewSyncedMap()
-	er.Attck = make([]Attack, 0)
+	er.Attack = make([]Attack, 0)
 	return
 }
 
@@ -201,7 +201,7 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	rule.Name = jr.Name
 	rule.Criticality = globals.Bound(jr.Meta.Criticality)
 	// Pass ATT&CK information to compiled rule
-	rule.Attck = jr.Meta.Attack
+	rule.Attack = jr.Meta.Attack
 	for _, t := range jr.Tags {
 		rule.Tags.Add(t)
 	}
