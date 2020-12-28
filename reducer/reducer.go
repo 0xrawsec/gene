@@ -203,7 +203,16 @@ func (r *Reducer) ReduceCopy(identifier string) (crs *ReducedStats) {
 
 // Reset ReducedStats according to its identifier
 func (r *Reducer) Reset(identifier string) {
+	r.Lock()
+	defer r.Unlock()
 	r.m[identifier] = NewReducedStats(r.e, identifier)
+}
+
+// Delete deletes ReducedStats according to its identifier
+func (r *Reducer) Delete(identifier string) {
+	r.Lock()
+	defer r.Unlock()
+	delete(r.m, identifier)
 }
 
 // CountUniqSigs counts all the uniq signatures seen in the reduced stats
