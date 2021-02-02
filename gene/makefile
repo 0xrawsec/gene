@@ -9,13 +9,12 @@ ifdef DEBUG
 	OPTS=
 endif
 
-all:
+all: buildversion
 	$(MAKE) clean
 	$(MAKE) init
-	$(MAKE) buildversion
 	$(MAKE) compile
 
-install:
+install: buildversion
 	go install $(OPTS) ./
 
 init:

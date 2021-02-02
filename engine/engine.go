@@ -80,7 +80,8 @@ const (
 )
 
 var (
-	geneInfoPath = evtx.Path("/Event/GeneInfo")
+	// GeneInfoPath path to the Gene information a the modified event
+	GeneInfoPath = evtx.Path("/Event/GeneInfo")
 
 	// DefaultRuleExtensions default extensions for rule files
 	DefaultRuleExtensions = datastructs.NewInitSyncedSet(".gen", ".gene")
@@ -526,7 +527,7 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 		genInfo["ATTACK"] = attcks
 	}
 
-	event.Set(&geneInfoPath, genInfo)
+	event.Set(&GeneInfoPath, genInfo)
 	// Update engine's statistics
 	e.Lock()
 	e.Stats.Scanned++
@@ -544,21 +545,26 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 
 	// return values
 	names = make([]string, 0)
-	filtered = true
+	filtered = false
 
 	// initialized variables
 	traces := make([]*rules.CompiledRule, 0)
 	attcks := make([]rules.Attack, 0)
 	markedAttcks := datastructs.NewSyncedSet()
+	// boolean value to track if only filters matched event
+	// because we don't want to add data to event if it is only filtered
+	onlyFiltered := true
 
 	e.RLock()
 	for _, r := range e.rules {
 		if r.Match(event) {
-			filtered = filtered && r.Filter
 			matched = true
+			// Becomes false as soon as the rule is not a filter
+			onlyFiltered = onlyFiltered && r.Filter
 
 			// Do not need to go further if it is a filter rule
 			if r.Filter {
+				filtered = true
 				continue
 			}
 
@@ -602,10 +608,9 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 	e.RUnlock()
 
 	// it is an filtered event if at least one rule matched and filtered flag is true
-	//filtered = len(names) > 0 && filtered
-	filtered = matched && filtered
+	//onlyFiltered = matched && onlyFiltered
 	// tells that the only matches are filters
-	if filtered {
+	if matched && onlyFiltered {
 		// we keep original event unmodified
 		return
 	}
@@ -625,7 +630,7 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 		genInfo["ATTACK"] = attcks
 	}
 
-	event.Set(&geneInfoPath, genInfo)
+	event.Set(&GeneInfoPath, genInfo)
 	// Update engine's statistics
 	e.Lock()
 	e.Stats.Scanned++
