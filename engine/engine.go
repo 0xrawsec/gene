@@ -295,6 +295,21 @@ func (e *Engine) GetRawRule(regex string) (cs chan string) {
 	return cs
 }
 
+// GetRawRuleByName returns the raw rule for a given rule name
+func (e *Engine) GetRawRuleByName(name string) string {
+	return e.rawRules[name]
+}
+
+// GetRuleNames returns a slice of containing the names of all the
+// rules loaded in the engine
+func (e *Engine) GetRuleNames() (names []string) {
+	names = make([]string, 0, len(e.names))
+	for name := range e.names {
+		names = append(names, name)
+	}
+	return names
+}
+
 // GetCRuleByName gets a compile rule by its name
 func (e *Engine) GetCRuleByName(name string) (r *rules.CompiledRule) {
 	if idx, ok := e.names[name]; ok {
