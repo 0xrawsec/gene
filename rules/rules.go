@@ -20,6 +20,8 @@ var (
 
 //CompiledRule definition
 type CompiledRule struct {
+	containers *ContainerDB
+
 	Name        string
 	Criticality int
 	Channels    datastructs.SyncedSet
@@ -31,7 +33,7 @@ type CompiledRule struct {
 	Disabled    bool // Way to deal with no container issue
 	Filter      bool // whether it is a Filter rule or not
 	Conditions  *ConditionElement
-	containers  *ContainerDB
+	Actions     []string
 	// ATT&CK information
 	Attack []Attack
 }
@@ -44,6 +46,7 @@ func NewCompiledRule() (er CompiledRule) {
 	er.EventIDs = datastructs.NewSyncedSet()
 	er.AtomMap = datastructs.NewSyncedMap()
 	er.Attack = make([]Attack, 0)
+	er.Actions = make([]string, 0)
 	return
 }
 
@@ -156,6 +159,7 @@ type Rule struct {
 	Meta      MetaSection
 	Matches   []string
 	Condition string
+	Actions   []string
 }
 
 //NewRule creates a new rule used to deserialize from JSON
@@ -171,7 +175,8 @@ func NewRule() Rule {
 			Attack:      make([]Attack, 0),
 			Criticality: 0},
 		Matches:   make([]string, 0),
-		Condition: ""}
+		Condition: "",
+		Actions:   make([]string, 0)}
 	return r
 }
 
@@ -202,6 +207,8 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	rule.Criticality = globals.Bound(jr.Meta.Criticality)
 	// Pass ATT&CK information to compiled rule
 	rule.Attack = jr.Meta.Attack
+	// Pass Actions to compiled rule
+	rule.Actions = jr.Actions
 	for _, t := range jr.Tags {
 		rule.Tags.Add(t)
 	}

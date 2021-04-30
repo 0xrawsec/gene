@@ -80,8 +80,16 @@ const (
 )
 
 var (
-	// GeneInfoPath path to the Gene information a the modified event
+	// GeneInfoPath path to the Gene information in a modified event
 	GeneInfoPath = evtx.Path("/Event/GeneInfo")
+	// CriticalityPath path to criticality information
+	CriticalityPath = evtx.Path("/Event/GeneInfo/Criticality")
+	// SignaturePath path to signature match information
+	SignaturePath = evtx.Path("/Event/GeneInfo/Signature")
+	// AttackPath path to MITRE ATT&CK information
+	AttackPath = evtx.Path("/Event/GeneInfo/Attack")
+	// ActionsPath path to actions
+	ActionsPath = evtx.Path("/Event/GeneInfo/Actions")
 
 	// DefaultRuleExtensions default extensions for rule files
 	DefaultRuleExtensions = datastructs.NewInitSyncedSet(".gen", ".gene")
@@ -126,16 +134,19 @@ type Engine struct {
 	nameFilters datastructs.SyncedSet
 	trace       bool
 	dumpRaw     bool
-	showAttck   bool
-	filter      bool // tells that we should apply Filter rules
+	//showAttck   bool
+	filter bool // tells that we should apply Filter rules
 	// Used to mark the traces and not duplicate those
 	markedTraces datastructs.SyncedSet
 	containers   *rules.ContainerDB
 	// Control allowed file extensions
 	ruleExtensions datastructs.SyncedSet
 	tplExtensions  datastructs.SyncedSet
+
 	// engine statistics
-	Stats Stats
+	Stats       Stats
+	ShowActions bool
+	ShowAttack  bool
 }
 
 //NewEngine creates a new engine
@@ -176,8 +187,9 @@ func (e *Engine) SetFilters(names, tags []string) {
 }
 
 // SetShowAttck sets engine flag to display ATT&CK information in matching events
+// Update: member was private before, this method is kept for compatibility purposes
 func (e *Engine) SetShowAttck(value bool) {
-	e.showAttck = value
+	e.ShowAttack = value
 }
 
 //Count returns the number of rules successfuly loaded
@@ -478,6 +490,8 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 	names = make([]string, 0)
 	attcks := make([]rules.Attack, 0)
 	markedAttcks := datastructs.NewSyncedSet()
+	actions := make([]string, 0)
+	markedActions := datastructs.NewSyncedSet()
 	filtered := true
 
 	e.RLock()
@@ -486,11 +500,20 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 			filtered = filtered && r.Filter
 			matched = true
 			names = append(names, r.Name)
+
 			// Updating ATT&CK information
 			for _, attck := range r.Attack {
 				if !markedAttcks.Contains(attck.ID) {
 					attcks = append(attcks, attck)
 					markedAttcks.Add(attck.ID)
+				}
+			}
+
+			// Updating actions
+			for _, action := range r.Actions {
+				if !markedActions.Contains((action)) {
+					actions = append(actions, action)
+					markedActions.Add(action)
 				}
 			}
 
@@ -538,8 +561,13 @@ func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) 
 		"Criticality": criticality}
 
 	// Update ATT&CK information if needed
-	if e.showAttck && len(attcks) > 0 {
+	if e.ShowAttack && len(attcks) > 0 {
 		genInfo["ATTACK"] = attcks
+	}
+
+	// Update Actions if needed
+	if e.ShowActions && len(actions) > 0 {
+		genInfo["Actions"] = actions
 	}
 
 	event.Set(&GeneInfoPath, genInfo)
@@ -566,6 +594,8 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 	traces := make([]*rules.CompiledRule, 0)
 	attcks := make([]rules.Attack, 0)
 	markedAttcks := datastructs.NewSyncedSet()
+	actions := make([]string, 0)
+	markedActions := datastructs.NewSyncedSet()
 	// boolean value to track if only filters matched event
 	// because we don't want to add data to event if it is only filtered
 	onlyFiltered := true
@@ -592,6 +622,14 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 				if !markedAttcks.Contains(attck.ID) {
 					attcks = append(attcks, attck)
 					markedAttcks.Add(attck.ID)
+				}
+			}
+
+			// Updating actions
+			for _, action := range r.Actions {
+				if !markedActions.Contains((action)) {
+					actions = append(actions, action)
+					markedActions.Add(action)
 				}
 			}
 
@@ -641,8 +679,13 @@ func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticali
 		"Criticality": criticality}
 
 	// Update ATT&CK information if needed
-	if e.showAttck && len(attcks) > 0 {
+	if e.ShowAttack && len(attcks) > 0 {
 		genInfo["ATTACK"] = attcks
+	}
+
+	// Update Actions if needed
+	if e.ShowActions && len(actions) > 0 {
+		genInfo["Actions"] = actions
 	}
 
 	event.Set(&GeneInfoPath, genInfo)
