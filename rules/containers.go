@@ -98,7 +98,7 @@ func (c *ContainerDB) String() string {
 	out := make([]string, 0)
 	for name := range *c {
 		out = append(out, fmt.Sprintf("Container: %s", name))
-		for _, v := range *((*c)[name].List()) {
+		for _, v := range (*c)[name].List() {
 			out = append(out, fmt.Sprintf("\tType:%T Value:%[1]v", v))
 		}
 	}

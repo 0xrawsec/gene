@@ -453,19 +453,19 @@ func (e *Engine) addRule(r *rules.CompiledRule, k string) error {
 	e.names[k] = i
 
 	// Update the map of tags in order to speed up search by tag
-	for _, t := range *(r.Tags.List()) {
+	for _, t := range r.Tags.List() {
 		key := t.(string)
 		e.tags[key] = append(e.tags[key], i)
 	}
 
 	// Update the map of channels
-	for _, c := range *(r.Channels.List()) {
+	for _, c := range r.Channels.List() {
 		key := c.(string)
 		e.channels[key] = append(e.channels[key], i)
 	}
 
 	// Update the map of eventIDs
-	for _, eid := range *(r.EventIDs.List()) {
+	for _, eid := range r.EventIDs.List() {
 		key := eid.(int64)
 		e.eventIDs[key] = append(e.eventIDs[key], i)
 	}

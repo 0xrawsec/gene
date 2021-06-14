@@ -1,6 +1,6 @@
 RELEASE=$(GOPATH)/release
 MAIN_BASEN_SRC=gene
-VERSION=$(shell git tag | tail -1 | sed 's/^v//')
+VERSION=$(shell git tag | sort -V | tail -1 | sed 's/^v//')
 COMMITID=$(shell git rev-parse HEAD)
 
 # Strips symbols and dwarf to make binary smaller

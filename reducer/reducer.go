@@ -116,13 +116,13 @@ func (rs *ReducedStats) Update(t time.Time, matches []string) {
 func (rs *ReducedStats) Finalize(cntSigs int) {
 
 	// process techniques
-	for _, i := range *rs.techniques.List() {
+	for _, i := range rs.techniques.List() {
 		technique := i.(string)
 		rs.Techniques = append(rs.Techniques, technique)
 	}
 
 	// process tactics
-	for _, i := range *rs.tactics.List() {
+	for _, i := range rs.tactics.List() {
 		tactic := i.(string)
 		rs.Tactics = append(rs.Tactics, tactic)
 	}
