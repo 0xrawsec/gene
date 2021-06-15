@@ -24,7 +24,7 @@ func NewContainers() *ContainerDB {
 // AddNewContainer adds an empty container to the DB
 func (c *ContainerDB) AddNewContainer(name string) error {
 	container := datastructs.NewSyncedSet()
-	return c.AddContainer(name, &container)
+	return c.AddContainer(name, container)
 }
 
 // AddContainer adds a new container to c

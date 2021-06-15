@@ -24,11 +24,11 @@ type CompiledRule struct {
 
 	Name        string
 	Criticality int
-	Channels    datastructs.SyncedSet
-	Computers   datastructs.SyncedSet
-	Tags        datastructs.SyncedSet
-	EventIDs    datastructs.SyncedSet
-	AtomMap     datastructs.SyncedMap
+	Channels    *datastructs.SyncedSet
+	Computers   *datastructs.SyncedSet
+	Tags        *datastructs.SyncedSet
+	EventIDs    *datastructs.SyncedSet
+	AtomMap     *datastructs.SyncedMap
 	Traces      []*Trace
 	Disabled    bool // Way to deal with no container issue
 	Filter      bool // whether it is a Filter rule or not

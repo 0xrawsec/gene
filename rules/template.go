@@ -42,7 +42,7 @@ func (t *Template) Replace(s string) (new string) {
 
 //TemplateMap structure
 type TemplateMap struct {
-	datastructs.SyncedMap
+	*datastructs.SyncedMap
 }
 
 //NewTemplateMap creates a new TemplateMap structure

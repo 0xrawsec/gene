@@ -130,18 +130,18 @@ type Engine struct {
 	channels  map[string][]int
 	eventIDs  map[int64][]int
 	// Filters used to choose which rule to compile in case of match by tag/name
-	tagFilters  datastructs.SyncedSet
-	nameFilters datastructs.SyncedSet
+	tagFilters  *datastructs.SyncedSet
+	nameFilters *datastructs.SyncedSet
 	trace       bool
 	dumpRaw     bool
 	//showAttck   bool
 	filter bool // tells that we should apply Filter rules
 	// Used to mark the traces and not duplicate those
-	markedTraces datastructs.SyncedSet
+	markedTraces *datastructs.SyncedSet
 	containers   *rules.ContainerDB
 	// Control allowed file extensions
-	ruleExtensions datastructs.SyncedSet
-	tplExtensions  datastructs.SyncedSet
+	ruleExtensions *datastructs.SyncedSet
+	tplExtensions  *datastructs.SyncedSet
 
 	// engine statistics
 	Stats       Stats
@@ -432,7 +432,7 @@ func (e *Engine) AddRule(r *rules.CompiledRule) error {
 		return nil
 	}
 	// We skip adding the rule to the engine if we decided to match by tags
-	if e.tagFilters.Intersect(&(r.Tags)).Len() == 0 && e.tagFilters.Len() > 0 {
+	if e.tagFilters.Intersect(r.Tags).Len() == 0 && e.tagFilters.Len() > 0 {
 		log.Debugf("Skip compiling by tags %s", r.Name)
 		return nil
 	}

@@ -130,7 +130,7 @@ func (t *Trace) Compile(trigger *CompiledRule, value string) (*CompiledRule, err
 	cr.Name = fmt.Sprintf("%s%s", trigger.Name, t.Name)
 
 	// Propagate the tags of the trigger
-	cr.Tags = datastructs.NewSyncedSet(&(trigger.Tags))
+	cr.Tags = datastructs.NewSyncedSet(trigger.Tags)
 
 	// Updating the EventIDs
 	if !t.anyEventID {
@@ -139,7 +139,7 @@ func (t *Trace) Compile(trigger *CompiledRule, value string) (*CompiledRule, err
 		}
 		// If there is no EventID in the trace, we take the ones of the triggering rule
 		if len(t.EventIDs) == 0 {
-			cr.EventIDs = datastructs.NewSyncedSet(&(trigger.EventIDs))
+			cr.EventIDs = datastructs.NewSyncedSet(trigger.EventIDs)
 		}
 	}
 
@@ -150,12 +150,12 @@ func (t *Trace) Compile(trigger *CompiledRule, value string) (*CompiledRule, err
 		}
 		// If there is no Channel in the trace, we take the ones of the triggering rule
 		if cr.Channels.Len() == 0 {
-			cr.Channels = datastructs.NewSyncedSet(&(trigger.Channels))
+			cr.Channels = datastructs.NewSyncedSet(trigger.Channels)
 		}
 	}
 
 	// Propagate the Computers fields of the trigger
-	cr.Computers = datastructs.NewSyncedSet(&(trigger.Computers))
+	cr.Computers = datastructs.NewSyncedSet(trigger.Computers)
 
 	// Propagate the Criticality of the trigger
 	cr.Criticality = trigger.Criticality

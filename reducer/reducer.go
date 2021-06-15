@@ -43,8 +43,8 @@ type ReducedStats struct {
 	StartTime  time.Time `json:"start-time"`
 	MedianTime time.Time `json:"median-time"`
 	StopTime   time.Time `json:"stop-time"`
-	techniques datastructs.SyncedSet
-	tactics    datastructs.SyncedSet
+	techniques *datastructs.SyncedSet
+	tactics    *datastructs.SyncedSet
 	sigCrits   []float64
 	alertCrits []float64
 	eng        *engine.Engine
@@ -162,7 +162,7 @@ type Reducer struct {
 	sync.RWMutex
 	e        *engine.Engine
 	m        map[string]*ReducedStats
-	uniqSigs datastructs.SyncedSet
+	uniqSigs *datastructs.SyncedSet
 }
 
 // NewReducer creates a new Reducer structure
