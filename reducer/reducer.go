@@ -9,10 +9,10 @@ import (
 	"github.com/0xrawsec/gene/globals"
 
 	"github.com/0xrawsec/golang-utils/datastructs"
+	"github.com/0xrawsec/golang-utils/stats"
 
 	"github.com/0xrawsec/gene/engine"
 	"github.com/0xrawsec/golang-evtx/evtx"
-	"github.com/0xrawsec/golang-utils/stats"
 )
 
 //////////////////////////// Reducer ////////////////////////////////
@@ -112,21 +112,7 @@ func (rs *ReducedStats) Update(t time.Time, matches []string) {
 	rs.CntAlerts++
 }
 
-// Finalize the computation of the statistics
-func (rs *ReducedStats) Finalize(cntSigs int) {
-
-	// process techniques
-	for _, i := range rs.techniques.List() {
-		technique := i.(string)
-		rs.Techniques = append(rs.Techniques, technique)
-	}
-
-	// process tactics
-	for _, i := range rs.tactics.List() {
-		tactic := i.(string)
-		rs.Tactics = append(rs.Tactics, tactic)
-	}
-
+func (rs *ReducedStats) ComputeScore(cntSigs int) int {
 	// compute alerts statistics
 	rs.AvgAlertCrit = stats.Truncate(float64(rs.SumAlertCrit)/float64(rs.CntAlerts), 2)
 	rs.StdDevAlertCrit = stats.Truncate(stats.StdDev(rs.alertCrits), 2)
@@ -144,10 +130,31 @@ func (rs *ReducedStats) Finalize(cntSigs int) {
 	rs.AvgAlertCritBySigDiv = int(math.Round((rs.AvgAlertCrit * rs.SigDiv)))
 
 	rs.Score = rs.AvgAlertCritBySigDiv + rs.CntUniqByAvgCritBySig
+	return rs.Score
+}
 
+// Finalize the computation of the statistics
+func (rs *ReducedStats) Finalize(cntSigs int) {
+
+	// process techniques
+	for _, i := range rs.techniques.List() {
+		technique := i.(string)
+		rs.Techniques = append(rs.Techniques, technique)
+	}
+
+	// process tactics
+	for _, i := range rs.tactics.List() {
+		tactic := i.(string)
+		rs.Tactics = append(rs.Tactics, tactic)
+	}
+
+	// unique signatures
 	for s := range rs.CntBySig {
 		rs.UniqSigs = append(rs.UniqSigs, s)
 	}
+
+	// compute score
+	rs.ComputeScore(cntSigs)
 
 	rs.MedianTime = rs.StartTime.Add((rs.StopTime.Sub(rs.StartTime)) / 2)
 }
@@ -198,7 +205,16 @@ func (r *Reducer) ReduceCopy(identifier string) (crs *ReducedStats) {
 		crs.Finalize(r.uniqSigs.Len())
 	}
 	return
+}
 
+// Score is a simpler primitive to return only the score
+func (r *Reducer) Score(identifier string) int {
+	r.RLock()
+	defer r.RUnlock()
+	if rs, ok := r.m[identifier]; ok {
+		return rs.ComputeScore(r.uniqSigs.Len())
+	}
+	return 0
 }
 
 // Reset ReducedStats according to its identifier
