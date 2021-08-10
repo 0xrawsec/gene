@@ -1,4 +1,4 @@
-RELEASE=$(GOPATH)/release
+RELEASE=$(shell go env GOPATH)/release
 MAIN_BASEN_SRC=gene
 VERSION=$(shell git tag | sort -V | tail -1 | sed 's/^v//')
 COMMITID=$(shell git rev-parse HEAD)

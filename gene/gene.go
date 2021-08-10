@@ -15,12 +15,10 @@ import (
 
 	"github.com/0xrawsec/gene/engine"
 	"github.com/0xrawsec/gene/reducer"
-	"github.com/0xrawsec/gene/rules"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/args"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/fsutil"
-	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
 	"github.com/0xrawsec/golang-utils/progress"
 	"github.com/0xrawsec/golang-utils/readers"
@@ -28,23 +26,28 @@ import (
 
 //////////////////////////// Utilities //////////////////////////////
 
-func matchEvent(e *engine.Engine, event *evtx.GoEvtxMap) {
-	n, crit, filtered := e.MatchOrFilter(event)
+func matchEvent(e *engine.Engine, evt engine.Event) {
+	matches, criticality, filtered := e.MatchOrFilter(evt)
+	// if we don't want to display filtered events
+	if flNoFilter && len(matches) == 0 && filtered {
+		return
+	}
+
 	// We print only if we are not in test mode
-	if (len(n) > 0 || filtered) && !test {
+	if (len(matches) > 0 || filtered) && !flTest {
 		// Prints out the events with timestamp or not
-		if showTimestamp && (crit >= criticalityThresh || filtered) {
-			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+		if flShowTimestamp && (criticality >= criticalityThresh || filtered) {
+			fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
 		} else {
-			if crit >= criticalityThresh || filtered {
-				fmt.Println(string(evtx.ToJSON(event)))
+			if criticality >= criticalityThresh || filtered {
+				fmt.Println(string(evtx.ToJSON(evt)))
 			}
 		}
-	} else if allEvents || (test && len(n) == 0) {
-		if showTimestamp {
-			fmt.Printf("%d: %s\n", event.TimeCreated().Unix(), string(evtx.ToJSON(event)))
+	} else if flAllEvents || (flTest && len(matches) == 0) {
+		if flShowTimestamp {
+			fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
 		} else {
-			fmt.Println(string(evtx.ToJSON(event)))
+			fmt.Println(string(evtx.ToJSON(evt)))
 		}
 	}
 }
@@ -85,7 +88,7 @@ func jsonEventGenerator() (ec chan *evtx.GoEvtxMap) {
 				}
 				// Printing Progress
 				eventCnt++
-				if showProgress && eventCnt >= oldEventCnt {
+				if flShowProgress && eventCnt >= oldEventCnt {
 					delta := time.Now().Sub(start)
 					prog.Update(fmt.Sprintf("%d (%2.f EPS)", eventCnt, float64(eventCnt)/delta.Seconds()))
 					prog.Print()
@@ -118,7 +121,7 @@ func evtxEventGenerator() (ec chan *evtx.GoEvtxMap) {
 			start := time.Now()
 			for event := range ef.UnorderedEvents() {
 				eventCnt++
-				if showProgress && eventCnt >= oldEventCnt {
+				if flShowProgress && eventCnt >= oldEventCnt {
 					delta := time.Now().Sub(start)
 					prog.Update(fmt.Sprintf("%d (%2.f EPS)", eventCnt, float64(eventCnt)/delta.Seconds()))
 					prog.Print()
@@ -186,25 +189,27 @@ const (
 )
 
 var (
-	debug         bool
-	showTimestamp bool
-	allEvents     bool
-	showProgress  bool
-	inJSONFmt     bool
-	trace         bool
-	template      bool
-	verify        bool
-	listTags      bool
-	versionFlag   bool
-	reduceFlag    bool
-	showAttckFlag bool
-	test          bool
-	cpuprofile    string
-	tags          []string
-	names         []string
-	tagsVar       args.ListVar
-	namesVar      args.ListVar
-	dumpsVar      args.ListVar
+	flDebug         bool
+	flShowTimestamp bool
+	flAllEvents     bool
+	flShowProgress  bool
+	flJSONFormat    bool
+	flTrace         bool
+	flTemplate      bool
+	flVerify        bool
+	flListTags      bool
+	flVersion       bool
+	flReduce        bool
+	flShowAttack    bool
+	flTest          bool
+	flNoFilter      bool
+
+	cpuprofile string
+	tags       []string
+	names      []string
+	tagsVar    args.ListVar
+	namesVar   args.ListVar
+	dumpsVar   args.ListVar
 
 	criticalityThresh int
 
@@ -215,33 +220,34 @@ var (
 	ruleExts  = args.ListVar{".gen", ".gene"}
 	jobs      = 1
 
-	tplExt = ".tpl"
+	tplExt = ".toml"
 )
 
 func main() {
-	flag.BoolVar(&debug, "d", debug, "Enable debug mode")
-	flag.BoolVar(&showTimestamp, "ts", showTimestamp, "Show the timestamp of the event when printing")
-	flag.BoolVar(&allEvents, "all", allEvents, "Print all events (even the one not matching rules)")
-	flag.BoolVar(&showProgress, "progress", showProgress, "Show progress")
-	flag.BoolVar(&inJSONFmt, "j", inJSONFmt, "Input is in JSON format")
-	flag.BoolVar(&trace, "trace", trace, "Tells the engine to use the trace function of the rules. Trace mode implies a number of job equal to 1")
-	flag.BoolVar(&template, "template", template, "Prints a rule template")
-	flag.BoolVar(&verify, "verify", verify, "Verify the rules and exit.")
-	flag.BoolVar(&listTags, "lt", listTags, "List tags of rules loaded into the engine")
-	flag.BoolVar(&versionFlag, "version", versionFlag, "Show version information and exit")
-	flag.BoolVar(&reduceFlag, "reduce", reduceFlag, "Aggregate the results of already processed events and outputs condensed information")
-	flag.BoolVar(&showAttckFlag, "a", showAttckFlag, "Show Mitre ATT&CK information in matching events")
-	flag.BoolVar(&test, "test", test, "Test mode. Prints non matching events and returns a non zero status code if not all events match.")
+	flag.BoolVar(&flDebug, "debug", flDebug, "Enable debug mode")
+	flag.BoolVar(&flShowTimestamp, "t", flShowTimestamp, "Show the timestamp of the event when printing")
+	flag.BoolVar(&flAllEvents, "all", flAllEvents, "Print all events (even the one not matching rules)")
+	flag.BoolVar(&flShowProgress, "progress", flShowProgress, "Show progress")
+	flag.BoolVar(&flJSONFormat, "j", flJSONFormat, "Input is in JSON format")
+	flag.BoolVar(&flTrace, "trace", flTrace, "Tells the engine to use the trace function of the rules. Trace mode implies a number of job equal to 1")
+	flag.BoolVar(&flTemplate, "template", flTemplate, "Prints a rule template")
+	flag.BoolVar(&flVerify, "verify", flVerify, "Verify the rules and exit")
+	flag.BoolVar(&flListTags, "list-tags", flListTags, "List tags of rules loaded into the engine")
+	flag.BoolVar(&flVersion, "version", flVersion, "Show version information and exit")
+	flag.BoolVar(&flReduce, "reduce", flReduce, "Aggregate the results of already processed events and outputs condensed information")
+	flag.BoolVar(&flShowAttack, "a", flShowAttack, "Show Mitre ATT&CK information in matching events")
+	flag.BoolVar(&flTest, "test", flTest, "Test mode. Prints non matching events and returns a non zero status code if not all events match")
+	flag.BoolVar(&flNoFilter, "no-filter", flNoFilter, "Don't display filtered events")
 	flag.StringVar(&rulesPath, "r", rulesPath, "Rule file or directory")
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
-	flag.StringVar(&whitelist, "wl", whitelist, "File containing values to insert into the whitelist")
-	flag.StringVar(&blacklist, "bl", blacklist, "File containing values to insert into the blacklist")
+	flag.StringVar(&whitelist, "whitelist", whitelist, "File containing values to insert into the whitelist")
+	flag.StringVar(&blacklist, "blacklist", blacklist, "File containing values to insert into the blacklist")
 	flag.IntVar(&criticalityThresh, "c", criticalityThresh, "Criticality treshold. Prints only if criticality above threshold")
-	flag.IntVar(&jobs, "jobs", jobs, "Number of parallel jobs to run. It may result in events printed in different order than provided. If <= 0 takes all available processors")
+	flag.IntVar(&jobs, "jobs", jobs, "Number of parallel jobs to run. It may result in events printed in different order than provided (use -t to print timestamp and re-order). If <= 0 takes all available processors")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
-	flag.Var(&tagsVar, "t", "Tags to search for (comma separated)")
+	flag.Var(&tagsVar, "tags", "Tags to select rules to compile (comma separated)")
 	flag.Var(&namesVar, "n", "Rule names to match against (comma separated)")
-	flag.Var(&dumpsVar, "dump", "Dumps the rules matching the regex provided (comma separated) and then exits. Usefull to verify if regexp template is correctly applied.")
+	flag.Var(&dumpsVar, "dump", "Dumps the rules matching the regex provided (comma separated) and then exits. Usefull to verify if regexp template is correctly applied")
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s: %[1]s -r RULES [OPTIONS] FILES...\n", filepath.Base(os.Args[0]))
 		flag.PrintDefaults()
@@ -260,12 +266,12 @@ func main() {
 	}
 
 	// Enable debugging mode if needed
-	if debug {
+	if flDebug {
 		log.InitLogger(log.LDebug)
 	}
 
 	// If version switch
-	if versionFlag {
+	if flVersion {
 		printInfo(os.Stderr)
 		os.Exit(exitSuccess)
 	}
@@ -277,14 +283,15 @@ func main() {
 
 	}
 	// If trace mode is enabled, it is better to process events in order
-	if trace {
+	if flTrace {
 		jobs = 1
+
 	}
 
 	// Display rule template and exit if template flag
-	if template {
-		r := rules.NewRule()
-		r.Meta.Attack = append(r.Meta.Attack, rules.Attack{})
+	if flTemplate {
+		r := engine.NewRule()
+		r.Meta.Attack = append(r.Meta.Attack, engine.Attack{})
 		b, err := json.Marshal(r)
 		if err != nil {
 			log.LogErrorAndExit(err, exitFail)
@@ -299,14 +306,14 @@ func main() {
 	}
 
 	// Initialization
-	e := engine.NewEngine(trace)
+	e := engine.NewEngine(flTrace)
 	setRuleExts := datastructs.NewSyncedSet()
 	tags = []string(tagsVar)
 	names = []string(namesVar)
 	// Enable rule dumping on engine side
 	e.SetDumpRaw(len(dumpsVar) > 0)
 	// Enable showing Mitre ATT&CK information
-	e.SetShowAttck(showAttckFlag)
+	e.SetShowAttck(flShowAttack)
 
 	// Validation
 	if len(tags) > 0 && len(names) > 0 {
@@ -346,55 +353,15 @@ func main() {
 	log.Infof("Size of blacklist container: %d", e.BlacklistLen())
 
 	// Loading the rules and templates
+	// we first prepare the rules path
 	realPath, err := fsutil.ResolveLink(rulesPath)
 	if err != nil {
 		log.LogErrorAndExit(err, exitFail)
 	}
 
-	// Loading the templates first
-	templateDir := realPath
-	if fsutil.IsFile(realPath) {
-		templateDir = filepath.Dir(realPath)
-	}
-	for wi := range fswalker.Walk(templateDir) {
-		for _, fi := range wi.Files {
-			ext := filepath.Ext(fi.Name())
-			templateFile := filepath.Join(wi.Dirpath, fi.Name())
-			if ext == tplExt {
-				log.Infof("Loading regexp templates from file: %s", templateFile)
-				err := e.LoadTemplate(templateFile)
-				if err != nil {
-					log.Errorf("Error loading %s: %s", templateFile, err)
-				}
-			}
-		}
-	}
-
-	// Handle both rules argument as file or directory
-	cntFailure := 0
-	switch {
-	case fsutil.IsFile(realPath):
-		err := e.Load(realPath)
-		if err != nil {
-			log.Error(err)
-		}
-	case fsutil.IsDir(realPath):
-		for wi := range fswalker.Walk(realPath) {
-			for _, fi := range wi.Files {
-				ext := filepath.Ext(fi.Name())
-				rulefile := filepath.Join(wi.Dirpath, fi.Name())
-				log.Debug(ext)
-				if setRuleExts.Contains(ext) {
-					err := e.Load(rulefile)
-					if err != nil {
-						log.Errorf("Error loading %s: %s", rulefile, err)
-						cntFailure++
-					}
-				}
-			}
-		}
-	default:
-		log.LogErrorAndExit(fmt.Errorf("Cannot resolve %s to file or dir", rulesPath), exitFail)
+	// actual rule loading
+	if err := e.LoadDirectory(realPath); err != nil {
+		log.LogErrorAndExit(fmt.Errorf("Failed at loading rule directory %s: %s", realPath, err))
 	}
 
 	// Show message about successfuly compiled rules
@@ -402,17 +369,14 @@ func main() {
 
 	// If we just wanted to verify the rules, we should exit whatever
 	// the status of the compilation
-	if verify {
-		if cntFailure > 0 {
-			log.LogErrorAndExit(fmt.Errorf("Rule(s) compilation (%d files failed): FAILURE", cntFailure), exitFail)
-		}
+	if flVerify {
 		log.Infof("Rule(s) compilation: SUCCESSFUL")
 		os.Exit(exitSuccess)
 	}
 
 	// If we want to reduce
-	if reduceFlag {
-		reduce(&e)
+	if flReduce {
+		reduce(e)
 		os.Exit(exitSuccess)
 	}
 
@@ -427,7 +391,7 @@ func main() {
 	}
 
 	// If we list the tags available
-	if listTags {
+	if flListTags {
 		fmt.Println("Tags of rules loaded:")
 		tags := e.Tags()
 		sort.Strings(tags)
@@ -441,7 +405,7 @@ func main() {
 	var events chan *evtx.GoEvtxMap
 	wg := sync.WaitGroup{}
 
-	if inJSONFmt {
+	if flJSONFormat {
 		events = jsonEventGenerator()
 	} else {
 		events = evtxEventGenerator()
@@ -451,8 +415,9 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for event := range events {
-				matchEvent(&e, event)
+			for evt := range events {
+				ge := engine.GenericEvent(*evt)
+				matchEvent(e, ge)
 			}
 		}()
 	}
@@ -464,7 +429,7 @@ func main() {
 	log.Infof("Positives: %d", e.Stats.Positives)
 
 	// if we were in test mode
-	if test {
+	if flTest {
 		if e.Count() == 0 {
 			log.Error("Test: UNSUCCESSFUL")
 			log.Infof("No rule loaded")

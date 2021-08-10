@@ -1,13 +1,16 @@
 package engine
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
+	"github.com/0xrawsec/golang-utils/readers"
 )
 
 const (
@@ -63,8 +66,8 @@ const (
 )
 
 var (
-	event       = make(evtx.GoEvtxMap)
-	bigRuleFile = "./data/1000rules.json"
+	evt         = make(GenericEvent)
+	bigRuleFile = "./test/data/1000rules.json"
 )
 
 var (
@@ -123,7 +126,7 @@ func (sb *SeekBuffer) Seek(offset int64, whence int) (int64, error) {
 }
 
 func init() {
-	err := json.Unmarshal([]byte(eventStr), &event)
+	err := json.Unmarshal([]byte(eventStr), &evt)
 	if err != nil {
 		panic(err)
 	}
@@ -148,6 +151,9 @@ func openEvtx(path string) *evtx.File {
 func TestLoad(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
+	"Meta": {
+		"Schema": "2.0.0"
+	},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
 		],
@@ -165,7 +171,8 @@ func TestMatch(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -179,7 +186,31 @@ func TestMatch(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+		t.Fail()
+	} else {
+		t.Log(m)
+	}
+}
+
+func TestShouldNotMatch(t *testing.T) {
+	rule := `{
+	"Name": "ShouldNotMatch",
+	"Meta": {
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [666]},
+		"Schema": "2.0.0"
+		},
+	"Matches": [],
+	"Condition": ""
+	}`
+
+	e := NewEngine(false)
+	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+		t.Logf("Loading failed: %s", err)
+		t.FailNow()
+	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) != 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -190,7 +221,7 @@ func TestMatchAttck(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"ATTACK": [
 			{
 				"ID": "T666",
@@ -202,7 +233,8 @@ func TestMatchAttck(t *testing.T) {
 				"Description": "Super nasty software",
 				"Reference": "https://attack.mitre.org/"
 			}
-		]	
+		],
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -217,10 +249,10 @@ func TestMatchAttck(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
-		t.Log(prettyJSON(event))
+		t.Log(prettyJSON(evt))
 	}
 }
 
@@ -229,7 +261,8 @@ func TestMatchByTag(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Tags": ["foo"],
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -259,7 +292,7 @@ func TestMatchByTag(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -271,7 +304,8 @@ func TestSimpleRule(t *testing.T) {
 	rule := `{
 	"Name": "SimpleRule",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -286,7 +320,7 @@ func TestSimpleRule(t *testing.T) {
 		t.Log(err)
 	}
 	t.Logf("Engine loaded %d rule", e.Count())
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -315,7 +349,8 @@ func TestNotOrRule(t *testing.T) {
 	rule := `{
 	"Name": "NotOrRule",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
@@ -331,7 +366,7 @@ func TestNotOrRule(t *testing.T) {
 		t.Log(err)
 	}
 	// The match should fail
-	if m, _ := e.Match(&event); len(m) != 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) != 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -360,7 +395,8 @@ func TestNotAndRule(t *testing.T) {
 	rule := `{
 	"Name": "NotAndRule",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
@@ -376,7 +412,7 @@ func TestNotAndRule(t *testing.T) {
 		t.Log(err)
 	}
 	// The match should fail
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -405,7 +441,8 @@ func TestComplexRule(t *testing.T) {
 	rule := `{
 	"Name": "ComplexRule",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
@@ -426,7 +463,7 @@ func TestComplexRule(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -455,7 +492,8 @@ func TestContainer(t *testing.T) {
 	rule := `{
 	"Name": "ContainerConditions",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
@@ -477,14 +515,14 @@ func TestContainer(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if m, _ := e.Match(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
 	}
 }
 
-func TestFiltered(t *testing.T) {
+func TestFiltered1(t *testing.T) {
 	/*
 	   "CommandLine": "C:\\Windows\\system32\\devicecensus.exe",
 	   "CurrentDirectory": "C:\\Windows\\system32\\",
@@ -506,9 +544,9 @@ func TestFiltered(t *testing.T) {
 	rule := `{
 	"Name": "ProcessCreate",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"EventIDs": [1],
-		"Filter": true
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
+		"Filter": true,
+		"Schema": "2.0.0"
 		},
 	"Matches": [],
 	"Condition": ""
@@ -522,9 +560,9 @@ func TestFiltered(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&event); filtered {
+	if _, _, filtered := e.MatchOrFilter(&evt); filtered {
 		t.Log("Event correctly filtered")
-		t.Logf("%s", prettyJSON(event))
+		t.Logf("%s", prettyJSON(evt))
 	} else {
 		t.Fail()
 	}
@@ -552,9 +590,9 @@ func TestFiltered2(t *testing.T) {
 	rule := `{
 	"Name": "ProcessCreate",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"EventIDs": [1],
-		"Filter": true
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
+		"Filter": true,
+		"Schema": "2.0.0"
 		},
 	"Matches": [],
 	"Condition": ""
@@ -563,7 +601,8 @@ func TestFiltered2(t *testing.T) {
 	{
 	"Name": "SimpleRule",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -579,10 +618,12 @@ func TestFiltered2(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&event); filtered {
-		t.Log("Event not filtered")
+	if m, _, filtered := e.MatchOrFilter(&evt); filtered && len(m) > 0 {
+		t.Log("Event is both an alert and filtered")
 	} else {
-		t.Log(prettyJSON(event))
+		t.Logf("Matches: %s", m)
+		t.Logf("Filtered: %t", filtered)
+		t.Log(prettyJSON(evt))
 		t.Fail()
 	}
 }
@@ -609,9 +650,9 @@ func TestNotFiltered(t *testing.T) {
 	rule := `{
 	"Name": "ProcessCreate",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"EventIDs": [2],
-		"Filter": true
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [2]},
+		"Filter": true,
+		"Schema": "2.0.0"
 		},
 	"Matches": [],
 	"Condition": ""
@@ -625,7 +666,7 @@ func TestNotFiltered(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&event); !filtered {
+	if _, _, filtered := e.MatchOrFilter(&evt); !filtered {
 		t.Log("Event not filtered")
 	} else {
 		t.Fail()
@@ -645,7 +686,8 @@ func TestActions(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -661,10 +703,49 @@ func TestActions(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&event); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
 		t.Fail()
 	} else {
-		t.Log(string(prettyJSON(event)))
+		t.Log(string(prettyJSON(evt)))
+	}
+}
+
+func TestDefaultActions(t *testing.T) {
+	rule := `{
+	"Name": "ShouldMatch",
+	"Meta": {
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}`
+
+	e := NewEngine(false)
+	e.ShowActions = true
+	actions := []string{"kill", "kill", "block", "block"}
+	e.SetDefaultActions(0, 10, actions)
+	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+		t.Logf("Loading failed: %s", err)
+		t.FailNow()
+	}
+	t.Logf("Successfuly loaded %d rules", e.Count())
+	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+		t.Fail()
+	} else {
+		if i, ok := evt.Get(GeneInfoPath); ok {
+			if det, ok := i.(*Detection); ok {
+				for _, act := range actions {
+					if !det.Actions.Contains(act) {
+						t.Errorf("default action not set as intended")
+					}
+				}
+			}
+
+		}
+		t.Log(string(prettyJSON(evt)))
 	}
 }
 
@@ -677,5 +758,71 @@ func BenchmarkLoadThousand(b *testing.B) {
 		b.FailNow()
 	}
 	b.Logf("Engine loaded %d rules", e.Count())
+}
+
+func BenchmarkEngine(b *testing.B) {
+	var err error
+	var fd *os.File
+	var r *gzip.Reader
+	var bytesScanned uint64
+
+	loops := 5
+	events := make([]GenericEvent, 0)
+
+	eventsFile := "./test/data/events.json.gz"
+	rulePath := "./test/data/compiled.gen"
+	e := NewEngine(false)
+
+	// loading rules into engine
+	if err := e.Load(rulePath); err != nil {
+		b.Errorf("Loading failed: %s", err)
+		b.FailNow()
+	}
+
+	if fd, err = os.Open(eventsFile); err != nil {
+		b.Errorf("Fail at opening event file: %s", err)
+		b.FailNow()
+	}
+	defer fd.Close()
+
+	// loading all events in memory
+	if r, err = gzip.NewReader(fd); err != nil {
+		b.Errorf("Failed at creating gzip reader: %s", err)
+		b.FailNow()
+	}
+
+	for line := range readers.Readlines(r) {
+		e := GenericEvent{}
+		if err = json.Unmarshal(line, &e); err != nil {
+			b.Errorf("Failed at unmarshaling event: %s", err)
+			b.FailNow()
+		}
+		events = append(events, e)
+		bytesScanned += uint64(len(line))
+	}
+	r.Close()
+
+	start := time.Now()
+	for i := 0; i < loops; i++ {
+		for _, evt := range events {
+			e.MatchOrFilter(evt)
+		}
+	}
+	stop := time.Now()
+
+	// statistics
+
+	// we have to multiply the number of bytes scanned by the
+	// number of loops we have done
+	bytesScanned *= uint64(loops)
+	dmatch := stop.Sub(start)
+	eps := float64(e.Stats.Scanned) / float64(dmatch.Seconds())
+	mbps := float64(bytesScanned) / float64(dmatch.Seconds()*1000000)
+
+	b.Logf("Benchmark using real Windows events and production detection rules")
+	b.Logf("Number of rules loaded: %d", e.Count())
+	b.Logf("Number of events scanned: %d", e.Stats.Scanned)
+	b.Logf("Theoretical maximum engine speed: %.2f Event/s", eps)
+	b.Logf("                                  %.2f MB/s", mbps)
 
 }

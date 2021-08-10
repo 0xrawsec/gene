@@ -6,14 +6,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0xrawsec/gene/globals"
-
+	"github.com/0xrawsec/gene/engine"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/stats"
 
-	"github.com/0xrawsec/gene/engine"
 	"github.com/0xrawsec/golang-evtx/evtx"
 )
+
+func BoundedScoreFormula(score, max int) float64 {
+	return stats.Truncate(float64(score)*100.0/float64(max), 1)
+}
 
 //////////////////////////// Reducer ////////////////////////////////
 
@@ -39,15 +41,16 @@ type ReducedStats struct {
 	// alert criticality metric, the higher it is the more attention should be given to the report
 	AvgAlertCritBySigDiv int `json:"alert-criticality-metric"`
 	// aggregated metric used to sort statistic reports between them. Higher the score higher the priority
-	Score      int       `json:"score"`
-	StartTime  time.Time `json:"start-time"`
-	MedianTime time.Time `json:"median-time"`
-	StopTime   time.Time `json:"stop-time"`
-	techniques *datastructs.SyncedSet
-	tactics    *datastructs.SyncedSet
-	sigCrits   []float64
-	alertCrits []float64
-	eng        *engine.Engine
+	Score        int       `json:"score"`
+	BoundedScore float64   `json:"bounded-score"`
+	StartTime    time.Time `json:"start-time"`
+	MedianTime   time.Time `json:"median-time"`
+	StopTime     time.Time `json:"stop-time"`
+	techniques   *datastructs.SyncedSet
+	tactics      *datastructs.SyncedSet
+	sigCrits     []float64
+	alertCrits   []float64
+	eng          *engine.Engine
 }
 
 // NewReducedStats structure
@@ -101,9 +104,9 @@ func (rs *ReducedStats) Update(t time.Time, matches []string) {
 		}
 
 	}
-	if evtCrit > globals.CriticalityBound {
-		rs.SumAlertCrit += globals.CriticalityBound
-		rs.alertCrits = append(rs.alertCrits, float64(globals.CriticalityBound))
+	if evtCrit > engine.CriticalityBound {
+		rs.SumAlertCrit += engine.CriticalityBound
+		rs.alertCrits = append(rs.alertCrits, float64(engine.CriticalityBound))
 	} else {
 		rs.SumAlertCrit += evtCrit
 		rs.alertCrits = append(rs.alertCrits, float64(evtCrit))
@@ -134,7 +137,7 @@ func (rs *ReducedStats) ComputeScore(cntSigs int) int {
 }
 
 // Finalize the computation of the statistics
-func (rs *ReducedStats) Finalize(cntSigs int) {
+func (rs *ReducedStats) Finalize(cntSigs, maxScore int) {
 
 	// process techniques
 	for _, i := range rs.techniques.List() {
@@ -154,7 +157,9 @@ func (rs *ReducedStats) Finalize(cntSigs int) {
 	}
 
 	// compute score
-	rs.ComputeScore(cntSigs)
+	score := rs.ComputeScore(cntSigs)
+
+	rs.BoundedScore = BoundedScoreFormula(score, maxScore)
 
 	rs.MedianTime = rs.StartTime.Add((rs.StopTime.Sub(rs.StartTime)) / 2)
 }
@@ -166,10 +171,11 @@ func (rs ReducedStats) String() string {
 
 // Reducer structure to store statistics about several machines
 type Reducer struct {
-	sync.RWMutex
+	mutex    sync.RWMutex
 	e        *engine.Engine
 	m        map[string]*ReducedStats
 	uniqSigs *datastructs.SyncedSet
+	max      int
 }
 
 // NewReducer creates a new Reducer structure
@@ -177,6 +183,24 @@ func NewReducer(e *engine.Engine) *Reducer {
 	return &Reducer{e: e,
 		m:        make(map[string]*ReducedStats),
 		uniqSigs: datastructs.NewSyncedSet()}
+}
+
+func (r *Reducer) Lock() {
+	r.mutex.Lock()
+	// we mark the max as not computed
+	r.max = 0
+}
+
+func (r *Reducer) RLock() {
+	r.mutex.RLock()
+}
+
+func (r *Reducer) Unlock() {
+	r.mutex.Unlock()
+}
+
+func (r *Reducer) RUnlock() {
+	r.mutex.RUnlock()
 }
 
 // Update a ReducedStats stored in Reducer with data
@@ -202,7 +226,7 @@ func (r *Reducer) ReduceCopy(identifier string) (crs *ReducedStats) {
 	defer r.RUnlock()
 	if rs, ok := r.m[identifier]; ok {
 		crs = rs.Copy()
-		crs.Finalize(r.uniqSigs.Len())
+		crs.Finalize(r.CountUniqSigs(), r.MaxScore())
 	}
 	return
 }
@@ -212,9 +236,45 @@ func (r *Reducer) Score(identifier string) int {
 	r.RLock()
 	defer r.RUnlock()
 	if rs, ok := r.m[identifier]; ok {
-		return rs.ComputeScore(r.uniqSigs.Len())
+		return rs.ComputeScore(r.CountUniqSigs())
 	}
 	return 0
+}
+
+// BoundedScore returns a bounded score in [0; 100] computed relatively
+// to the maximum score found in the reducer
+func (r *Reducer) BoundedScore(identifier string) float64 {
+	r.RLock()
+	defer r.RUnlock()
+	if rs, ok := r.m[identifier]; ok {
+		score := rs.ComputeScore(r.CountUniqSigs())
+		max := r.MaxScore()
+		return BoundedScoreFormula(score, max)
+	}
+	return 0
+}
+
+// MaxScore returns the maximum score found in the reducer
+func (r *Reducer) MaxScore() (max int) {
+	r.RLock()
+	defer r.RUnlock()
+
+	// don't need to compute the max score
+	if r.max != 0 {
+		return r.max
+	}
+
+	// compute the maximum score
+	for _, rs := range r.m {
+		score := rs.ComputeScore(r.CountUniqSigs())
+		if score > max {
+			max = score
+		}
+	}
+
+	// set max
+	r.max = max
+	return
 }
 
 // Reset ReducedStats according to its identifier

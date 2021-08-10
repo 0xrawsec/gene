@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,10 +11,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/0xrawsec/gene/globals"
-	"github.com/0xrawsec/gene/rules"
-	"github.com/0xrawsec/golang-evtx/evtx"
-	"github.com/0xrawsec/golang-utils/crypto/data"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/fsutil"
 	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
@@ -80,29 +75,13 @@ const (
 )
 
 var (
-	// GeneInfoPath path to the Gene information in a modified event
-	GeneInfoPath = evtx.Path("/Event/GeneInfo")
-	// CriticalityPath path to criticality information
-	CriticalityPath = evtx.Path("/Event/GeneInfo/Criticality")
-	// SignaturePath path to signature match information
-	SignaturePath = evtx.Path("/Event/GeneInfo/Signature")
-	// AttackPath path to MITRE ATT&CK information
-	AttackPath = evtx.Path("/Event/GeneInfo/Attack")
-	// ActionsPath path to actions
-	ActionsPath = evtx.Path("/Event/GeneInfo/Actions")
 
 	// DefaultRuleExtensions default extensions for rule files
 	DefaultRuleExtensions = datastructs.NewInitSyncedSet(".gen", ".gene")
 	// DefaultTplExtensions default extensions for template files
-	DefaultTplExtensions = datastructs.NewInitSyncedSet(".tpl")
+	DefaultTplExtensions           = datastructs.NewInitSyncedSet(".toml")
+	EngineMinimalRuleSchemaVersion = ParseVersion("2.0.0")
 )
-
-// generates a random string that can be used as rulename
-func randRuleName() string {
-	var b [32]byte
-	rand.Read(b[:])
-	return data.Md5(b[:])
-}
 
 //ErrRuleExist definition
 type ErrRuleExist struct {
@@ -122,26 +101,23 @@ type Stats struct {
 //Engine defines the engine managing several rules
 type Engine struct {
 	sync.RWMutex
-	templates *rules.TemplateMap
-	rules     []*rules.CompiledRule
+	templates *TemplateMap
+	rules     []*CompiledRule
 	rawRules  map[string]string
 	tags      map[string][]int // will be map[tag][]int with index referencing rule in rules
 	names     map[string]int   // will be map[name][]int with index referencing rule in rules
-	channels  map[string][]int
-	eventIDs  map[int64][]int
 	// Filters used to choose which rule to compile in case of match by tag/name
 	tagFilters  *datastructs.SyncedSet
 	nameFilters *datastructs.SyncedSet
-	trace       bool
 	dumpRaw     bool
 	//showAttck   bool
-	filter bool // tells that we should apply Filter rules
-	// Used to mark the traces and not duplicate those
-	markedTraces *datastructs.SyncedSet
-	containers   *rules.ContainerDB
+	filter     bool // tells that we should apply Filter rules
+	containers *ContainerDB
 	// Control allowed file extensions
 	ruleExtensions *datastructs.SyncedSet
 	tplExtensions  *datastructs.SyncedSet
+	// default actions
+	defaultActions map[int][]string
 
 	// engine statistics
 	Stats       Stats
@@ -150,24 +126,22 @@ type Engine struct {
 }
 
 //NewEngine creates a new engine
-func NewEngine(trace bool) (e Engine) {
-	e.templates = rules.NewTemplateMap()
-	e.rules = make([]*rules.CompiledRule, 0)
+func NewEngine(trace bool) (e *Engine) {
+	e = &Engine{}
+	e.templates = NewTemplateMap()
+	e.rules = make([]*CompiledRule, 0)
 	e.rawRules = make(map[string]string)
 	e.tags = make(map[string][]int)
 	e.names = make(map[string]int)
-	e.channels = make(map[string][]int)
-	e.eventIDs = make(map[int64][]int)
 	e.tagFilters = datastructs.NewSyncedSet()
 	e.nameFilters = datastructs.NewSyncedSet()
-	e.trace = trace
-	e.markedTraces = datastructs.NewSyncedSet()
-	e.containers = rules.NewContainers()
+	e.containers = NewContainers()
 	// We do not create the containers so that they are not considered as empty
 	//e.containers.AddNewContainer("blacklist")
 	//e.containers.AddNewContainer("whitelist")
 	e.ruleExtensions = DefaultRuleExtensions
 	e.tplExtensions = DefaultTplExtensions
+	e.defaultActions = make(map[int][]string)
 	return
 }
 
@@ -183,6 +157,14 @@ func (e *Engine) SetFilters(names, tags []string) {
 	}
 	for _, t := range tags {
 		e.tagFilters.Add(t)
+	}
+}
+
+// SetDefaultActions sets default actions given to event reaching
+// certain criticality within [low; high]
+func (e *Engine) SetDefaultActions(low, high int, actions []string) {
+	for i := low; i <= high; i++ {
+		e.defaultActions[i] = actions
 	}
 }
 
@@ -238,7 +220,7 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 	dec := json.NewDecoder(reader)
 
 	for {
-		var jRule rules.Rule
+		var jRule Rule
 		decoderOffset := seekerGoto(reader, 0, os.SEEK_CUR)
 		// We don't handle error here
 		decBuffer, _ := ioutil.ReadAll(dec.Buffered())
@@ -323,7 +305,7 @@ func (e *Engine) GetRuleNames() (names []string) {
 }
 
 // GetCRuleByName gets a compile rule by its name
-func (e *Engine) GetCRuleByName(name string) (r *rules.CompiledRule) {
+func (e *Engine) GetCRuleByName(name string) (r *CompiledRule) {
 	if idx, ok := e.names[name]; ok {
 		return e.rules[idx]
 	}
@@ -425,7 +407,8 @@ func (e *Engine) Load(rulefile string) error {
 }
 
 //AddRule adds a rule to the current engine
-func (e *Engine) AddRule(r *rules.CompiledRule) error {
+func (e *Engine) AddRule(r *CompiledRule) error {
+
 	// We skip adding the rule to the engine if we decided to match by name(s)
 	if !e.nameFilters.Contains(r.Name) && e.nameFilters.Len() > 0 {
 		log.Debugf("Skip compiling by name %s", r.Name)
@@ -441,7 +424,12 @@ func (e *Engine) AddRule(r *rules.CompiledRule) error {
 
 // addRule adds a rule r to the engine, k is the key used in the map to store
 // the rule
-func (e *Engine) addRule(r *rules.CompiledRule, k string) error {
+func (e *Engine) addRule(r *CompiledRule, k string) error {
+
+	if r.Schema.Below(EngineMinimalRuleSchemaVersion) {
+		return fmt.Errorf("Expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
+	}
+
 	e.Lock()
 	defer e.Unlock()
 	// don't need to increment since element will be appended at i
@@ -458,243 +446,50 @@ func (e *Engine) addRule(r *rules.CompiledRule, k string) error {
 		e.tags[key] = append(e.tags[key], i)
 	}
 
-	// Update the map of channels
-	for _, c := range r.Channels.List() {
-		key := c.(string)
-		e.channels[key] = append(e.channels[key], i)
-	}
-
-	// Update the map of eventIDs
-	for _, eid := range r.EventIDs.List() {
-		key := eid.(int64)
-		e.eventIDs[key] = append(e.eventIDs[key], i)
-	}
-
 	return nil
-}
-
-//AddTraceRules adds rules generated on the flight when trace mode is enabled
-func (e *Engine) AddTraceRules(ruleList ...*rules.CompiledRule) {
-	for _, r := range ruleList {
-		if err := e.addRule(r, randRuleName()); err != nil {
-			log.Errorf("Cannot add rule \"%s\": %s", r.Name, err)
-		}
-	}
-}
-
-//Match (deprecated) checks if there is a match in any rule of the engine
-func (e *Engine) Match(event *evtx.GoEvtxMap) (names []string, criticality int) {
-	var matched bool
-
-	traces := make([]*rules.CompiledRule, 0)
-	names = make([]string, 0)
-	attcks := make([]rules.Attack, 0)
-	markedAttcks := datastructs.NewSyncedSet()
-	actions := make([]string, 0)
-	markedActions := datastructs.NewSyncedSet()
-	filtered := true
-
-	e.RLock()
-	for _, r := range e.rules {
-		if r.Match(event) {
-			filtered = filtered && r.Filter
-			matched = true
-			names = append(names, r.Name)
-
-			// Updating ATT&CK information
-			for _, attck := range r.Attack {
-				if !markedAttcks.Contains(attck.ID) {
-					attcks = append(attcks, attck)
-					markedAttcks.Add(attck.ID)
-				}
-			}
-
-			// Updating actions
-			for _, action := range r.Actions {
-				if !markedActions.Contains((action)) {
-					actions = append(actions, action)
-					markedActions.Add(action)
-				}
-			}
-
-			criticality += r.Criticality
-			// If we decide to trace the other events matching the rules
-			if e.trace {
-				for i, tr := range r.Traces {
-					value, err := event.GetString(tr.Path())
-					// If we find the appropriate element in the event we matched
-					if err == nil {
-						// Hashing the trace
-						h := tr.HashWithValue(value)
-						if !e.markedTraces.Contains(h) {
-							// We add the hash of the current trace not to recompile it again
-							e.markedTraces.Add(h)
-							// We compile the trace into a rule and append it to the list of traces
-							if tRule, err := tr.Compile(r, value); err == nil {
-								traces = append(traces, tRule)
-							} else {
-								log.Errorf("Failed to compile trace rule i=%d for \"%s\" ", i, r.Name)
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	// Unlock so that we can update engine
-	e.RUnlock()
-
-	// tells that the only matches are filters
-	if filtered {
-		// we keep original event unmodified
-		return
-	}
-
-	// We can update with the traces since we released the lock
-	e.AddTraceRules(traces...)
-
-	// Bound criticality
-	criticality = globals.Bound(criticality)
-	// Update event with signature information
-	genInfo := map[string]interface{}{
-		"Signature":   names,
-		"Criticality": criticality}
-
-	// Update ATT&CK information if needed
-	if e.ShowAttack && len(attcks) > 0 {
-		genInfo["ATTACK"] = attcks
-	}
-
-	// Update Actions if needed
-	if e.ShowActions && len(actions) > 0 {
-		genInfo["Actions"] = actions
-	}
-
-	event.Set(&GeneInfoPath, genInfo)
-	// Update engine's statistics
-	e.Lock()
-	e.Stats.Scanned++
-	if matched {
-		e.Stats.Positives++
-	}
-	e.Unlock()
-	return
 }
 
 // MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that
 // it also return a flag indicating if the event is filtered.
-func (e *Engine) MatchOrFilter(event *evtx.GoEvtxMap) (names []string, criticality int, filtered bool) {
-	var matched bool
-
-	// return values
-	names = make([]string, 0)
-	filtered = false
+func (e *Engine) MatchOrFilter(evt Event) (names []string, criticality int, filtered bool) {
 
 	// initialized variables
-	traces := make([]*rules.CompiledRule, 0)
-	attcks := make([]rules.Attack, 0)
-	markedAttcks := datastructs.NewSyncedSet()
-	actions := make([]string, 0)
-	markedActions := datastructs.NewSyncedSet()
-	// boolean value to track if only filters matched event
-	// because we don't want to add data to event if it is only filtered
-	onlyFiltered := true
+	detection := NewDetection(e.ShowAttack, e.ShowActions)
 
 	e.RLock()
 	for _, r := range e.rules {
-		if r.Match(event) {
-			matched = true
-			// Becomes false as soon as the rule is not a filter
-			onlyFiltered = onlyFiltered && r.Filter
+		if r.Match(evt) {
+
+			detection.Update(r)
 
 			// Do not need to go further if it is a filter rule
 			if r.Filter {
-				filtered = true
 				continue
-			}
-
-			// we add the name of the rule to the list of signature
-			// match only if it is not a filter
-			names = append(names, r.Name)
-
-			// Updating ATT&CK information
-			for _, attck := range r.Attack {
-				if !markedAttcks.Contains(attck.ID) {
-					attcks = append(attcks, attck)
-					markedAttcks.Add(attck.ID)
-				}
-			}
-
-			// Updating actions
-			for _, action := range r.Actions {
-				if !markedActions.Contains((action)) {
-					actions = append(actions, action)
-					markedActions.Add(action)
-				}
-			}
-
-			criticality += r.Criticality
-			// If we decide to trace the other events matching the rules
-			if e.trace {
-				for i, tr := range r.Traces {
-					value, err := event.GetString(tr.Path())
-					// If we find the appropriate element in the event we matched
-					if err == nil {
-						// Hashing the trace
-						h := tr.HashWithValue(value)
-						if !e.markedTraces.Contains(h) {
-							// We add the hash of the current trace not to recompile it again
-							e.markedTraces.Add(h)
-							// We compile the trace into a rule and append it to the list of traces
-							if tRule, err := tr.Compile(r, value); err == nil {
-								traces = append(traces, tRule)
-							} else {
-								log.Errorf("Failed to compile trace rule i=%d for \"%s\" ", i, r.Name)
-							}
-						}
-					}
-				}
 			}
 		}
 	}
 	// Unlock so that we can update engine
 	e.RUnlock()
 
-	// it is an filtered event if at least one rule matched and filtered flag is true
-	//onlyFiltered = matched && onlyFiltered
-	// tells that the only matches are filters
-	if matched && onlyFiltered {
-		// we keep original event unmodified
-		return
-	}
-
-	// We can update with the traces since we released the lock
-	e.AddTraceRules(traces...)
-
-	// Bound criticality
-	criticality = globals.Bound(criticality)
-	// Update event with signature information
-	genInfo := map[string]interface{}{
-		"Signature":   names,
-		"Criticality": criticality}
-
-	// Update ATT&CK information if needed
-	if e.ShowAttack && len(attcks) > 0 {
-		genInfo["ATTACK"] = attcks
-	}
-
-	// Update Actions if needed
-	if e.ShowActions && len(actions) > 0 {
-		genInfo["Actions"] = actions
-	}
-
-	event.Set(&GeneInfoPath, genInfo)
 	// Update engine's statistics
 	e.Lock()
 	e.Stats.Scanned++
-	if matched {
+	if detection.IsAlert() {
 		e.Stats.Positives++
 	}
 	e.Unlock()
-	return
+
+	if detection.OnlyMatchedFilters() {
+		// we keep original event unmodified
+		return nil, 0, true
+	}
+
+	// Set default actions if present
+	if actions, ok := e.defaultActions[detection.Criticality]; ok {
+		detection.Actions.Add(datastructs.ToInterfaceSlice(actions)...)
+	}
+
+	evt.SetDetection(detection)
+
+	return detection.Names(), detection.Criticality, detection.AlsoMatchedFilter()
 }
