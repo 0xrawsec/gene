@@ -58,7 +58,7 @@ func (v Version) IsZero() bool {
 	return v.Major == 0 && v.Minor == 0 && v.Patch == 0
 }
 
-func (v *Version) MarshalJSON() ([]byte, error) {
+func (v Version) MarshalJSON() ([]byte, error) {
 	return json.Marshal(v.String())
 }
 

@@ -131,7 +131,6 @@ func (oe *EventOpReader) Read(operand string) (value bool, ok bool) {
 type MetaSection struct {
 	Events      map[string][]int64
 	Computers   []string
-	Traces      []string `json:",omitempty"`
 	Attack      []Attack `json:"ATTACK,omitempty"`
 	Criticality int
 	Disable     bool
@@ -157,9 +156,9 @@ func NewRule() Rule {
 		Meta: MetaSection{
 			Events:      make(map[string][]int64),
 			Computers:   make([]string, 0),
-			Traces:      make([]string, 0),
 			Attack:      make([]Attack, 0),
-			Criticality: 0},
+			Criticality: 0,
+			Schema:      EngineMinimalRuleSchemaVersion},
 		Matches:   make([]string, 0),
 		Condition: "",
 		Actions:   make([]string, 0)}
