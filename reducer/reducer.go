@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0xrawsec/gene/engine"
+	"github.com/0xrawsec/gene/v2/engine"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/stats"
 

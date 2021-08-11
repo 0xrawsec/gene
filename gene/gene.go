@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0xrawsec/gene/engine"
-	"github.com/0xrawsec/gene/reducer"
+	"github.com/0xrawsec/gene/v2/engine"
+	"github.com/0xrawsec/gene/v2/reducer"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/args"
 	"github.com/0xrawsec/golang-utils/datastructs"

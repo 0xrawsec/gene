@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0xrawsec/gene/engine"
+	"github.com/0xrawsec/gene/v2/engine"
 )
 
 var (

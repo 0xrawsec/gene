@@ -27,7 +27,8 @@ if __name__ == "__main__":
 
         rule["Meta"] = new_meta
 
-        json.dump(rule, sys.stdout)
+        json.dump(rule, sys.stdout, indent=2)
+        print()
         print()
     
     for f in failed:
