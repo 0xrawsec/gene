@@ -14,6 +14,9 @@ import (
 )
 
 func BoundedScoreFormula(score, max int) float64 {
+	if max <= 0 {
+		return 0
+	}
 	return stats.Truncate(float64(score)*100.0/float64(max), 1)
 }
 
