@@ -46,11 +46,23 @@ Here are some of our motivations:
 
 # Documentation
 
-In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/1.6/
+In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/2.0/
 
 Where to find rules ? [there](https://github.com/0xrawsec/gene-rules)
 
 # Changelog
+
+## v2.0.0
+  * Code refactoring:
+    * Changes in package organisation
+    * Changes in API definitions
+    * Implementation of an Event interface making APIs more generic
+    * Default actions to apply on detections
+  * Changes in the rule format:
+    * New way define events to apply rule on
+    * Schema field to enforce rule format compatibility with engine
+    * Removed trace support (not up to date and not used)
+  * Regex templates defined in **TOML** format
 
 ## v1.6.0
   * Indirect Match Support (we can now compare two fields of the same event)
