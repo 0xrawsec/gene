@@ -48,7 +48,9 @@ Here are some of our motivations:
 
 In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/2.0/
 
-[Where to find rules ?](https://github.com/0xrawsec/gene-rules)
+Additional resources:
+ * To convert old rules (prior to 2.0.0 schema) to the new format, use [migraterules.py](./scripts/migraterules.py)
+ * [Where to find rules ?](https://github.com/0xrawsec/gene-rules)
 
 # Changelog
 
