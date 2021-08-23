@@ -48,7 +48,7 @@ Here are some of our motivations:
 
 In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/2.0/
 
-Where to find rules ? [there](https://github.com/0xrawsec/gene-rules)
+[Where to find rules ?](https://github.com/0xrawsec/gene-rules)
 
 # Changelog
 
