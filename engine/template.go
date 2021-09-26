@@ -67,7 +67,7 @@ func (tm *TemplateMap) GetTemplate(name string) (ok bool, tpl *Template) {
 //ReplaceAll replaces all templates in string and return the new string
 func (tm *TemplateMap) ReplaceAll(s string) (new string) {
 	new = s
-	for name := range tm.Keys() {
+	for _, name := range tm.Keys() {
 		ok, tpl := tm.GetTemplate(name.(string))
 		if ok {
 			new = tpl.Replace(new)

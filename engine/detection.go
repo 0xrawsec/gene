@@ -79,7 +79,7 @@ func (d *Detection) AlsoMatchedFilter() bool {
 
 func (d *Detection) Names() []string {
 	n := make([]string, d.Signature.Len())
-	for i, in := range d.Signature.List() {
+	for i, in := range d.Signature.Slice() {
 		n[i] = in.(string)
 	}
 	return n

@@ -265,7 +265,7 @@ func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
 	}
 
 	// Check for unknown operands and display warnings
-	for iOp := range rule.AtomMap.Keys() {
+	for _, iOp := range rule.AtomMap.Keys() {
 		if !operandsSet.Contains(iOp.(string)) {
 			log.Warnf("Rule \"%s\" operand %s not used", rule.Name, iOp.(string))
 		}

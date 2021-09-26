@@ -67,7 +67,7 @@ func jsonEventGenerator() (ec chan *evtx.GoEvtxMap) {
 				log.Infof("Processing: %s", jsonFile)
 				f, err = os.Open(jsonFile)
 				if err != nil {
-					log.LogError(err)
+					log.Error(err)
 				}
 			} else {
 				jsonFile = "stdin"
@@ -83,7 +83,7 @@ func jsonEventGenerator() (ec chan *evtx.GoEvtxMap) {
 					if err == io.EOF {
 						break
 					}
-					log.LogError(err)
+					log.Error(err)
 					break
 				}
 				// Printing Progress
@@ -259,7 +259,8 @@ func main() {
 	if cpuprofile != "" {
 		f, err := os.Create(cpuprofile)
 		if err != nil {
-			log.LogErrorAndExit(err)
+			log.Abort(exitFail, err)
+
 		}
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
@@ -294,7 +295,7 @@ func main() {
 		r.Meta.Attack = append(r.Meta.Attack, engine.Attack{})
 		b, err := json.Marshal(r)
 		if err != nil {
-			log.LogErrorAndExit(err, exitFail)
+			log.Abort(exitFail, err)
 		}
 		fmt.Println(string(b))
 		os.Exit(exitSuccess)
@@ -302,7 +303,7 @@ func main() {
 
 	// Control parameters
 	if rulesPath == "" {
-		log.LogErrorAndExit(fmt.Errorf("No rule file to load"), exitFail)
+		log.Abort(exitFail, "No rule file to load")
 	}
 
 	// Initialization
@@ -317,7 +318,7 @@ func main() {
 
 	// Validation
 	if len(tags) > 0 && len(names) > 0 {
-		log.LogErrorAndExit(fmt.Errorf("Cannot search by tags and names at the same time"), exitFail)
+		log.Abort(exitFail, "Cannot search by tags and names at the same time")
 	}
 	e.SetFilters(names, tags)
 
@@ -331,7 +332,7 @@ func main() {
 	if whitelist != "" {
 		wlf, err := os.Open(whitelist)
 		if err != nil {
-			log.LogErrorAndExit(err, exitFail)
+			log.Abort(exitFail, err)
 		}
 		for line := range readers.Readlines(wlf) {
 			e.Whitelist(string(line))
@@ -343,7 +344,7 @@ func main() {
 	if blacklist != "" {
 		blf, err := os.Open(blacklist)
 		if err != nil {
-			log.LogErrorAndExit(err, exitFail)
+			log.Abort(exitFail, err)
 		}
 		for line := range readers.Readlines(blf) {
 			e.Blacklist(string(line))
@@ -356,12 +357,12 @@ func main() {
 	// we first prepare the rules path
 	realPath, err := fsutil.ResolveLink(rulesPath)
 	if err != nil {
-		log.LogErrorAndExit(err, exitFail)
+		log.Abort(exitFail, err)
 	}
 
 	// actual rule loading
 	if err := e.LoadDirectory(realPath); err != nil {
-		log.LogErrorAndExit(fmt.Errorf("Failed at loading rule directory %s: %s", realPath, err))
+		log.Abort(exitFail, fmt.Errorf("Failed at loading rule directory %s: %s", realPath, err))
 	}
 
 	// Show message about successfuly compiled rules

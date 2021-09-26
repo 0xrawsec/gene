@@ -441,7 +441,7 @@ func (e *Engine) addRule(r *CompiledRule, k string) error {
 	e.names[k] = i
 
 	// Update the map of tags in order to speed up search by tag
-	for _, t := range r.Tags.List() {
+	for _, t := range r.Tags.Slice() {
 		key := t.(string)
 		e.tags[key] = append(e.tags[key], i)
 	}

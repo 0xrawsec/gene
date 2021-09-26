@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
-	"github.com/0xrawsec/golang-utils/log"
 )
 
 var (
@@ -34,7 +33,7 @@ func init() {
 func TestAtomRule(t *testing.T) {
 	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
-		log.LogError(err)
+		t.Error(err)
 		return
 	}
 
@@ -122,7 +121,7 @@ func TestEvtxRule(t *testing.T) {
 
 	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
-		log.LogError(err)
+		t.Error(err)
 		t.FailNow()
 	}
 
@@ -166,7 +165,7 @@ func TestEvtxRule(t *testing.T) {
 func TestLoadRule(t *testing.T) {
 	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
-		log.LogError(err)
+		t.Error(err)
 		t.FailNow()
 	}
 
@@ -206,7 +205,7 @@ func TestLoadRule(t *testing.T) {
 func TestBlacklist(t *testing.T) {
 	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
-		log.LogError(err)
+		t.Error(err)
 		t.FailNow()
 	}
 
@@ -249,7 +248,7 @@ func TestIndirectMatch(t *testing.T) {
 
 	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
-		log.LogError(err)
+		t.Error(err)
 		t.FailNow()
 	}
 

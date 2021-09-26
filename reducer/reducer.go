@@ -143,13 +143,13 @@ func (rs *ReducedStats) ComputeScore(cntSigs int) int {
 func (rs *ReducedStats) Finalize(cntSigs, maxScore int) {
 
 	// process techniques
-	for _, i := range rs.techniques.List() {
+	for _, i := range rs.techniques.Slice() {
 		technique := i.(string)
 		rs.Techniques = append(rs.Techniques, technique)
 	}
 
 	// process tactics
-	for _, i := range rs.tactics.List() {
+	for _, i := range rs.tactics.Slice() {
 		tactic := i.(string)
 		rs.Tactics = append(rs.Tactics, tactic)
 	}
