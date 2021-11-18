@@ -19,7 +19,7 @@ func TestReducer(t *testing.T) {
 	rand.Seed(158)
 	identifiers := make([]string, 50)
 
-	e := engine.NewEngine(false)
+	e := engine.NewEngine()
 	if err := e.LoadDirectory(rules); err != nil {
 		t.Errorf("Failed to load engine: %s", err)
 		t.FailNow()

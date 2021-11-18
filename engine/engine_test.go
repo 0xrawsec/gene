@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -159,7 +160,7 @@ func TestLoad(t *testing.T) {
 		],
 	"Condition": "$a"
 	}`
-	e := NewEngine(false)
+	e := NewEngine()
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -180,7 +181,7 @@ func TestMatch(t *testing.T) {
 	"Condition": "$a"
 	}`
 
-	e := NewEngine(false)
+	e := NewEngine()
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -204,7 +205,7 @@ func TestShouldNotMatch(t *testing.T) {
 	"Condition": ""
 	}`
 
-	e := NewEngine(false)
+	e := NewEngine()
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
@@ -242,7 +243,7 @@ func TestMatchAttck(t *testing.T) {
 	"Condition": "$a"
 	}`
 
-	e := NewEngine(false)
+	e := NewEngine()
 	e.SetShowAttck(true)
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
@@ -282,7 +283,7 @@ func TestMatchByTag(t *testing.T) {
 	}
 	`
 
-	e := NewEngine(false)
+	e := NewEngine()
 	tags := []string{"foo"}
 	e.SetFilters([]string{}, tags)
 
@@ -313,7 +314,7 @@ func TestSimpleRule(t *testing.T) {
 	"Condition": "$a"
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -359,7 +360,7 @@ func TestNotOrRule(t *testing.T) {
 	"Condition": "!($a or $b)"
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -405,7 +406,7 @@ func TestNotAndRule(t *testing.T) {
 	"Condition": "!($a and !$b)"
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -455,7 +456,7 @@ func TestComplexRule(t *testing.T) {
 	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and $f"
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -503,7 +504,7 @@ func TestContainer(t *testing.T) {
 	"Condition": "$md5 and $sha1 and $sha256"
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	// Container update has to be done before loading rules
 	e.AddToContainer("blacklist", "83514d9aaf0e168944b6d3c01110c393")
 	e.AddToContainer("blacklist", "65894b0162897f2a6bb8d2eb13684bf2b451fdee")
@@ -552,7 +553,7 @@ func TestFiltered1(t *testing.T) {
 	"Condition": ""
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -610,7 +611,7 @@ func TestFiltered2(t *testing.T) {
 	"Condition": "$a"
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -658,7 +659,7 @@ func TestNotFiltered(t *testing.T) {
 	"Condition": ""
 	}
 	`
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
 	if err != nil {
 		t.Fail()
@@ -674,7 +675,7 @@ func TestNotFiltered(t *testing.T) {
 }
 
 func TestLoadDirectory(t *testing.T) {
-	e := NewEngine(false)
+	e := NewEngine()
 	err := e.LoadDirectory("./")
 	if err != nil {
 		t.Errorf("Failed to load rules in directory: %s", err)
@@ -696,7 +697,7 @@ func TestActions(t *testing.T) {
 	"Actions": ["kill", "kill", "block", "block"]
 	}`
 
-	e := NewEngine(false)
+	e := NewEngine()
 	e.ShowActions = true
 	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
 		t.Logf("Loading failed: %s", err)
@@ -723,7 +724,7 @@ func TestDefaultActions(t *testing.T) {
 	"Condition": "$a"
 	}`
 
-	e := NewEngine(false)
+	e := NewEngine()
 	e.ShowActions = true
 	actions := []string{"kill", "kill", "block", "block"}
 	e.SetDefaultActions(0, 10, actions)
@@ -749,10 +750,47 @@ func TestDefaultActions(t *testing.T) {
 	}
 }
 
+func TestLoadContainer(t *testing.T) {
+	var cfd *os.File
+	var err error
+
+	size := 10000
+	cname := "container"
+	container := "./test/data/tmp/container.cont"
+
+	if cfd, err = os.Create(container); err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
+	for i := 0; i < size; i++ {
+		cfd.WriteString(fmt.Sprintf("random.%d\n", rand.Int()))
+	}
+
+	if err = cfd.Close(); err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
+	e := NewEngine()
+	if cfd, err = os.Open(container); err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
+	if err = e.LoadContainer(cname, cfd); err != nil {
+		t.Error(err)
+	}
+
+	if e.containers.Len(cname) != size {
+		t.Error("Unexpected container length")
+	}
+}
+
 /////////////////////////////// Benchmarks /////////////////////////////////////
 
 func BenchmarkLoadThousand(b *testing.B) {
-	e := NewEngine(false)
+	e := NewEngine()
 	if err := e.Load(bigRuleFile); err != nil {
 		b.Logf("Loading failed: %s", err)
 		b.FailNow()
@@ -771,7 +809,7 @@ func BenchmarkEngine(b *testing.B) {
 
 	eventsFile := "./test/data/events.json.gz"
 	rulePath := "./test/data/compiled.gen"
-	e := NewEngine(false)
+	e := NewEngine()
 
 	// loading rules into engine
 	if err := e.Load(rulePath); err != nil {

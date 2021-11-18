@@ -194,7 +194,6 @@ var (
 	flAllEvents     bool
 	flShowProgress  bool
 	flJSONFormat    bool
-	flTrace         bool
 	flTemplate      bool
 	flVerify        bool
 	flListTags      bool
@@ -229,7 +228,6 @@ func main() {
 	flag.BoolVar(&flAllEvents, "all", flAllEvents, "Print all events (even the one not matching rules)")
 	flag.BoolVar(&flShowProgress, "progress", flShowProgress, "Show progress")
 	flag.BoolVar(&flJSONFormat, "j", flJSONFormat, "Input is in JSON format")
-	flag.BoolVar(&flTrace, "trace", flTrace, "Tells the engine to use the trace function of the rules. Trace mode implies a number of job equal to 1")
 	flag.BoolVar(&flTemplate, "template", flTemplate, "Prints a rule template")
 	flag.BoolVar(&flVerify, "verify", flVerify, "Verify the rules and exit")
 	flag.BoolVar(&flListTags, "list-tags", flListTags, "List tags of rules loaded into the engine")
@@ -283,11 +281,6 @@ func main() {
 		jobs = runtime.NumCPU()
 
 	}
-	// If trace mode is enabled, it is better to process events in order
-	if flTrace {
-		jobs = 1
-
-	}
 
 	// Display rule template and exit if template flag
 	if flTemplate {
@@ -307,7 +300,7 @@ func main() {
 	}
 
 	// Initialization
-	e := engine.NewEngine(flTrace)
+	e := engine.NewEngine()
 	setRuleExts := datastructs.NewSyncedSet()
 	tags = []string(tagsVar)
 	names = []string(namesVar)

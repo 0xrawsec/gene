@@ -24,7 +24,7 @@ github.com/0xrawsec/gene/v2/engine/containers.go:25:	AddNewContainer		100.0%
 github.com/0xrawsec/gene/v2/engine/containers.go:31:	AddContainer		75.0%
 github.com/0xrawsec/gene/v2/engine/containers.go:41:	AddToContainer		100.0%
 github.com/0xrawsec/gene/v2/engine/containers.go:51:	AddStringToContainer	100.0%
-github.com/0xrawsec/gene/v2/engine/containers.go:62:	Len			0.0%
+github.com/0xrawsec/gene/v2/engine/containers.go:62:	Len			66.7%
 github.com/0xrawsec/gene/v2/engine/containers.go:70:	Has			100.0%
 github.com/0xrawsec/gene/v2/engine/containers.go:76:	Get			100.0%
 github.com/0xrawsec/gene/v2/engine/containers.go:82:	Contains		0.0%
@@ -60,12 +60,12 @@ github.com/0xrawsec/gene/v2/engine/engine.go:299:	GetRuleNames		0.0%
 github.com/0xrawsec/gene/v2/engine/engine.go:308:	GetCRuleByName		0.0%
 github.com/0xrawsec/gene/v2/engine/engine.go:316:	LoadReader		100.0%
 github.com/0xrawsec/gene/v2/engine/engine.go:321:	LoadTemplate		0.0%
-github.com/0xrawsec/gene/v2/engine/engine.go:330:	LoadContainer		0.0%
-github.com/0xrawsec/gene/v2/engine/engine.go:337:	LoadDirectory		60.6%
-github.com/0xrawsec/gene/v2/engine/engine.go:397:	Load			71.4%
-github.com/0xrawsec/gene/v2/engine/engine.go:410:	AddRule			71.4%
-github.com/0xrawsec/gene/v2/engine/engine.go:427:	addRule			92.3%
-github.com/0xrawsec/gene/v2/engine/engine.go:454:	MatchOrFilter		100.0%
+github.com/0xrawsec/gene/v2/engine/engine.go:330:	LoadContainer		100.0%
+github.com/0xrawsec/gene/v2/engine/engine.go:341:	LoadDirectory		60.6%
+github.com/0xrawsec/gene/v2/engine/engine.go:401:	Load			71.4%
+github.com/0xrawsec/gene/v2/engine/engine.go:414:	AddRule			71.4%
+github.com/0xrawsec/gene/v2/engine/engine.go:431:	addRule			92.3%
+github.com/0xrawsec/gene/v2/engine/engine.go:458:	MatchOrFilter		100.0%
 github.com/0xrawsec/gene/v2/engine/event.go:20:		EventGetString		80.0%
 github.com/0xrawsec/gene/v2/engine/event.go:34:		Set			90.0%
 github.com/0xrawsec/gene/v2/engine/event.go:52:		Get			100.0%
@@ -151,4 +151,4 @@ github.com/0xrawsec/gene/v2/reducer/reducer.go:284:	Reset			0.0%
 github.com/0xrawsec/gene/v2/reducer/reducer.go:291:	Delete			0.0%
 github.com/0xrawsec/gene/v2/reducer/reducer.go:298:	CountUniqSigs		100.0%
 github.com/0xrawsec/gene/v2/reducer/reducer.go:303:	Print			0.0%
-total:							(statements)		76.8%
+total:							(statements)		77.3%

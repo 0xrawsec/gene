@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,7 +16,6 @@ import (
 	"github.com/0xrawsec/golang-utils/fsutil"
 	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
-	"github.com/0xrawsec/golang-utils/readers"
 )
 
 /////////////////////////// Utility functions //////////////////////////////////
@@ -126,7 +126,7 @@ type Engine struct {
 }
 
 //NewEngine creates a new engine
-func NewEngine(trace bool) (e *Engine) {
+func NewEngine() (e *Engine) {
 	e = &Engine{}
 	e.templates = NewTemplateMap()
 	e.rules = make([]*CompiledRule, 0)
@@ -327,10 +327,14 @@ func (e *Engine) LoadTemplate(templatefile string) error {
 }
 
 // LoadContainer loads every line found in reader into the container
-func (e *Engine) LoadContainer(container string, reader io.Reader) {
-	for line := range readers.Readlines(reader) {
-		e.AddToContainer(container, string(line))
+func (e *Engine) LoadContainer(container string, reader io.Reader) error {
+	scanner := bufio.NewScanner(reader)
+
+	for scanner.Scan() {
+		e.AddToContainer(container, scanner.Text())
 	}
+
+	return scanner.Err()
 }
 
 // LoadDirectory loads all the templates and rules inside a directory
