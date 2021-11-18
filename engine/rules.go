@@ -183,8 +183,15 @@ func (jr *Rule) JSON() (string, error) {
 	return string(b), err
 }
 
-//Compile a JSONRule into CompiledRule
-func (jr *Rule) Compile(containers *ContainerDB) (*CompiledRule, error) {
+//Compile a Rule
+func (jr *Rule) Compile(e *Engine) (*CompiledRule, error) {
+	if e != nil {
+		return jr.compile(e.containers)
+	}
+	return jr.compile(nil)
+}
+
+func (jr *Rule) compile(containers *ContainerDB) (*CompiledRule, error) {
 	var err error
 	rule := NewCompiledRule(jr.Meta.Schema)
 
@@ -280,5 +287,5 @@ func Load(b []byte, containers *ContainerDB) (*CompiledRule, error) {
 	if err != nil {
 		return nil, err
 	}
-	return jr.Compile(containers)
+	return jr.compile(containers)
 }

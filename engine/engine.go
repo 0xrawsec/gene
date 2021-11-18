@@ -255,7 +255,7 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 		}
 
 		// We compile the rule
-		er, err := jRule.Compile(e.containers)
+		er, err := jRule.Compile(e)
 		if err != nil {
 			ruleLine, offInLine := findLineError(ruleOffset, reader)
 			return fmt.Errorf("Failed to compile rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
