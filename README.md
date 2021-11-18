@@ -1,3 +1,5 @@
+![coverage](.github/coverage/badge.svg)
+
 # GENE: Go Evtx sigNature Engine
 
 The idea behind this project is to provide an efficient and standard way to
