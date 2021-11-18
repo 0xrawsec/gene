@@ -189,7 +189,7 @@ func (f *FieldMatch) String() string {
 ////////////////////////////// ContainerMatch ///////////////////////////////
 
 var (
-	atomContainerMatchRegexp = regexp.MustCompile(`(?P<name>\$\w+):\s+extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>.*)\s*\)\s+in\s+(?P<container>\w+)`)
+	atomContainerMatchRegexp = regexp.MustCompile(`(?P<name>\$\w+):\s+extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>.*)\s*\)\s+in\s+(?P<container>[\w\.\-]+)`)
 	atomContainerMatchHelper = submatch.NewHelper(atomContainerMatchRegexp)
 )
 
