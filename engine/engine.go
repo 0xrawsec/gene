@@ -145,6 +145,74 @@ func NewEngine() (e *Engine) {
 	return
 }
 
+//addRule adds a rule to the current engine
+func (e *Engine) addRule(r *CompiledRule) error {
+
+	if r.Schema.Below(EngineMinimalRuleSchemaVersion) {
+		return fmt.Errorf("Expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
+	}
+
+	// We skip adding the rule to the engine if we decided to match by name(s)
+	if !e.nameFilters.Contains(r.Name) && e.nameFilters.Len() > 0 {
+		log.Debugf("Skip compiling by name %s", r.Name)
+		return nil
+	}
+
+	// We skip adding the rule to the engine if we decided to match by tags
+	if e.tagFilters.Intersect(r.Tags).Len() == 0 && e.tagFilters.Len() > 0 {
+		log.Debugf("Skip compiling by tags %s", r.Name)
+		return nil
+	}
+
+	e.Lock()
+	defer e.Unlock()
+	// don't need to increment since element will be appended at i
+	i := len(e.rules)
+	if _, ok := e.names[r.Name]; ok {
+		return ErrRuleExist{r.Name}
+	}
+	e.rules = append(e.rules, r)
+	e.names[r.Name] = i
+
+	// Update the map of tags in order to speed up search by tag
+	for _, t := range r.Tags.Slice() {
+		key := t.(string)
+		e.tags[key] = append(e.tags[key], i)
+	}
+
+	return nil
+}
+
+func (e *Engine) loadReader(reader io.ReadSeeker) error {
+	var decerr error
+	dec := json.NewDecoder(reader)
+
+	for {
+		var jRule Rule
+		decoderOffset := seekerGoto(reader, 0, os.SEEK_CUR)
+		// We don't handle error here
+		decBuffer, _ := ioutil.ReadAll(dec.Buffered())
+		ruleOffset := nextRuleOffset(decoderOffset-int64(len(decBuffer)), reader)
+
+		decerr = dec.Decode(&jRule)
+		if decerr != nil {
+			if decerr != io.EOF {
+				ruleLine, offInLine := findLineError(ruleOffset, reader)
+				return fmt.Errorf("JSON parsing (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, decerr)
+			}
+			// We got EOF if we go there
+			break
+		}
+
+		if err := e.LoadRule(&jRule); err != nil {
+			ruleLine, offInLine := findLineError(ruleOffset, reader)
+			return fmt.Errorf("failed to laod rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
+		}
+	}
+
+	return nil
+}
+
 //SetDumpRaw setter for dumpRaw flag
 func (e *Engine) SetDumpRaw(value bool) {
 	e.dumpRaw = value
@@ -215,59 +283,6 @@ func (e *Engine) WhitelistLen() int {
 	return e.containers.Len(whitelistContainer)
 }
 
-func (e *Engine) loadReader(reader io.ReadSeeker) error {
-	var decerr error
-	dec := json.NewDecoder(reader)
-
-	for {
-		var jRule Rule
-		decoderOffset := seekerGoto(reader, 0, os.SEEK_CUR)
-		// We don't handle error here
-		decBuffer, _ := ioutil.ReadAll(dec.Buffered())
-		ruleOffset := nextRuleOffset(decoderOffset-int64(len(decBuffer)), reader)
-
-		decerr = dec.Decode(&jRule)
-		if decerr != nil {
-			if decerr != io.EOF {
-				ruleLine, offInLine := findLineError(ruleOffset, reader)
-				return fmt.Errorf("JSON parsing (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, decerr)
-			}
-			// We got EOF if we go there
-			break
-		}
-		// Check if the rule is disabled
-		if jRule.IsDisabled() {
-			log.Infof("Rule \"%s\" has been disabled", jRule.Name)
-			continue
-		}
-
-		//We replace the regexp templates in the rule
-		jRule.ReplaceTemplate(e.templates)
-
-		// We store the rule in raw rules
-		if e.dumpRaw {
-			json, err := jRule.JSON()
-			if err == nil {
-				e.rawRules[jRule.Name] = json
-			} else {
-				e.rawRules[jRule.Name] = "Rule encoding issue"
-			}
-		}
-
-		// We compile the rule
-		er, err := jRule.Compile(e)
-		if err != nil {
-			ruleLine, offInLine := findLineError(ruleOffset, reader)
-			return fmt.Errorf("Failed to compile rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
-		}
-		// We add the rule to the engine
-		if err := e.AddRule(er); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 //GetRawRule returns the raw rule according to its name
 //it is convenient to get the rule after template replacement
 func (e *Engine) GetRawRule(regex string) (cs chan string) {
@@ -312,11 +327,6 @@ func (e *Engine) GetCRuleByName(name string) (r *CompiledRule) {
 	return
 }
 
-//LoadReader loads rule from a ReadSeeker
-func (e *Engine) LoadReader(reader io.ReadSeeker) error {
-	return e.loadReader(reader)
-}
-
 //LoadTemplate loads a template from a file
 func (e *Engine) LoadTemplate(templatefile string) error {
 	f, err := os.Open(templatefile)
@@ -335,6 +345,11 @@ func (e *Engine) LoadContainer(container string, reader io.Reader) error {
 	}
 
 	return scanner.Err()
+}
+
+//LoadReader loads rule from a ReadSeeker
+func (e *Engine) LoadReader(reader io.ReadSeeker) error {
+	return e.loadReader(reader)
 }
 
 // LoadDirectory loads all the templates and rules inside a directory
@@ -371,7 +386,7 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 	// Handle both rules argument as file or directory
 	switch {
 	case fsutil.IsFile(realPath):
-		err := e.Load(realPath)
+		err := e.LoadFile(realPath)
 		if err != nil {
 			log.Errorf("Error loading %s: %s", realPath, err)
 			return err
@@ -385,7 +400,7 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 				log.Debug(ext)
 				// Check if the file extension is in the list of valid rule extension
 				if e.ruleExtensions.Contains(ext) {
-					err := e.Load(rulefile)
+					err := e.LoadFile(rulefile)
 					if err != nil {
 						log.Errorf("Error loading %s: %s", rulefile, err)
 						return err
@@ -397,8 +412,8 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 	return nil
 }
 
-//Load loads a rule file into the current engine
-func (e *Engine) Load(rulefile string) error {
+//LoadFile loads a rule file into the current engine
+func (e *Engine) LoadFile(rulefile string) error {
 	f, err := os.Open(rulefile)
 	if err != nil {
 		return err
@@ -410,47 +425,47 @@ func (e *Engine) Load(rulefile string) error {
 	return nil
 }
 
-//AddRule adds a rule to the current engine
-func (e *Engine) AddRule(r *CompiledRule) error {
-
-	// We skip adding the rule to the engine if we decided to match by name(s)
-	if !e.nameFilters.Contains(r.Name) && e.nameFilters.Len() > 0 {
-		log.Debugf("Skip compiling by name %s", r.Name)
+func (e *Engine) LoadRule(rule *Rule) error {
+	// Check if the rule is disabled
+	if rule.IsDisabled() {
+		log.Infof("Rule \"%s\" has been disabled", rule.Name)
 		return nil
 	}
-	// We skip adding the rule to the engine if we decided to match by tags
-	if e.tagFilters.Intersect(r.Tags).Len() == 0 && e.tagFilters.Len() > 0 {
-		log.Debugf("Skip compiling by tags %s", r.Name)
-		return nil
-	}
-	return e.addRule(r, r.Name)
-}
 
-// addRule adds a rule r to the engine, k is the key used in the map to store
-// the rule
-func (e *Engine) addRule(r *CompiledRule, k string) error {
+	//We replace the regexp templates in the rule
+	rule.ReplaceTemplate(e.templates)
 
-	if r.Schema.Below(EngineMinimalRuleSchemaVersion) {
-		return fmt.Errorf("Expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
+	// We store the rule in raw rules
+	if e.dumpRaw {
+		if json, err := rule.JSON(); err != nil {
+			return fmt.Errorf("cannot save raw rule: %w", err)
+		} else {
+			e.rawRules[rule.Name] = json
+		}
 	}
 
-	e.Lock()
-	defer e.Unlock()
-	// don't need to increment since element will be appended at i
-	i := len(e.rules)
-	if _, ok := e.names[k]; ok {
-		return ErrRuleExist{k}
+	// We compile the rule
+	er, err := rule.Compile(e)
+	if err != nil {
+		return fmt.Errorf("failed to compile rule: %w", err)
 	}
-	e.rules = append(e.rules, r)
-	e.names[k] = i
 
-	// Update the map of tags in order to speed up search by tag
-	for _, t := range r.Tags.Slice() {
-		key := t.(string)
-		e.tags[key] = append(e.tags[key], i)
+	// We add the rule to the engine
+	if err := e.addRule(er); err != nil {
+		return err
 	}
 
 	return nil
+}
+
+// LoadBytes loads rules from []byte data
+func (e *Engine) LoadBytes(data []byte) error {
+	return e.LoadReader(newSeekBuffer(data))
+}
+
+// LoadString loads rules from string data
+func (e *Engine) LoadString(data string) error {
+	return e.LoadReader(newSeekBuffer([]byte(data)))
 }
 
 // MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that

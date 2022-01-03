@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math/rand"
 	"os"
 	"testing"
@@ -71,61 +70,6 @@ var (
 	bigRuleFile = "./test/data/1000rules.json"
 )
 
-var (
-	ErrBufferOutOfBounds = fmt.Errorf("Buffer out of bound")
-)
-
-type SeekBuffer struct {
-	i    int
-	buff []byte
-}
-
-func NewSeekBuffer(b []byte) *SeekBuffer {
-	sb := &SeekBuffer{}
-	sb.buff = make([]byte, len(b))
-	copy(sb.buff, b)
-	return sb
-}
-
-func (sb *SeekBuffer) Read(p []byte) (n int, err error) {
-	if sb.i+len(p) < sb.Len() {
-		n = copy(p, sb.buff[sb.i:sb.i+len(p)])
-		sb.i += n
-		return n, nil
-	}
-	n = copy(p, sb.buff[sb.i:])
-	sb.i += n
-	return n, io.EOF
-}
-
-func (sb *SeekBuffer) Len() int {
-	return len(sb.buff)
-}
-
-func (sb *SeekBuffer) Seek(offset int64, whence int) (int64, error) {
-	switch whence {
-	case os.SEEK_CUR:
-		if sb.i+int(offset) <= sb.Len() {
-			sb.i += int(offset)
-			break
-		}
-		return 0, ErrBufferOutOfBounds
-	case os.SEEK_SET:
-		if int(offset) <= sb.Len() && offset >= 0 {
-			sb.i = int(offset)
-			break
-		}
-		return 0, ErrBufferOutOfBounds
-	case os.SEEK_END:
-		if sb.Len()-int(offset) > 0 {
-			sb.i = sb.Len() - int(offset)
-			break
-		}
-		return 0, ErrBufferOutOfBounds
-	}
-	return int64(sb.i), nil
-}
-
 func init() {
 	err := json.Unmarshal([]byte(eventStr), &evt)
 	if err != nil {
@@ -161,7 +105,7 @@ func TestLoad(t *testing.T) {
 	"Condition": "$a"
 	}`
 	e := NewEngine()
-	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -182,7 +126,7 @@ func TestMatch(t *testing.T) {
 	}`
 
 	e := NewEngine()
-	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -206,7 +150,7 @@ func TestShouldNotMatch(t *testing.T) {
 	}`
 
 	e := NewEngine()
-	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -245,7 +189,7 @@ func TestMatchAttck(t *testing.T) {
 
 	e := NewEngine()
 	e.SetShowAttck(true)
-	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -270,11 +214,13 @@ func TestMatchByTag(t *testing.T) {
 		],
 	"Condition": "$a"
 	}
+
 	{
 	"Name": "ShouldNotMatch",
 	"Tags": ["bar"],
 	"Meta": {
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"]
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
+		"Schema": "2.0.0"
 		},
 	"Matches": [
 		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -287,7 +233,7 @@ func TestMatchByTag(t *testing.T) {
 	tags := []string{"foo"}
 	e.SetFilters([]string{}, tags)
 
-	if err := e.LoadReader(NewSeekBuffer([]byte(rules))); err != nil {
+	if err := e.LoadString(rules); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -315,8 +261,7 @@ func TestSimpleRule(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -361,8 +306,7 @@ func TestNotOrRule(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -407,8 +351,7 @@ func TestNotAndRule(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -457,8 +400,7 @@ func TestComplexRule(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -509,8 +451,7 @@ func TestContainer(t *testing.T) {
 	e.AddToContainer("blacklist", "83514d9aaf0e168944b6d3c01110c393")
 	e.AddToContainer("blacklist", "65894b0162897f2a6bb8d2eb13684bf2b451fdee")
 	e.AddToContainer("blacklist", "03324e67244312360ff089cf61175def2031be513457bb527ae0abf925e72319")
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -554,8 +495,7 @@ func TestFiltered1(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -612,8 +552,7 @@ func TestFiltered2(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -660,8 +599,7 @@ func TestNotFiltered(t *testing.T) {
 	}
 	`
 	e := NewEngine()
-	err := e.LoadReader(NewSeekBuffer([]byte(rule)))
-	if err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Fail()
 		t.Log(err)
 	}
@@ -699,7 +637,7 @@ func TestActions(t *testing.T) {
 
 	e := NewEngine()
 	e.ShowActions = true
-	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -728,7 +666,7 @@ func TestDefaultActions(t *testing.T) {
 	e.ShowActions = true
 	actions := []string{"kill", "kill", "block", "block"}
 	e.SetDefaultActions(0, 10, actions)
-	if err := e.LoadReader(NewSeekBuffer([]byte(rule))); err != nil {
+	if err := e.LoadString(rule); err != nil {
 		t.Logf("Loading failed: %s", err)
 		t.FailNow()
 	}
@@ -791,7 +729,7 @@ func TestLoadContainer(t *testing.T) {
 
 func BenchmarkLoadThousand(b *testing.B) {
 	e := NewEngine()
-	if err := e.Load(bigRuleFile); err != nil {
+	if err := e.LoadFile(bigRuleFile); err != nil {
 		b.Logf("Loading failed: %s", err)
 		b.FailNow()
 	}
@@ -812,7 +750,7 @@ func BenchmarkEngine(b *testing.B) {
 	e := NewEngine()
 
 	// loading rules into engine
-	if err := e.Load(rulePath); err != nil {
+	if err := e.LoadFile(rulePath); err != nil {
 		b.Errorf("Loading failed: %s", err)
 		b.FailNow()
 	}

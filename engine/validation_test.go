@@ -52,7 +52,7 @@ var (
 func TestValidation(t *testing.T) {
 	e := NewEngine()
 	for k, v := range corruptedRules {
-		err := e.LoadReader(NewSeekBuffer([]byte(v)))
+		err := e.LoadReader(newSeekBuffer([]byte(v)))
 		if err != nil {
 			t.Logf("%s failed with: %s", k, err)
 			continue
