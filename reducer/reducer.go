@@ -1,6 +1,7 @@
 package reducer
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"sync"
@@ -9,8 +10,6 @@ import (
 	"github.com/0xrawsec/gene/v2/engine"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/stats"
-
-	"github.com/0xrawsec/golang-evtx/evtx"
 )
 
 func BoundedScoreFormula(score, max int) float64 {
@@ -167,9 +166,15 @@ func (rs *ReducedStats) Finalize(cntSigs, maxScore int) {
 	rs.MedianTime = rs.StartTime.Add((rs.StopTime.Sub(rs.StartTime)) / 2)
 }
 
-func (rs ReducedStats) String() string {
-	//rs.Finalize()
-	return string(evtx.ToJSON(rs))
+func (rs *ReducedStats) String() string {
+	var out []byte
+	var err error
+
+	if out, err = json.Marshal(rs); err != nil {
+		panic(err)
+	}
+
+	return string(out)
 }
 
 // Reducer structure to store statistics about several machines
@@ -303,10 +308,7 @@ func (r *Reducer) CountUniqSigs() int {
 func (r *Reducer) Print() {
 	r.RLock()
 	defer r.RUnlock()
-	//cnt := r.CountUniqSigs()
 	for computer := range r.m {
-		//r.m[computer].Finalize(cnt)
-		//fmt.Println(r.m[computer])
 		fmt.Println(r.ReduceCopy(computer))
 	}
 }

@@ -34,8 +34,8 @@ type FieldMatch struct {
 	Value    string `regexp:"value"`
 	indirect bool
 	compiled bool
-	path     XPath
-	indPath  XPath
+	path     *XPath
+	indPath  *XPath
 	cRule    *regexp.Regexp
 	iValue   interface{} // interface to store Value in another form as string
 }
@@ -200,7 +200,7 @@ type ContainerMatch struct {
 	Regexp         string `regexp:"regexp"`
 	Operand        string `regexp:"operand"`
 	Container      string `regexp:"container"`
-	path           XPath
+	path           *XPath
 	compiled       bool
 	subMatchHelper *submatch.Helper
 	cExtract       *regexp.Regexp

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/0xrawsec/gene/v2/engine"
+	"github.com/0xrawsec/toast"
 )
 
 var (
@@ -16,14 +17,15 @@ var (
 )
 
 func TestReducer(t *testing.T) {
+
+	tt := toast.FromT(t)
+
 	rand.Seed(158)
 	identifiers := make([]string, 50)
 
 	e := engine.NewEngine()
-	if err := e.LoadDirectory(rules); err != nil {
-		t.Errorf("Failed to load engine: %s", err)
-		t.FailNow()
-	}
+
+	tt.CheckErr(e.LoadDirectory(rules))
 
 	r := NewReducer(e)
 	ruleNames := e.GetRuleNames()
@@ -49,7 +51,7 @@ func TestReducer(t *testing.T) {
 	}
 
 	var worst *ReducedStats
-	t.Logf("Maximum score: %d", r.MaxScore())
+	t.Logf("Maximum score: %d", r.MaxScore())
 
 	for _, id := range identifiers {
 		score := r.Score(id)
@@ -59,14 +61,24 @@ func TestReducer(t *testing.T) {
 		if rs.BoundedScore == 100 {
 			worst = rs
 		}
-		if score != rs.Score {
-			t.Errorf("Scores are not equal")
-		}
-		if bscore != rs.BoundedScore {
-			t.Errorf("Bounded scores are not equal")
-		}
+
+		tt.Assert(score == rs.Score)
+		tt.Assert(bscore == rs.BoundedScore)
 	}
 
-	b, _ := json.MarshalIndent(worst, "", "  ")
+	b, err := json.MarshalIndent(worst, "", "  ")
+	tt.CheckErr(err)
+
+	// testing print
+	r.Print()
 	t.Logf(string(b))
+
+	// deleting some identifiers
+	for _, id := range identifiers {
+		r.Reset(id)
+		tt.Assert(r.ReduceCopy(id) != nil)
+
+		r.Delete(id)
+		tt.Assert(r.ReduceCopy(id) == nil)
+	}
 }
