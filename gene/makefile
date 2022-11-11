@@ -4,7 +4,7 @@ VERSION=$(shell git tag | sort -V | tail -1 | sed 's/^v//')
 COMMITID=$(shell git rev-parse HEAD)
 
 # Strips symbols and dwarf to make binary smaller
-OPTS=-ldflags "-s -w"
+OPTS=-trimpath -ldflags "-s -w"
 ifdef DEBUG
 	OPTS=
 endif
