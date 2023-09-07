@@ -1,6 +1,8 @@
 package engine
 
-import "github.com/0xrawsec/golang-utils/datastructs"
+import (
+	"github.com/0xrawsec/golang-utils/datastructs"
+)
 
 type EventFilter map[string]*datastructs.Set
 
@@ -15,18 +17,26 @@ func NewEventFilter(m map[string][]int64) EventFilter {
 	return f
 }
 
-func (f EventFilter) Match(e Event) bool {
+func (f EventFilter) match(source string, id int64) bool {
 	// if there is no filter we match by default
-	if len(f) == 0 {
+	if f.IsEmpty() {
 		return true
 	}
 
-	if eventids, ok := f[e.Channel()]; ok {
+	if eventids, ok := f[source]; ok {
 		if eventids.Len() > 0 {
-			return eventids.Contains(e.EventID())
+			return eventids.Contains(id)
 		}
 		return true
 	}
 
 	return false
+}
+
+func (f EventFilter) IsEmpty() bool {
+	return len(f) == 0
+}
+
+func (f EventFilter) Match(e Event) bool {
+	return f.match(e.Channel(), e.EventID())
 }

@@ -1,9 +1,11 @@
 package engine
 
 import (
+	"runtime"
 	"testing"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
+	"github.com/0xrawsec/toast"
 )
 
 var (
@@ -290,4 +292,63 @@ func TestIndirectMatch(t *testing.T) {
 	}
 
 	t.Logf("Scanned events: %d", count)
+}
+
+func TestMatchEvent(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	ruleStr := `{
+	"Name": "TestMatchEvent",
+	"Meta": {
+		"Events": {
+			"kunai": [1],
+			"Microsoft-Windows-Sysmon/Operational": [1]
+			}
+		}
+	}`
+
+	er, err := Load([]byte(ruleStr), nil)
+	tt.CheckErr(err)
+	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
+
+	tt.Assert(er.EventFilter.match("kunai", 1))
+	tt.Assert(!er.EventFilter.match("kunai", 42))
+
+	tt.Assert(er.EventFilter.match("Microsoft-Windows-Sysmon/Operational", 1))
+	tt.Assert(!er.EventFilter.match("Microsoft-Windows-Sysmon/Operational", 42))
+}
+
+func TestMatchOS(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	ruleStr := `{
+	"Name": "TestOSMatch",
+	"Meta": {
+		"OSs": ["windows", "Linux", "DARWIN"]
+		}
+	}`
+
+	er, err := Load([]byte(ruleStr), nil)
+	tt.CheckErr(err)
+	tt.Assert(er.OSs.Len() == 3)
+
+	tt.Assert(er.matchOS("windows"))
+	tt.Assert(er.matchOS("linux"))
+	tt.Assert(er.matchOS("darwin"))
+	tt.Assert(er.matchOS(runtime.GOOS))
+
+	tt.Assert(!er.matchOS("ios"))
+	tt.Assert(!er.matchOS("android"))
+
+	// testing that we return ErrInvalidOS on invalid OS
+	er, err = Load([]byte(`
+	{
+	"Name": "TestOSMatch",
+	"Meta": {
+		"OSs": ["invalid_os"]
+		}
+	}`), nil)
+	tt.ExpectErr(err, ErrInvalidOS)
 }

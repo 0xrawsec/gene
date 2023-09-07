@@ -83,12 +83,12 @@ var (
 	EngineMinimalRuleSchemaVersion = ParseVersion("2.0.0")
 )
 
-//ErrRuleExist definition
+// ErrRuleExist definition
 type ErrRuleExist struct {
 	ruleName string
 }
 
-//Error error implementation
+// Error error implementation
 func (e ErrRuleExist) Error() string {
 	return fmt.Sprintf("Rule \"%s\" already exists", e.ruleName)
 }
@@ -98,12 +98,13 @@ type Stats struct {
 	Positives uint64
 }
 
-//Engine defines the engine managing several rules
+// Engine defines the engine managing several rules
 type Engine struct {
 	sync.RWMutex
 	templates *TemplateMap
 	rules     []*CompiledRule
 	rawRules  map[string]string
+	os        string           // OS the engine is running on
 	tags      map[string][]int // will be map[tag][]int with index referencing rule in rules
 	names     map[string]int   // will be map[name][]int with index referencing rule in rules
 	// Filters used to choose which rule to compile in case of match by tag/name
@@ -125,7 +126,7 @@ type Engine struct {
 	ShowAttack  bool
 }
 
-//NewEngine creates a new engine
+// NewEngine creates a new engine
 func NewEngine() (e *Engine) {
 	e = &Engine{}
 	e.templates = NewTemplateMap()
@@ -145,11 +146,16 @@ func NewEngine() (e *Engine) {
 	return
 }
 
-//addRule adds a rule to the current engine
+// addRule adds a rule to the current engine
 func (e *Engine) addRule(r *CompiledRule) error {
 
 	if r.Schema.Below(EngineMinimalRuleSchemaVersion) {
 		return fmt.Errorf("Expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
+	}
+
+	if e.os != "" && !r.matchOS(e.os) {
+		log.Debugf("Skip rule %s because it does not match configured OS: configured=%s rule=%s", r.Name, e.os, r.OSs.Slice())
+		return nil
 	}
 
 	// We skip adding the rule to the engine if we decided to match by name(s)
@@ -213,12 +219,12 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 	return nil
 }
 
-//SetDumpRaw setter for dumpRaw flag
+// SetDumpRaw setter for dumpRaw flag
 func (e *Engine) SetDumpRaw(value bool) {
 	e.dumpRaw = value
 }
 
-//SetFilters sets the filters to use in the engine
+// SetFilters sets the filters to use in the engine
 func (e *Engine) SetFilters(names, tags []string) {
 	for _, n := range names {
 		e.nameFilters.Add(n)
@@ -242,12 +248,12 @@ func (e *Engine) SetShowAttck(value bool) {
 	e.ShowAttack = value
 }
 
-//Count returns the number of rules successfuly loaded
+// Count returns the number of rules successfuly loaded
 func (e *Engine) Count() int {
 	return len(e.rules)
 }
 
-//Tags returns the tags of the rules currently loaded into the engine
+// Tags returns the tags of the rules currently loaded into the engine
 func (e *Engine) Tags() []string {
 	tn := make([]string, 0, len(e.tags))
 	for t := range e.tags {
@@ -283,8 +289,8 @@ func (e *Engine) WhitelistLen() int {
 	return e.containers.Len(whitelistContainer)
 }
 
-//GetRawRule returns the raw rule according to its name
-//it is convenient to get the rule after template replacement
+// GetRawRule returns the raw rule according to its name
+// it is convenient to get the rule after template replacement
 func (e *Engine) GetRawRule(regex string) (cs chan string) {
 	cs = make(chan string)
 	nameRegexp := regexp.MustCompile(regex)
@@ -327,7 +333,7 @@ func (e *Engine) GetCRuleByName(name string) (r *CompiledRule) {
 	return
 }
 
-//LoadTemplate loads a template from a file
+// LoadTemplate loads a template from a file
 func (e *Engine) LoadTemplate(templatefile string) error {
 	f, err := os.Open(templatefile)
 	if err != nil {
@@ -347,7 +353,7 @@ func (e *Engine) LoadContainer(container string, reader io.Reader) error {
 	return scanner.Err()
 }
 
-//LoadReader loads rule from a ReadSeeker
+// LoadReader loads rule from a ReadSeeker
 func (e *Engine) LoadReader(reader io.ReadSeeker) error {
 	return e.loadReader(reader)
 }
@@ -412,7 +418,7 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 	return nil
 }
 
-//LoadFile loads a rule file into the current engine
+// LoadFile loads a rule file into the current engine
 func (e *Engine) LoadFile(rulefile string) error {
 	f, err := os.Open(rulefile)
 	if err != nil {

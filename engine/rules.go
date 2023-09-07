@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/log"
@@ -25,13 +26,14 @@ func bound(i int) int {
 	return i
 }
 
-//CompiledRule definition
+// CompiledRule definition
 type CompiledRule struct {
 	containers *ContainerDB
 
 	Name        string
 	Criticality int
 	EventFilter EventFilter
+	OSs         *datastructs.SyncedSet
 	Computers   *datastructs.SyncedSet
 	Tags        *datastructs.SyncedSet
 	AtomMap     *datastructs.SyncedMap
@@ -44,9 +46,10 @@ type CompiledRule struct {
 	Schema Version
 }
 
-//NewCompiledRule initializes and returns an EvtxRule object
+// NewCompiledRule initializes and returns an EvtxRule object
 func NewCompiledRule(schema Version) (er CompiledRule) {
 	er.Tags = datastructs.NewSyncedSet()
+	er.OSs = datastructs.NewSyncedSet()
 	er.Computers = datastructs.NewSyncedSet()
 	er.AtomMap = datastructs.NewSyncedMap()
 	er.Attack = make([]Attack, 0)
@@ -55,15 +58,23 @@ func NewCompiledRule(schema Version) (er CompiledRule) {
 	return
 }
 
-//AddMatcher adds an atom rule to the CompiledRule
-//func (er *CompiledRule) AddMatcher(a *AtomRule) {
+// AddMatcher adds an atom rule to the CompiledRule
+// func (er *CompiledRule) AddMatcher(a *AtomRule) {
 func (er *CompiledRule) AddMatcher(m Matcher) {
 	er.AtomMap.Add(m.GetName(), m)
 }
 
-//SetContainers sets the ContainerDB pointer of rule
+// SetContainers sets the ContainerDB pointer of rule
 func (er *CompiledRule) SetContainers(containers *ContainerDB) {
 	er.containers = containers
+}
+
+// matchOS checks if the is able suitable for OS passed as parameter
+func (er *CompiledRule) matchOS(os string) bool {
+	if er.OSs.Len() == 0 {
+		return true
+	}
+	return er.OSs.Contains(os)
 }
 
 func (er *CompiledRule) metaMatch(evt Event) bool {
@@ -81,7 +92,7 @@ func (er *CompiledRule) metaMatch(evt Event) bool {
 	return true
 }
 
-//Match returns whether the CompiledRule matches the EVTX event
+// Match returns whether the CompiledRule matches the EVTX event
 func (er *CompiledRule) Match(evt Event) bool {
 	// Check if the rule is disabled, if yes match returns false
 	if er.Disabled {
@@ -127,9 +138,32 @@ func (oe *EventOpReader) Read(operand string) (value bool, ok bool) {
 // Temporary: we use JSON for easy parsing right now, lets see if we need to
 // switch to another format in the future
 
-//MetaSection defines the section holding the metadata of the rule
+var supportedOS = datastructs.NewInitSyncedSet(
+	"aix",
+	"android",
+	"darwin",
+	"dragonfly",
+	"freebsd",
+	"illumos",
+	"ios",
+	"js",
+	"linux",
+	"netbsd",
+	"openbsd",
+	"plan9",
+	"solaris",
+	"wasip1",
+	"windows",
+)
+
+var (
+	ErrInvalidOS = fmt.Errorf("invalid OS")
+)
+
+// MetaSection defines the section holding the metadata of the rule
 type MetaSection struct {
 	Events      map[string][]int64
+	OSs         []string
 	Computers   []string
 	Attack      []Attack `json:"ATTACK,omitempty"`
 	Criticality int
@@ -138,7 +172,7 @@ type MetaSection struct {
 	Schema      Version
 }
 
-//Rule is a JSON parsable rule
+// Rule is a JSON parsable rule
 type Rule struct {
 	Name      string
 	Tags      []string
@@ -148,13 +182,14 @@ type Rule struct {
 	Actions   []string
 }
 
-//NewRule creates a new rule used to deserialize from JSON
+// NewRule creates a new rule used to deserialize from JSON
 func NewRule() Rule {
 	r := Rule{
 		Name: "",
 		Tags: make([]string, 0),
 		Meta: MetaSection{
 			Events:      make(map[string][]int64),
+			OSs:         make([]string, 0),
 			Computers:   make([]string, 0),
 			Attack:      make([]Attack, 0),
 			Criticality: 0,
@@ -170,20 +205,20 @@ func (jr *Rule) IsDisabled() bool {
 	return jr.Meta.Disable
 }
 
-//ReplaceTemplate the regexp templates found in the matches
+// ReplaceTemplate the regexp templates found in the matches
 func (jr *Rule) ReplaceTemplate(tm *TemplateMap) {
 	for i, match := range jr.Matches {
 		jr.Matches[i] = tm.ReplaceAll(match)
 	}
 }
 
-//JSON returns the JSON string corresponding to the rule
+// JSON returns the JSON string corresponding to the rule
 func (jr *Rule) JSON() (string, error) {
 	b, err := json.Marshal(jr)
 	return string(b), err
 }
 
-//Compile a Rule
+// Compile a Rule
 func (jr *Rule) Compile(e *Engine) (*CompiledRule, error) {
 	if e != nil {
 		return jr.compile(e.containers)
@@ -207,6 +242,16 @@ func (jr *Rule) compile(containers *ContainerDB) (*CompiledRule, error) {
 
 	// Setting up event filter
 	rule.EventFilter = NewEventFilter(jr.Meta.Events)
+
+	// Initializes OSs
+	for _, os := range jr.Meta.OSs {
+		// force OS being lower case
+		os = strings.ToLower(os)
+		if !supportedOS.Contains(os) {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidOS, os)
+		}
+		rule.OSs.Add(os)
+	}
 
 	// Initializes Computers
 	for _, s := range jr.Meta.Computers {
@@ -280,7 +325,7 @@ func (jr *Rule) compile(containers *ContainerDB) (*CompiledRule, error) {
 	return &rule, nil
 }
 
-//Load loads rule to EvtxRule
+// Load loads rule to EvtxRule
 func Load(b []byte, containers *ContainerDB) (*CompiledRule, error) {
 	var jr Rule
 	err := json.Unmarshal(b, &jr)
