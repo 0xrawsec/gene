@@ -22,7 +22,7 @@ jobs:
         go-version: '1.21'
 
     - name: Install Tools
-      run: apt install -y make 
+      run: sudo apt install -y make 
 
     - name: Build
       run: cd gene && make ci-build
