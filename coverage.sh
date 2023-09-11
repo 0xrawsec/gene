@@ -14,4 +14,4 @@ GOOS=linux go test -short -failfast -coverprofile="${coverprofile}" ${pkgs[*]}
 go tool cover -func "${coverprofile}" | tee "${out}"
 
 url_message=`cat ${out} | tail -n -1 | awk -F"\t" '{print $NF}' | tr -d '[:cntrl:]' | sed 's/%/%25/'`
-curl -s https://img.shields.io/badge/coverage-${url_message}-informational > ${coverage_dir}/badge.svg
+curl -s https://img.shields.io/badge/coverage-${url_message}-informational?style=for-the-badge > ${coverage_dir}/badge.svg

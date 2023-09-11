@@ -1,4 +1,4 @@
-[![CI](https://github.com/0xrawsec/gene/actions/workflows/go.yml/badge.svg)](https://github.com/0xrawsec/gene/actions/workflows/go.yml)
+[![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/0xrawsec/gene/go.yml?style=for-the-badge)](https://github.com/0xrawsec/gene/actions/workflows/go.yml)
 ![coverage](.github/coverage/badge.svg)
 
 # GENE: Go Evtx sigNature Engine
