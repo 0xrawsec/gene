@@ -3,7 +3,7 @@
 [![GitHub release (with filter)](https://img.shields.io/github/v/release/0xrawsec/gene?style=for-the-badge)](https://github.com/0xrawsec/gene/releases/latest)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=for-the-badge&logo=docsdotrs)](https://rawsec.lu/doc/gene/1.6/)
 
-# GENE: Go Evtx sigNature Engine
+# Gene
 
 The idea behind this project is to provide an efficient and standard way to
 look into Windows Event Logs (a.k.a EVTX files). For those who are familiar with
