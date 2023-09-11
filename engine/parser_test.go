@@ -4,7 +4,6 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/0xrawsec/golang-utils/log"
 	"github.com/0xrawsec/toast"
 )
 
@@ -163,9 +162,10 @@ func TestLoadRule(t *testing.T) {
 	"Tags": ["Hello", "World"],
 	"Meta": {
 		"LogType": "winevt",
-		"EventIDs": [1,7],
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"Computer": ["Test"]
+		"Events": {
+			"Microsoft-Windows-Sysmon/Operational": [1,7]
+		},
+		"Computers": ["DESKTOP-5SUA567"]
 		},
 	"Matches": [
 		"$a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'",
@@ -175,7 +175,7 @@ func TestLoadRule(t *testing.T) {
 	"Condition": "$c and $a and (!$b)"
 	}`
 
-	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), nil, &TypeWinevt)
 	tt.CheckErr(err)
 
 	tt.Assert(er.Match(winevtEvent))
@@ -205,19 +205,16 @@ func TestParseContainerMatch(t *testing.T) {
 }
 
 func TestBlacklist(t *testing.T) {
-	log.SetLogLevel(log.LDebug)
-
 	tt := toast.FromT(t)
 
 	ruleStr := `{
 	"Name": "Blacklisted",
 	"Tags": ["Hello", "World"],
 	"Meta": {
-		"EventIDs": [1,7],
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"Computer": ["Test"],
-		"Action": "warn"
-		},
+		"Events": {
+			"Microsoft-Windows-Sysmon/Operational": [1,7]
+		}
+	},
 	"Matches": [
 		"$sha1In: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
 		"$md5InBl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in blacklist",
@@ -234,7 +231,7 @@ func TestBlacklist(t *testing.T) {
 	// bogus value in whitelist, we don't care what's in it
 	containers.AddStringToContainer("whitelist", "turbo fish")
 
-	er, err := Load([]byte(ruleStr), containers, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), containers, &TypeWinevt)
 
 	tt.CheckErr(err)
 	tt.Assert(er.Match(winevtEvent))
@@ -248,11 +245,10 @@ func TestIndirectMatch(t *testing.T) {
 	ruleStr := `{
 	"Name": "IndirectMatch",
 	"Meta": {
-		"EventIDs": [1, 6, 7],
-		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"Computer": ["Test"],
-		"Action": "warn"
-		},
+		"Events": {
+			"Microsoft-Windows-Sysmon/Operational": [1,7]
+		}
+	},
 	"Matches": [
 		"$dummyIndirect: Hashes = @Hashes",
 		"$abs: /Event/System/Computer = @/Event/System/Computer",
@@ -261,7 +257,7 @@ func TestIndirectMatch(t *testing.T) {
 	"Condition": "$dummyIndirect and $abs and !$fail"
 	}`
 
-	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), nil, &TypeWinevt)
 
 	tt.CheckErr(err)
 
@@ -283,7 +279,7 @@ func TestMatchEvent(t *testing.T) {
 		}
 	}`
 
-	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), nil, &TypeWinevt)
 	tt.CheckErr(err)
 	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
 
@@ -305,7 +301,7 @@ func TestMatchOS(t *testing.T) {
 		}
 	}`
 
-	er, err := Load([]byte(ruleStr), nil, nil)
+	er, err := LoadRule([]byte(ruleStr), nil, nil)
 	tt.CheckErr(err)
 	tt.Assert(er.OSs.Len() == 3)
 
@@ -318,12 +314,13 @@ func TestMatchOS(t *testing.T) {
 	tt.Assert(!er.matchOS("android"))
 
 	// testing that we return ErrInvalidOS on invalid OS
-	er, err = Load([]byte(`
+	_, err = LoadRule([]byte(`
 	{
 	"Name": "TestOSMatch",
 	"Meta": {
 		"OSs": ["invalid_os"]
 		}
 	}`), nil, nil)
+
 	tt.ExpectErr(err, ErrInvalidOS)
 }

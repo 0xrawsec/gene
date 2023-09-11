@@ -97,7 +97,7 @@ func parseToFloat(s string) (f float64, err error) {
 	if f, err := strconv.ParseFloat(s, 64); err == nil {
 		return f, err
 	}
-	return 0, fmt.Errorf("Unknown type to parse")
+	return 0, fmt.Errorf("unknown type to parse")
 }
 
 // Compile FieldMatch into a regexp

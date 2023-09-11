@@ -9,7 +9,7 @@ import (
 
 var (
 	//ErrContainerAlreadyExists should be returned in case an container name is already used in Containers
-	ErrContainerAlreadyExists = fmt.Errorf("Already existing container")
+	ErrContainerAlreadyExists = fmt.Errorf("already existing container")
 )
 
 // ContainerDB structure used to store several containers

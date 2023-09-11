@@ -11,18 +11,17 @@ import (
 
 // Tokenizer structure
 type Tokenizer struct {
-	i        int
-	tokens   []string
-	expected []string
+	i      int
+	tokens []string
 }
 
 var (
 	//ErrEOT End Of Tokens
-	ErrEOT = fmt.Errorf("End of tokens")
+	ErrEOT = fmt.Errorf("end of tokens")
 	//ErrUnexpectedToken definition
-	ErrUnexpectedToken = fmt.Errorf("Unexpected tokens")
+	ErrUnexpectedToken = fmt.Errorf("unexpected tokens")
 	//ErrEmptyToken definition
-	ErrEmptyToken = fmt.Errorf("Empty token")
+	ErrEmptyToken = fmt.Errorf("empty token")
 )
 
 // NewTokenizer creates and inits a new Tokenizer struct
@@ -462,12 +461,6 @@ func nextCondEltLowerLevel(ce *ConditionElement) *ConditionElement {
 		}
 	}
 	return e.Next
-}
-
-func computeNegation(ce *ConditionElement, operands OperandReader) (nce *ConditionElement, v bool) {
-	nce, v = compute(false, ce.Next, operands)
-
-	return
 }
 
 func compute(computed bool, ce *ConditionElement, operands OperandReader) (*ConditionElement, bool) {

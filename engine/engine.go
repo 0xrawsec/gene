@@ -2,10 +2,8 @@ package engine
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -111,9 +109,7 @@ type Engine struct {
 	tagFilters  *datastructs.SyncedSet
 	nameFilters *datastructs.SyncedSet
 	dumpRaw     bool
-	//showAttck   bool
-	filter     bool // tells that we should apply Filter rules
-	containers *ContainerDB
+	containers  *ContainerDB
 	// Control allowed file extensions
 	ruleExtensions *datastructs.SyncedSet
 	tplExtensions  *datastructs.SyncedSet
@@ -159,7 +155,7 @@ func (e *Engine) AddLogFormat(name string, format *LogType) {
 func (e *Engine) addRule(r *CompiledRule) error {
 
 	if r.Schema.Below(EngineMinimalRuleSchemaVersion) {
-		return fmt.Errorf("Expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
+		return fmt.Errorf("expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
 	}
 
 	if e.os != "" && !r.matchOS(e.os) {
@@ -200,13 +196,13 @@ func (e *Engine) addRule(r *CompiledRule) error {
 
 func (e *Engine) loadReader(reader io.ReadSeeker) error {
 	var decerr error
-	dec := json.NewDecoder(reader)
+	dec := NewRuleDecoder(reader)
 
 	for {
 		var jRule Rule
-		decoderOffset := seekerGoto(reader, 0, os.SEEK_CUR)
+		decoderOffset := seekerGoto(reader, 0, io.SeekCurrent)
 		// We don't handle error here
-		decBuffer, _ := ioutil.ReadAll(dec.Buffered())
+		decBuffer, _ := io.ReadAll(dec.Buffered())
 		ruleOffset := nextRuleOffset(decoderOffset-int64(len(decBuffer)), reader)
 
 		decerr = dec.Decode(&jRule)

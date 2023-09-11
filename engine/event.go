@@ -20,9 +20,9 @@ type Event interface {
 
 func EventGetString(evt Event, p *XPath) (string, bool) {
 	if i, ok := evt.Get(p); ok {
-		switch i.(type) {
+		switch i := i.(type) {
 		case string:
-			return i.(string), true
+			return i, true
 		default:
 			return fmt.Sprintf("%v", i), true
 		}
@@ -39,9 +39,9 @@ func (g GenericEvent) Set(p *XPath, new interface{}) error {
 			g[(p.Path)[0]] = new
 			return nil
 		}
-		switch i.(type) {
+		switch i := i.(type) {
 		case map[string]interface{}:
-			ng := GenericEvent(i.(map[string]interface{}))
+			ng := GenericEvent(i)
 			np := &XPath{Path: p.Path[1:]}
 			return ng.Set(np, new)
 		}
@@ -57,9 +57,9 @@ func (e GenericEvent) Get(p *XPath) (interface{}, bool) {
 			if len(p.Path) == 1 {
 				return i, true
 			}
-			switch i.(type) {
+			switch i := i.(type) {
 			case map[string]interface{}:
-				ne := GenericEvent(i.(map[string]interface{}))
+				ne := GenericEvent(i)
 				np := &XPath{Path: p.Path[1:]}
 				return ne.Get(np)
 			}

@@ -792,7 +792,25 @@ func TestGetRule(t *testing.T) {
 	names := e.GetRuleNames()
 	tt.Assert(len(names) == 1)
 	tt.Assert(names[0] == "ShouldMatch")
+}
 
+func TestLoadingOldFormat(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	rule := `{
+	"Name": "ShouldMatch",
+	"Meta": {
+		"EventIDs" : [1, 7],
+		"Channels" : ["Microsoft-Windows-Sysmon/Operational"],
+		"Schema": "2.0.0"
+		},
+	"Condition": ""
+	}`
+
+	e := NewEngine()
+
+	tt.Assert(e.LoadString(rule) != nil)
 }
 
 /////////////////////////////// Benchmarks /////////////////////////////////////

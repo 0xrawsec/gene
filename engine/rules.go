@@ -1,8 +1,10 @@
 package engine
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/0xrawsec/golang-utils/datastructs"
@@ -183,6 +185,12 @@ type Rule struct {
 	Actions   []string
 }
 
+func NewRuleDecoder(r io.Reader) *json.Decoder {
+	dec := json.NewDecoder(r)
+	dec.DisallowUnknownFields()
+	return dec
+}
+
 // NewRule creates a new rule used to deserialize from JSON
 func NewRule() Rule {
 	r := Rule{
@@ -297,7 +305,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 			cm.SetContainerDB(rule.containers)
 			rule.AddMatcher(cm)
 		default:
-			return nil, fmt.Errorf("Unknown match statement: %s", p)
+			return nil, fmt.Errorf("unknown match statement: %s", p)
 		}
 	}
 
@@ -305,7 +313,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	tokenizer := NewTokenizer(jr.Condition)
 	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil && err != ErrEOT {
-		return nil, fmt.Errorf("Failed to parse condition \"%s\": %s", jr.Condition, err)
+		return nil, fmt.Errorf("failed to parse condition \"%s\": %s", jr.Condition, err)
 	}
 
 	rule.Conditions = cond
@@ -314,7 +322,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	// We control that all the operands are known
 	for _, op := range operands {
 		if !rule.AtomMap.Contains(op) {
-			return nil, fmt.Errorf("Unkown operand %s in condition \"%s\"", op, jr.Condition)
+			return nil, fmt.Errorf("unkown operand %s in condition \"%s\"", op, jr.Condition)
 		}
 	}
 
@@ -327,10 +335,12 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	return &rule, nil
 }
 
-// Load loads (unmarshal and compile) rule
-func Load(b []byte, containers *ContainerDB, format *LogType) (*CompiledRule, error) {
+// LoadRule loads (unmarshal and compile) a rule
+func LoadRule(b []byte, containers *ContainerDB, format *LogType) (*CompiledRule, error) {
 	var jr Rule
-	err := json.Unmarshal(b, &jr)
+
+	dec := NewRuleDecoder(bytes.NewBuffer(b))
+	err := dec.Decode(&jr)
 	if err != nil {
 		return nil, err
 	}

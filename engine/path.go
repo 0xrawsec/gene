@@ -11,13 +11,9 @@ const (
 )
 
 var (
-	eventIDPath    = Path("/Event/System/EventID")
-	channelPath    = Path("/Event/System/Channel")
-	computerPath   = Path("/Event/System/Computer")
 	systemTimePath = Path("/Event/System/TimeCreated/SystemTime")
 
 	eventDataPath = path("/Event/EventData")
-	userDataPath  = path("/Event/UserData")
 
 	// GeneInfoPath path to the Gene information in a modified event
 	GeneInfoPath = Path("/Event/GeneInfo")
