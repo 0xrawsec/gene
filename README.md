@@ -1,7 +1,7 @@
 [![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/0xrawsec/gene/go.yml?style=for-the-badge)](https://github.com/0xrawsec/gene/actions/workflows/go.yml)
 ![coverage](.github/coverage/badge.svg)
 ![GitHub tag (with filter)](https://img.shields.io/github/v/tag/0xrawsec/gene?style=for-the-badge&label=version&color=orange)
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=for-the-badge&logo=docsdotrs)](https://rawsec.lu/doc/gene/1.6/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=for-the-badge&logo=docsdotrs)](https://rawsec.lu/doc/gene/2.0/)
 
 # Gene
 
