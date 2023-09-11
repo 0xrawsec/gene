@@ -1,6 +1,6 @@
 module github.com/0xrawsec/gene/v2
 
-go 1.13
+go 1.21
 
 require (
 	github.com/0xrawsec/golang-evtx v1.2.9
