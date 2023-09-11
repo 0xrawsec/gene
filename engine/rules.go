@@ -173,6 +173,8 @@ type MetaSection struct {
 	Disable     bool
 	Filter      bool
 	Schema      Version
+	Authors     []string
+	Comments    []string
 }
 
 // Rule is a JSON parsable rule

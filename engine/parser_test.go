@@ -324,3 +324,25 @@ func TestMatchOS(t *testing.T) {
 
 	tt.ExpectErr(err, ErrInvalidOS)
 }
+
+func TestAuthorsComments(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	ruleStr := `{
+	"Name": "TestAuthorsComments",
+	"Meta": {
+		"Authors": [
+			"0xrawsec",
+			"Santa"
+		],
+		"Comments": [
+			"Some useful comment",
+			"Another comment"
+			]
+		}
+	}`
+
+	_, err := LoadRule([]byte(ruleStr), nil, nil)
+	tt.CheckErr(err)
+}
