@@ -17,12 +17,15 @@ type Matcher interface {
 }
 
 var (
-	//ErrUnkOperator error to return when an operator is not known
-	ErrUnkOperator = fmt.Errorf("Unknown operator")
+	// ErrSyntax raised when syntax error is met
+	ErrSyntax    = fmt.Errorf("syntax error")
+	ErrLogFormat = fmt.Errorf("log format error")
+
 	//Regexp and its helper to ease AtomRule parsing
-	fieldMatchRegexp        = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`)
+	pathRe                  = `([\w/]+|".*?")`
+	fieldMatchRegexp        = regexp.MustCompile(fmt.Sprintf(`(?P<name>\$\w+):\s*(?P<operand>%s)\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`, pathRe))
 	fieldMatchRegexpHlpr    = submatch.NewHelper(fieldMatchRegexp)
-	indFieldMatchRegexp     = regexp.MustCompile(`(?P<name>\$\w+):\s*(?P<operand>(\w+|".*?"))\s*(?P<operator>=)\s+@(?P<value>.*)`)
+	indFieldMatchRegexp     = regexp.MustCompile(fmt.Sprintf(`(?P<name>\$\w+):\s*(?P<operand>%s)\s*(?P<operator>=)\s+@(?P<value>%s)`, pathRe, pathRe))
 	indFieldMatchRegexpHlpr = submatch.NewHelper(indFieldMatchRegexp)
 )
 
@@ -34,6 +37,7 @@ type FieldMatch struct {
 	Value    string `regexp:"value"`
 	indirect bool
 	compiled bool
+	format   *LogType
 	path     *XPath
 	indPath  *XPath
 	cRule    *regexp.Regexp
@@ -45,25 +49,25 @@ func IsFieldMatch(s string) bool {
 	return fieldMatchRegexp.MatchString(s) || indFieldMatchRegexp.MatchString(s)
 }
 
-// ParseFieldMatch parses a string and returns an FieldMatch
-func ParseFieldMatch(rule string) (ar FieldMatch, err error) {
+// ParseFieldMatch parses a string and returns a FieldMatch
+func ParseFieldMatch(match string, format *LogType) (m FieldMatch, err error) {
 	var hlpr submatch.Helper
 
 	// Check if the syntax of the match is valid
 	switch {
-	case fieldMatchRegexp.Match([]byte(rule)):
+	case fieldMatchRegexp.Match([]byte(match)):
 		hlpr = fieldMatchRegexpHlpr
-	case indFieldMatchRegexp.Match([]byte(rule)):
+	case indFieldMatchRegexp.Match([]byte(match)):
 		hlpr = indFieldMatchRegexpHlpr
-		ar.indirect = true
+		m.indirect = true
 	default:
-		return ar, fmt.Errorf("Syntax error in \"%s\"", rule)
+		return m, fmt.Errorf("%w \"%s\"", ErrSyntax, match)
 	}
 
 	// Continues
-	hlpr.Prepare([]byte(rule))
+	hlpr.Prepare([]byte(match))
 
-	err = hlpr.Unmarshal(&ar)
+	err = hlpr.Unmarshal(&m)
 	// it is normal not to set private fields
 	if fse, ok := err.(submatch.FieldNotSetError); ok {
 		switch fse.Field {
@@ -74,20 +78,16 @@ func ParseFieldMatch(rule string) (ar FieldMatch, err error) {
 	if err != nil {
 		return
 	}
-	ar.Operand = strings.Trim(ar.Operand, `"'`)
-	ar.Value = strings.Trim(ar.Value, `"'`)
+	m.Operand = strings.Trim(m.Operand, `"'`)
+	m.Value = strings.Trim(m.Value, `"'`)
+	m.format = format
 	// Compile the rule into a Regexp
-	err = ar.Compile()
+	err = m.Compile()
 	if err != nil {
-		log.Debugf("Compiling error in \"%s\": %s", rule, err)
-		return ar, fmt.Errorf("Failed to compile \"%s\"", rule)
+		log.Debugf("Compiling error in \"%s\": %s", match, err)
+		return m, fmt.Errorf("%w: %s", err, match)
 	}
-	return ar, err
-}
-
-// NewFieldMatch creates a new FieldMatch rule from data
-func NewFieldMatch(name, operand, operator, value string) *FieldMatch {
-	return &FieldMatch{name, operand, operator, value, false, false, nil, nil, nil, 0}
+	return m, err
 }
 
 func parseToFloat(s string) (f float64, err error) {
@@ -100,7 +100,7 @@ func parseToFloat(s string) (f float64, err error) {
 	return 0, fmt.Errorf("Unknown type to parse")
 }
 
-// Compile  AtomRule into a regexp
+// Compile FieldMatch into a regexp
 func (f *FieldMatch) Compile() error {
 	var err error
 	if !f.compiled {
@@ -116,11 +116,25 @@ func (f *FieldMatch) Compile() error {
 				f.iValue, err = parseToFloat(f.Value)
 			}
 		} else {
-			p := Path(fmt.Sprintf("/Event/EventData/%s", f.Value))
-			f.indPath = p
+			// setting indirect field path
+			if IsAbsoluteXPath(f.Value) {
+				f.indPath = Path(f.Value)
+			} else if f.format != nil {
+				f.indPath = f.format.Data.Append(f.Value)
+			} else {
+				return fmt.Errorf("%w: either known log format or absolute fields match must be used", ErrLogFormat)
+			}
 		}
-		p := Path(fmt.Sprintf("/Event/EventData/%s", f.Operand))
-		f.path = p
+
+		// setting field path
+		if IsAbsoluteXPath(f.Operand) {
+			f.path = Path(f.Operand)
+		} else if f.format != nil {
+			f.path = f.format.Data.Append(f.Operand)
+		} else {
+			return fmt.Errorf("%w: either known log format or absolute fields match must be used", ErrLogFormat)
+		}
+
 		f.compiled = true
 	}
 	if err != nil {
@@ -136,7 +150,10 @@ func (f *FieldMatch) GetName() string {
 
 // Match checks whether the AtomRule match the SysmonEvent
 func (f *FieldMatch) Match(se Event) bool {
-	f.Compile()
+	if err := f.Compile(); err != nil {
+		panic(err)
+	}
+
 	s, ok := EventGetString(se, f.path)
 	if ok {
 		// indirect match means we compare with the value of another field
@@ -189,7 +206,7 @@ func (f *FieldMatch) String() string {
 ////////////////////////////// ContainerMatch ///////////////////////////////
 
 var (
-	atomContainerMatchRegexp = regexp.MustCompile(`(?P<name>\$\w+):\s+extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>.*)\s*\)\s+in\s+(?P<container>[\w\.\-]+)`)
+	atomContainerMatchRegexp = regexp.MustCompile(fmt.Sprintf(`(?P<name>\$\w+):\s+extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>%s)\s*\)\s+in\s+(?P<container>[\w\.\-]+)`, pathRe))
 	atomContainerMatchHelper = submatch.NewHelper(atomContainerMatchRegexp)
 )
 
@@ -208,16 +225,22 @@ type ContainerMatch struct {
 }
 
 // ParseContainerMatch parses an extract and returns an AtomExtract from it
-func ParseContainerMatch(extract string) (ae *ContainerMatch, err error) {
-	ae = NewContainerMatch()
+func ParseContainerMatch(extract string, format *LogType) (cm *ContainerMatch, err error) {
+	cm = NewContainerMatch()
 	if !atomContainerMatchRegexp.MatchString(extract) {
-		return nil, fmt.Errorf("Syntax error in \"%s\"", extract)
+		return nil, fmt.Errorf("%w \"%s\"", ErrSyntax, extract)
 	}
 	atomContainerMatchHelper.Prepare([]byte(extract))
-	atomContainerMatchHelper.Unmarshal(ae)
-	// We prepend with a dolar so that it is complient with the syntax already defined
-	p := Path(fmt.Sprintf("/Event/EventData/%s", ae.Operand))
-	ae.path = p
+	atomContainerMatchHelper.Unmarshal(cm)
+
+	if IsAbsoluteXPath(cm.Operand) {
+		cm.path = Path(cm.Operand)
+	} else if format != nil {
+		cm.path = format.Data.Append(cm.Operand)
+	} else {
+		return nil, fmt.Errorf("%w: either known log format or absolute fields match must be used", ErrLogFormat)
+	}
+
 	return
 }
 
@@ -274,7 +297,10 @@ func (c *ContainerMatch) Extract(evt Event) (string, bool) {
 // Matcher interface the string matched against the container are converted
 // to lower case (default behaviour of ContainsString method)
 func (c *ContainerMatch) Match(evt Event) bool {
-	c.Compile()
+	if err := c.Compile(); err != nil {
+		panic(err)
+	}
+
 	if extract, ok := c.Extract(evt); ok {
 		log.Debugf("Extracted: %s", extract)
 		if c.containerDB != nil {

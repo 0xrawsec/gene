@@ -162,6 +162,7 @@ var (
 
 // MetaSection defines the section holding the metadata of the rule
 type MetaSection struct {
+	LogType     string
 	Events      map[string][]int64
 	OSs         []string
 	Computers   []string
@@ -193,7 +194,8 @@ func NewRule() Rule {
 			Computers:   make([]string, 0),
 			Attack:      make([]Attack, 0),
 			Criticality: 0,
-			Schema:      EngineMinimalRuleSchemaVersion},
+			Schema:      EngineMinimalRuleSchemaVersion,
+		},
 		Matches:   make([]string, 0),
 		Condition: "",
 		Actions:   make([]string, 0)}
@@ -221,12 +223,12 @@ func (jr *Rule) JSON() (string, error) {
 // Compile a Rule
 func (jr *Rule) Compile(e *Engine) (*CompiledRule, error) {
 	if e != nil {
-		return jr.compile(e.containers)
+		return jr.compile(e.containers, e.logFormats[jr.Meta.LogType])
 	}
-	return jr.compile(nil)
+	return jr.compile(nil, nil)
 }
 
-func (jr *Rule) compile(containers *ContainerDB) (*CompiledRule, error) {
+func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule, error) {
 	var err error
 	rule := NewCompiledRule(jr.Meta.Schema)
 
@@ -266,14 +268,14 @@ func (jr *Rule) compile(containers *ContainerDB) (*CompiledRule, error) {
 		switch {
 		case IsFieldMatch(p):
 			var a FieldMatch
-			a, err = ParseFieldMatch(p)
+			a, err = ParseFieldMatch(p, format)
 			if err != nil {
 				return nil, err
 			}
 			rule.AddMatcher(&a)
 		case IsContainerMatch(p):
 			var cm *ContainerMatch
-			cm, err = ParseContainerMatch(p)
+			cm, err = ParseContainerMatch(p, format)
 			if err != nil {
 				return nil, err
 			}
@@ -326,11 +328,11 @@ func (jr *Rule) compile(containers *ContainerDB) (*CompiledRule, error) {
 }
 
 // Load loads rule to EvtxRule
-func Load(b []byte, containers *ContainerDB) (*CompiledRule, error) {
+func Load(b []byte, containers *ContainerDB, format *LogType) (*CompiledRule, error) {
 	var jr Rule
 	err := json.Unmarshal(b, &jr)
 	if err != nil {
 		return nil, err
 	}
-	return jr.compile(containers)
+	return jr.compile(containers, format)
 }

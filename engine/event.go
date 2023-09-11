@@ -7,6 +7,7 @@ import (
 )
 
 type Event interface {
+	Format() *LogType
 	Set(*XPath, interface{}) error
 	SetDetection(d *Detection)
 	Get(*XPath) (interface{}, bool)
@@ -68,11 +69,13 @@ func (e GenericEvent) Get(p *XPath) (interface{}, bool) {
 }
 
 func (g GenericEvent) SetDetection(d *Detection) {
-	g.Set(GeneInfoPath, d)
+	p := g.Format().GeneInfo
+	g.Set(p, d)
 }
 
 func (g GenericEvent) GetDetection() *Detection {
-	if i, ok := g.Get(GeneInfoPath); ok {
+	p := g.Format().GeneInfo
+	if i, ok := g.Get(p); ok {
 		if d, ok := i.(*Detection); ok {
 			return d
 		}
@@ -81,14 +84,16 @@ func (g GenericEvent) GetDetection() *Detection {
 }
 
 func (g GenericEvent) Channel() string {
-	if ch, ok := EventGetString(g, channelPath); ok {
+	p := g.Format().Channel
+	if ch, ok := EventGetString(g, p); ok {
 		return ch
 	}
 	return ""
 }
 
 func (g GenericEvent) Computer() string {
-	if comp, ok := EventGetString(g, computerPath); ok {
+	p := g.Format().Hostname
+	if comp, ok := EventGetString(g, p); ok {
 		return comp
 	}
 	return ""
@@ -97,7 +102,8 @@ func (g GenericEvent) Computer() string {
 func (g GenericEvent) EventID() (id int64) {
 	var err error
 
-	if s, ok := EventGetString(g, eventIDPath); ok {
+	p := g.Format().EventID
+	if s, ok := EventGetString(g, p); ok {
 		if id, err = strconv.ParseInt(s, 0, 32); err == nil {
 			return
 		}
@@ -106,10 +112,19 @@ func (g GenericEvent) EventID() (id int64) {
 }
 
 func (g GenericEvent) Timestamp() time.Time {
-	if sts, ok := EventGetString(g, systemTimePath); ok {
+	p := g.Format().Timestamp
+	if sts, ok := EventGetString(g, p); ok {
 		if ts, err := time.Parse(time.RFC3339Nano, sts); err == nil {
 			return ts
 		}
 	}
 	return time.Time{}
+}
+
+func (g GenericEvent) Format() *LogType {
+	// should be in any windows event
+	if _, ok := g.Get(systemTimePath); ok {
+		return &TypeWinevt
+	}
+	return &TypeKunai
 }

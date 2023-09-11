@@ -37,8 +37,21 @@ func TestPath(t *testing.T) {
 	tt.Assert(edata.Len() == 2)
 	tt.Assert(procid.Len() == 3)
 
-	tt.Assert(edata.String()=="/Event/EventData")
-	tt.Assert(procid.String()=="/Event/EventData/ProcessId")
+	tt.Assert(edata.String() == "/Event/EventData")
+	tt.Assert(procid.String() == "/Event/EventData/ProcessId")
+
+	tt.Assert(IsAbsoluteXPath("/Event/EventData"))
+	tt.Assert(!IsAbsoluteXPath("ProcessId"))
+}
+
+func TestJoin(t *testing.T) {
+	tt := toast.FromT(t)
+
+	p := Path("/Event").Append("EventData")
+
+	tt.Assert(p.Flags.EventDataField)
+	tt.Assert(p.Equal(Path("/Event/EventData")))
+
 }
 
 func BenchmarkPathStartsWith(b *testing.B) {

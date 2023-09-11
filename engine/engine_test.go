@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/readers"
+	"github.com/0xrawsec/toast"
 )
 
 const (
@@ -66,12 +68,12 @@ const (
 )
 
 var (
-	evt         = make(GenericEvent)
+	winevtEvent = make(GenericEvent)
 	bigRuleFile = "./test/data/1000rules.json"
 )
 
 func init() {
-	err := json.Unmarshal([]byte(eventStr), &evt)
+	err := json.Unmarshal([]byte(eventStr), &winevtEvent)
 	if err != nil {
 		panic(err)
 	}
@@ -97,6 +99,7 @@ func TestLoad(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
+		"LogType": "winevt",
 		"Schema": "2.0.0"
 	},
 	"Matches": [
@@ -116,6 +119,7 @@ func TestMatch(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
@@ -131,7 +135,7 @@ func TestMatch(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -155,7 +159,7 @@ func TestShouldNotMatch(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) != 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) != 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -166,6 +170,7 @@ func TestMatchAttck(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"ATTACK": [
 			{
@@ -194,10 +199,10 @@ func TestMatchAttck(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
-		t.Log(prettyJSON(evt))
+		t.Log(prettyJSON(winevtEvent))
 	}
 }
 
@@ -206,6 +211,7 @@ func TestMatchByTag(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Tags": ["foo"],
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
@@ -219,6 +225,7 @@ func TestMatchByTag(t *testing.T) {
 	"Name": "ShouldNotMatch",
 	"Tags": ["bar"],
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
@@ -239,7 +246,7 @@ func TestMatchByTag(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -251,6 +258,7 @@ func TestSimpleRule(t *testing.T) {
 	rule := `{
 	"Name": "SimpleRule",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
@@ -266,7 +274,7 @@ func TestSimpleRule(t *testing.T) {
 		t.Log(err)
 	}
 	t.Logf("Engine loaded %d rule", e.Count())
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -295,6 +303,7 @@ func TestNotOrRule(t *testing.T) {
 	rule := `{
 	"Name": "NotOrRule",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -311,7 +320,7 @@ func TestNotOrRule(t *testing.T) {
 		t.Log(err)
 	}
 	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) != 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) != 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -340,6 +349,7 @@ func TestNotAndRule(t *testing.T) {
 	rule := `{
 	"Name": "NotAndRule",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -356,7 +366,7 @@ func TestNotAndRule(t *testing.T) {
 		t.Log(err)
 	}
 	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -385,6 +395,7 @@ func TestComplexRule(t *testing.T) {
 	rule := `{
 	"Name": "ComplexRule",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -406,7 +417,7 @@ func TestComplexRule(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -435,6 +446,7 @@ func TestContainer(t *testing.T) {
 	rule := `{
 	"Name": "ContainerConditions",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -457,7 +469,7 @@ func TestContainer(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
 		t.Log(m)
@@ -501,9 +513,9 @@ func TestFiltered1(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&evt); filtered {
+	if _, _, filtered := e.MatchOrFilter(&winevtEvent); filtered {
 		t.Log("Event correctly filtered")
-		t.Logf("%s", prettyJSON(evt))
+		t.Logf("%s", prettyJSON(winevtEvent))
 	} else {
 		t.Fail()
 	}
@@ -531,6 +543,7 @@ func TestFiltered2(t *testing.T) {
 	rule := `{
 	"Name": "ProcessCreate",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Filter": true,
 		"Schema": "2.0.0"
@@ -542,6 +555,7 @@ func TestFiltered2(t *testing.T) {
 	{
 	"Name": "SimpleRule",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -558,12 +572,12 @@ func TestFiltered2(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if m, _, filtered := e.MatchOrFilter(&evt); filtered && len(m) > 0 {
+	if m, _, filtered := e.MatchOrFilter(&winevtEvent); filtered && len(m) > 0 {
 		t.Log("Event is both an alert and filtered")
 	} else {
 		t.Logf("Matches: %s", m)
 		t.Logf("Filtered: %t", filtered)
-		t.Log(prettyJSON(evt))
+		t.Log(prettyJSON(winevtEvent))
 		t.Fail()
 	}
 }
@@ -605,7 +619,7 @@ func TestNotFiltered(t *testing.T) {
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
 	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&evt); !filtered {
+	if _, _, filtered := e.MatchOrFilter(&winevtEvent); !filtered {
 		t.Log("Event not filtered")
 	} else {
 		t.Fail()
@@ -613,18 +627,39 @@ func TestNotFiltered(t *testing.T) {
 }
 
 func TestLoadDirectory(t *testing.T) {
+	tt := toast.FromT(t)
 	e := NewEngine()
-	err := e.LoadDirectory("./")
-	if err != nil {
-		t.Errorf("Failed to load rules in directory: %s", err)
+
+	dir := t.TempDir()
+	count := 42
+
+	for i := 0; i < count; i++ {
+		rule := fmt.Sprintf(`{
+	"Name": "ShouldMatch_%d",
+	"Meta": {
+		"LogType": "winevt",
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a",
+	"Actions": ["kill", "kill", "block", "block"]
+	}`, i)
+
+		tt.CheckErr(os.WriteFile(filepath.Join(dir, fmt.Sprintf("rule_%d.gen", i)), []byte(rule), 0777))
 	}
-	t.Logf("Loaded %d rules", e.Count())
+
+	tt.CheckErr(e.LoadDirectory(dir))
+	tt.Assert(e.Count() == count)
 }
 
 func TestActions(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -642,10 +677,10 @@ func TestActions(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
-		t.Log(string(prettyJSON(evt)))
+		t.Log(string(prettyJSON(winevtEvent)))
 	}
 }
 
@@ -653,6 +688,7 @@ func TestDefaultActions(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
+		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
@@ -671,10 +707,10 @@ func TestDefaultActions(t *testing.T) {
 		t.FailNow()
 	}
 	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&evt); len(m) == 0 {
+	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
 		t.Fail()
 	} else {
-		if i, ok := evt.Get(GeneInfoPath); ok {
+		if i, ok := winevtEvent.Get(GeneInfoPath); ok {
 			if det, ok := i.(*Detection); ok {
 				for _, act := range actions {
 					if !det.Actions.Contains(act) {
@@ -684,7 +720,7 @@ func TestDefaultActions(t *testing.T) {
 			}
 
 		}
-		t.Log(string(prettyJSON(evt)))
+		t.Log(string(prettyJSON(winevtEvent)))
 	}
 }
 

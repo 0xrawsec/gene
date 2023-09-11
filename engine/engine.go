@@ -119,6 +119,8 @@ type Engine struct {
 	tplExtensions  *datastructs.SyncedSet
 	// default actions
 	defaultActions map[int][]string
+	// log formats
+	logFormats map[string]*LogType
 
 	// engine statistics
 	Stats       Stats
@@ -143,7 +145,14 @@ func NewEngine() (e *Engine) {
 	e.ruleExtensions = DefaultRuleExtensions
 	e.tplExtensions = DefaultTplExtensions
 	e.defaultActions = make(map[int][]string)
+	e.logFormats = make(map[string]*LogType)
+	e.AddLogFormat("winevt", &TypeWinevt)
+	e.AddLogFormat("kunai", &TypeKunai)
 	return
+}
+
+func (e *Engine) AddLogFormat(name string, format *LogType) {
+	e.logFormats[name] = format
 }
 
 // addRule adds a rule to the current engine
@@ -212,7 +221,7 @@ func (e *Engine) loadReader(reader io.ReadSeeker) error {
 
 		if err := e.LoadRule(&jRule); err != nil {
 			ruleLine, offInLine := findLineError(ruleOffset, reader)
-			return fmt.Errorf("failed to laod rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
+			return fmt.Errorf("failed to load rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
 		}
 	}
 
@@ -359,6 +368,7 @@ func (e *Engine) LoadReader(reader io.ReadSeeker) error {
 }
 
 // LoadDirectory loads all the templates and rules inside a directory
+// this function does not walk directory recursively
 func (e *Engine) LoadDirectory(rulesDir string) error {
 	// Loading the rules
 	realPath, err := fsutil.ResolveLink(rulesDir)
@@ -426,7 +436,7 @@ func (e *Engine) LoadFile(rulefile string) error {
 	}
 	err = e.loadReader(f)
 	if err != nil {
-		return fmt.Errorf("Failed to load rule file \"%s\": %s", rulefile, err)
+		return fmt.Errorf("failed to load rule file \"%s\": %s", rulefile, err)
 	}
 	return nil
 }

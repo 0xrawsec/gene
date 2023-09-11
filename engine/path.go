@@ -33,27 +33,40 @@ type XPath struct {
 	}
 }
 
+func splitPath(p string) []string {
+	// if we want to have a cutset instead of a single character
+	return strings.FieldsFunc(p, func(c rune) bool {
+		return c == '/'
+	})
+}
+
 func path(p string) (x *XPath) {
 	san := strings.Trim(p, xpathSep)
-	x = &XPath{Path: strings.Split(san, xpathSep)}
+	x = &XPath{Path: splitPath(san)}
 	return x
+}
+
+func IsAbsoluteXPath(p string) bool {
+	return strings.HasPrefix(p, xpathSep)
 }
 
 func Path(p string) (x *XPath) {
 	x = path(p)
+	x.initFlags()
+	return
+}
 
-	if x.Get(0) != "Event" {
+func (p *XPath) initFlags() {
+	if p.Get(0) != "Event" {
 		return
 	}
 
-	switch x.Get(1) {
+	switch p.Get(1) {
 	case "EventData":
-		x.Flags.EventDataField = true
+		p.Flags.EventDataField = true
 	case "UserData":
-		x.Flags.UserDataField = true
+		p.Flags.UserDataField = true
 	}
-
-	return
 }
 
 func (p *XPath) Get(i int) string {
@@ -68,6 +81,12 @@ func (p *XPath) Last() string {
 		return p.Path[len(p.Path)-1]
 	}
 	return ""
+}
+
+func (p *XPath) Append(s string) *XPath {
+	new := XPath{Path: append(p.Path[:], s)}
+	new.initFlags()
+	return &new
 }
 
 func (p *XPath) String() string {

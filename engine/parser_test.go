@@ -9,14 +9,8 @@ import (
 )
 
 var (
-	testFile    = "./test/data/sysmon.evtx"
-	ar          = NewFieldMatch("$foo", "Hashes", "=", "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
-	rulesString = [...]string{
-		`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
-		`$test: "Hashes" = 'c'est un super test'`,
-		`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`,
-		`$indmatch: SourceProcessGuid = @TargetProcessGuid`,
-	}
+	testFile = "./test/data/sysmon.evtx"
+
 	conditions = []string{
 		`$a or $b`,
 		`$a and ( $b or $c )`,
@@ -28,10 +22,6 @@ var (
 	}
 )
 
-func init() {
-	//log.InitLogger(log.LDebug)
-}
-
 func TestAtomRule(t *testing.T) {
 	f, err := evtx.OpenDirty(testFile)
 	if err != nil {
@@ -39,23 +29,41 @@ func TestAtomRule(t *testing.T) {
 		return
 	}
 
+	fm := &FieldMatch{Name: "$foo", Operand: "Hashes", Operator: "=", Value: "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA", format: &TypeWinevt}
+
 	for e := range f.FastEvents() {
 		ge := GenericEvent(*e)
-		if ar.Match(ge) {
+		if fm.Match(ge) {
 			t.Log(string(evtx.ToJSON(e)))
 		}
 	}
 }
 
 func TestParseAtomRule(t *testing.T) {
-	for _, rule := range rulesString {
-		ar, err := ParseFieldMatch(rule)
-		if err != nil {
-			t.Log(err)
-			t.Fail()
-		}
-		t.Log(ar)
+
+	tt := toast.FromT(t)
+
+	parse := func(m string) (err error) {
+		_, err = ParseFieldMatch(m, &TypeWinevt)
+		return
 	}
+
+	tt.CheckErr(parse(`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse(`$test: "Hashes" = 'c'est un super test'`))
+	tt.CheckErr(parse(`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse(`$h: /Event/EventData/Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse(`$h: Event/EventData/Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+
+	// Syntax is not correct, space is not allowed in field without quotes
+	tt.ExpectErr(parse(`$h: Event/EventData/Some Field ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`), ErrSyntax)
+
+	// Spaces are accepted when field is quoted
+	tt.CheckErr(parse(`$h: "Event/EventData/Some Field" ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+
+	// testing indirect matches
+	tt.CheckErr(parse(`$indmatch: SourceProcessGuid = @TargetProcessGuid`))
+	tt.CheckErr(parse(`$indmatch: /Event/EventData/SourceProcessGuid = @TargetProcessGuid`))
+	tt.CheckErr(parse(`$indmatch: /Event/EventData/SourceProcessGuid = @/Event/EventData/TargetProcessGuid`))
 }
 
 func TestParseCondition(t *testing.T) {
@@ -128,14 +136,14 @@ func TestEvtxRule(t *testing.T) {
 	}
 
 	as := `$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`
-	a, err := ParseFieldMatch(as)
+	a, err := ParseFieldMatch(as, &TypeWinevt)
 	if err != nil {
 		t.Logf("Failed to parse: %s", as)
 		t.Fail()
 	}
 
 	bs := `$b: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FB'`
-	b, err := ParseFieldMatch(bs)
+	b, err := ParseFieldMatch(bs, &TypeWinevt)
 	if err != nil {
 		t.Logf("Failed to parse: %s", bs)
 		t.Fail()
@@ -175,6 +183,7 @@ func TestLoadRule(t *testing.T) {
 	"Name": "Test",
 	"Tags": ["Hello", "World"],
 	"Meta": {
+		"LogType": "winevt",
 		"EventIDs": [1,7],
 		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
 		"Computer": ["Test"],
@@ -187,7 +196,7 @@ func TestLoadRule(t *testing.T) {
 		],
 	"Condition": "$c"
 	}`
-	er, err := Load([]byte(ruleStr), nil)
+	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
 	if err != nil {
 		t.Logf("Error parsing string rule: %s", err)
 		t.FailNow()
@@ -202,6 +211,28 @@ func TestLoadRule(t *testing.T) {
 		count++
 	}
 	t.Logf("Scanned events: %d", count)
+}
+
+func TestParseContainerMatch(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	parse := func(m string) (err error) {
+		_, err = ParseContainerMatch(m, &TypeWinevt)
+		return
+	}
+
+	tt.CheckErr(parse("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist"))
+	tt.CheckErr(parse("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Hashes) in blacklist"))
+
+	// testing syntax error
+	tt.ExpectErr(parse("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Some Hashes) in blacklist"), ErrSyntax)
+	// quoted path should not raise syntax error
+	tt.CheckErr(parse(`$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', "/Event/EventData/Some Hashes") in blacklist`))
+
+	r, err := ParseContainerMatch("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Hashes) in blacklist", &TypeWinevt)
+	tt.CheckErr(err)
+	tt.Assert(r.path.Flags.EventDataField)
 }
 
 func TestBlacklist(t *testing.T) {
@@ -228,7 +259,7 @@ func TestBlacklist(t *testing.T) {
 	}`
 	containers := NewContainers()
 	containers.AddToContainer(black, "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
-	er, err := Load([]byte(ruleStr), containers)
+	er, err := Load([]byte(ruleStr), containers, &TypeWinevt)
 	if err != nil {
 		t.Logf("Error parsing string rule: %s", err)
 		t.FailNow()
@@ -267,7 +298,7 @@ func TestIndirectMatch(t *testing.T) {
 		],
 	"Condition": "$dummyIndirect"
 	}`
-	er, err := Load([]byte(ruleStr), nil)
+	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
 	if err != nil {
 		t.Logf("Error parsing string rule: %s", err)
 		t.FailNow()
@@ -308,7 +339,7 @@ func TestMatchEvent(t *testing.T) {
 		}
 	}`
 
-	er, err := Load([]byte(ruleStr), nil)
+	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
 	tt.CheckErr(err)
 	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
 
@@ -330,7 +361,7 @@ func TestMatchOS(t *testing.T) {
 		}
 	}`
 
-	er, err := Load([]byte(ruleStr), nil)
+	er, err := Load([]byte(ruleStr), nil, nil)
 	tt.CheckErr(err)
 	tt.Assert(er.OSs.Len() == 3)
 
@@ -349,6 +380,6 @@ func TestMatchOS(t *testing.T) {
 	"Meta": {
 		"OSs": ["invalid_os"]
 		}
-	}`), nil)
+	}`), nil, nil)
 	tt.ExpectErr(err, ErrInvalidOS)
 }

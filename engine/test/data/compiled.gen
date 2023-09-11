@@ -1,5 +1,6 @@
 {
   "Name": "AddUser",
+  "LogFormat": "winevt",
   "Tags": [
     ""
   ],
@@ -24,6 +25,7 @@
 }
 {
   "Name": "AlternateExplicitCredentialUse",
+  "LogFormat": "winevt",
   "Tags": [
     "Lateral",
     "Security"
@@ -52,6 +54,7 @@
 }
 {
   "Name": "AnonymousNetworkLogon",
+  "LogFormat": "winevt",
   "Tags": [
     "Lateral",
     "Security"
@@ -80,6 +83,7 @@
 }
 {
   "Name": "AutomatedRecursiveDir",
+  "LogFormat": "winevt",
   "Tags": [
     "Cmd"
   ],
@@ -105,6 +109,7 @@
 }
 {
   "Name": "BlacklistedDomain",
+  "LogFormat": "winevt",
   "Tags": [
     "DNS"
   ],
@@ -128,6 +133,7 @@
 }
 {
   "Name": "BlacklistedHash",
+  "LogFormat": "winevt",
   "Tags": [
     "Blacklist"
   ],
@@ -155,6 +161,7 @@
 }
 {
   "Name": "BlacklistedImphash",
+  "LogFormat": "winevt",
   "Tags": [
     "Blacklist"
   ],
@@ -180,6 +187,7 @@
 }
 {
   "Name": "BrowserChild",
+  "LogFormat": "winevt",
   "Tags": [
     "Browser"
   ],
@@ -203,6 +211,7 @@
 }
 {
   "Name": "BrowserSuspiciousChild",
+  "LogFormat": "winevt",
   "Tags": [
     "Browser"
   ],
@@ -228,6 +237,7 @@
 }
 {
   "Name": "CanaryFileRead",
+  "LogFormat": "winevt",
   "Tags": [
     "Canary"
   ],
@@ -252,6 +262,7 @@
 }
 {
   "Name": "CertutilDownloader",
+  "LogFormat": "winevt",
   "Tags": [
     "Tools"
   ],
@@ -285,6 +296,7 @@
 }
 {
   "Name": "CertutilSuspDecode",
+  "LogFormat": "winevt",
   "Tags": [
     "Tools"
   ],
@@ -316,6 +328,7 @@
 }
 {
   "Name": "Cryptolocker",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -344,6 +357,7 @@
 }
 {
   "Name": "DefenderActionCriticallyFailed",
+  "LogFormat": "winevt",
   "Tags": [
     "Defender"
   ],
@@ -366,6 +380,7 @@
 }
 {
   "Name": "DefenderBehaviourDetected",
+  "LogFormat": "winevt",
   "Tags": [
     "Defender"
   ],
@@ -387,6 +402,7 @@
 }
 {
   "Name": "DefenderConfigChanged",
+  "LogFormat": "winevt",
   "Tags": [
     "Defender"
   ],
@@ -408,6 +424,7 @@
 }
 {
   "Name": "DefenderFeatureDisabled",
+  "LogFormat": "winevt",
   "Tags": [
     "Defender"
   ],
@@ -430,6 +447,7 @@
 }
 {
   "Name": "DefenderMalwareDetected",
+  "LogFormat": "winevt",
   "Tags": [
     "Defender"
   ],
@@ -452,6 +470,7 @@
 }
 {
   "Name": "DomainInMisp",
+  "LogFormat": "winevt",
   "Tags": [
     "DNS"
   ],
@@ -475,6 +494,7 @@
 }
 {
   "Name": "DownloadPath",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "Exec",
@@ -501,6 +521,7 @@
 }
 {
   "Name": "DriverLoadedNotValidSig",
+  "LogFormat": "winevt",
   "Tags": [
     "DriverLoaded",
     "Signature"
@@ -525,6 +546,7 @@
 }
 {
   "Name": "DriverLoadedSuspiciousSigStatus",
+  "LogFormat": "winevt",
   "Tags": [
     "DriverLoaded",
     "Signature"
@@ -550,6 +572,7 @@
 }
 {
   "Name": "DriverLoadedUnusualPath",
+  "LogFormat": "winevt",
   "Tags": [
     "DriverLoaded"
   ],
@@ -574,6 +597,7 @@
 }
 {
   "Name": "EmbeddedHTTPLinkInCL",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "HTTP"
@@ -598,6 +622,7 @@
 }
 {
   "Name": "EventClearing",
+  "LogFormat": "winevt",
   "Tags": [
     "PostExploit"
   ],
@@ -629,6 +654,7 @@
 }
 {
   "Name": "ExecDownloadedDocument",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "Exec",
@@ -655,6 +681,7 @@
 }
 {
   "Name": "ExecTimestomping",
+  "LogFormat": "winevt",
   "Tags": [
     "Timestomp"
   ],
@@ -681,6 +708,7 @@
 }
 {
   "Name": "ExecutableADS",
+  "LogFormat": "winevt",
   "Tags": [
     "ADS"
   ],
@@ -712,6 +740,7 @@
 }
 {
   "Name": "ExecutableFileCreated",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "CreateFile"
@@ -739,6 +768,7 @@
 }
 {
   "Name": "ExecutableUnkExt",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -762,6 +792,7 @@
 }
 {
   "Name": "ExplicitNetworkLogon",
+  "LogFormat": "winevt",
   "Tags": [
     "Lateral",
     "Security"
@@ -790,6 +821,7 @@
 }
 {
   "Name": "ExplorerInjection",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -827,6 +859,7 @@
 }
 {
   "Name": "FilePrivEsc",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -851,6 +884,7 @@
 }
 {
   "Name": "FromDownloadedDocument",
+  "LogFormat": "winevt",
   "Tags": [
     "Office",
     "Download"
@@ -876,6 +910,7 @@
 }
 {
   "Name": "Heur7zExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Archive",
     "Exec",
@@ -910,6 +945,7 @@
 }
 {
   "Name": "HeurADSInCL",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "ADS"
@@ -941,6 +977,7 @@
 }
 {
   "Name": "HeurBrowserInjection",
+  "LogFormat": "winevt",
   "Tags": [
     "Browser"
   ],
@@ -967,6 +1004,7 @@
 }
 {
   "Name": "HeurCLWithCreds",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "Lateral"
@@ -993,6 +1031,7 @@
 }
 {
   "Name": "HeurCallShellcode",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "RemoteThread",
@@ -1019,6 +1058,7 @@
 }
 {
   "Name": "HeurDnsFromSuspicious",
+  "LogFormat": "winevt",
   "Tags": [
     "DNS",
     "Heuristics"
@@ -1043,6 +1083,7 @@
 }
 {
   "Name": "HeurDropper",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "CreateFile"
@@ -1069,6 +1110,7 @@
 }
 {
   "Name": "HeurLongDomain",
+  "LogFormat": "winevt",
   "Tags": [
     "DNS",
     "Heuristics"
@@ -1091,6 +1133,7 @@
 }
 {
   "Name": "HeurMaliciousAccess",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "WHIDS"
@@ -1120,6 +1163,7 @@
 }
 {
   "Name": "HeurOfficeThreat",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "WHIDS",
@@ -1146,6 +1190,7 @@
 }
 {
   "Name": "HeurPersistentRAT",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "WHIDS"
@@ -1173,6 +1218,7 @@
 }
 {
   "Name": "HeurRAT",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1197,6 +1243,7 @@
 }
 {
   "Name": "HeurRemotePayload",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1221,6 +1268,7 @@
 }
 {
   "Name": "HeurSpawnShell",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1245,6 +1293,7 @@
 }
 {
   "Name": "HeurSuspFileWrite",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1270,6 +1319,7 @@
 }
 {
   "Name": "HeurSysmonLongDomain",
+  "LogFormat": "winevt",
   "Tags": [
     "DNS",
     "Heuristics",
@@ -1296,6 +1346,7 @@
 }
 {
   "Name": "HeurWebShell",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "WHIDS",
@@ -1322,6 +1373,7 @@
 }
 {
   "Name": "HeurZipExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Archive",
     "Exec",
@@ -1355,6 +1407,7 @@
 }
 {
   "Name": "HeuristicSamlibDll",
+  "LogFormat": "winevt",
   "Tags": [
     "Mimikatz",
     "Credentials",
@@ -1383,6 +1436,7 @@
 }
 {
   "Name": "HeuristicVaultcliDll",
+  "LogFormat": "winevt",
   "Tags": [
     "Mimikatz",
     "Credentials",
@@ -1410,6 +1464,7 @@
 }
 {
   "Name": "HiddenPsExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell",
     "Heuristics"
@@ -1435,6 +1490,7 @@
 }
 {
   "Name": "HighlyPolymorphicCode",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -1465,6 +1521,7 @@
 }
 {
   "Name": "InfoRemotePath",
+  "LogFormat": "winevt",
   "Tags": [
     "Info",
     "Lateral"
@@ -1489,6 +1546,7 @@
 }
 {
   "Name": "InfoSuspiciousParent",
+  "LogFormat": "winevt",
   "Tags": [
     "Info"
   ],
@@ -1512,6 +1570,7 @@
 }
 {
   "Name": "LargeBase64",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1535,6 +1594,7 @@
 }
 {
   "Name": "LargeCL512",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1563,6 +1623,7 @@
 }
 {
   "Name": "LargeCL999",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics"
   ],
@@ -1590,6 +1651,7 @@
 }
 {
   "Name": "LateralWMI",
+  "LogFormat": "winevt",
   "Tags": [
     "WMI",
     "Lateral"
@@ -1615,6 +1677,7 @@
 }
 {
   "Name": "LogonFromExternal",
+  "LogFormat": "winevt",
   "Tags": [
     "Lateral",
     "Security"
@@ -1642,6 +1705,7 @@
 }
 {
   "Name": "MSOfficeThreat",
+  "LogFormat": "winevt",
   "Tags": [
     "Office",
     "Threat"
@@ -1675,6 +1739,7 @@
 }
 {
   "Name": "MaliciousLsassAccess",
+  "LogFormat": "winevt",
   "Tags": [
     "Mimikatz",
     "Credentials",
@@ -1708,6 +1773,7 @@
 }
 {
   "Name": "MaliciousSvchostAccess",
+  "LogFormat": "winevt",
   "Tags": [
     "Invoke-Phant0m",
     "SvcHost"
@@ -1733,6 +1799,7 @@
 }
 {
   "Name": "MediumPolymorphicCode",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -1764,6 +1831,7 @@
 }
 {
   "Name": "NTLMDowngradeAttack",
+  "LogFormat": "winevt",
   "Tags": [
     "Credentials",
     "Lsass"
@@ -1801,6 +1869,7 @@
 }
 {
   "Name": "NTLMDowngradeAttackSecurity",
+  "LogFormat": "winevt",
   "Tags": [
     "Credentials"
   ],
@@ -1835,6 +1904,7 @@
 }
 {
   "Name": "Nbtstat.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -1858,6 +1928,7 @@
 }
 {
   "Name": "Net.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -1881,6 +1952,7 @@
 }
 {
   "Name": "NewADS",
+  "LogFormat": "winevt",
   "Tags": [
     "ADS"
   ],
@@ -1912,6 +1984,7 @@
 }
 {
   "Name": "NewAutorun",
+  "LogFormat": "winevt",
   "Tags": [
     "Registry",
     "Autorun"
@@ -1947,6 +2020,7 @@
 }
 {
   "Name": "NewExeCreatedInRoot",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "CreateFile"
@@ -1973,6 +2047,7 @@
 }
 {
   "Name": "NewLocalAdmin",
+  "LogFormat": "winevt",
   "Tags": [
     ""
   ],
@@ -1997,6 +2072,7 @@
 }
 {
   "Name": "NewRemoteScheduledTask",
+  "LogFormat": "winevt",
   "Tags": [
     "ScheduledTasks",
     "Lateral"
@@ -2030,6 +2106,7 @@
 }
 {
   "Name": "NewSchedTaskInReg",
+  "LogFormat": "winevt",
   "Tags": [
     "Registry",
     "Autorun",
@@ -2063,6 +2140,7 @@
 }
 {
   "Name": "NewSchedTaskOnDisk",
+  "LogFormat": "winevt",
   "Tags": [
     "ScheduledTasks"
   ],
@@ -2093,6 +2171,7 @@
 }
 {
   "Name": "NewScheduledTask",
+  "LogFormat": "winevt",
   "Tags": [
     "ScheduledTasks"
   ],
@@ -2125,6 +2204,7 @@
 }
 {
   "Name": "NotWhitelisted",
+  "LogFormat": "winevt",
   "Tags": [
     "Whitelist"
   ],
@@ -2152,6 +2232,7 @@
 }
 {
   "Name": "OfficeDropper",
+  "LogFormat": "winevt",
   "Tags": [
     "Office",
     "Dropper"
@@ -2184,6 +2265,7 @@
 }
 {
   "Name": "OfficeDropperExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Office",
     "Dropper"
@@ -2216,6 +2298,7 @@
 }
 {
   "Name": "PSC#Win32API",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell",
     "C#",
@@ -2239,6 +2322,7 @@
 }
 {
   "Name": "PSInvokeExpression",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell"
   ],
@@ -2269,6 +2353,7 @@
 }
 {
   "Name": "Ping.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -2292,6 +2377,7 @@
 }
 {
   "Name": "PowershellEmbeddedC#",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell",
     "EmbeddedCode"
@@ -2317,6 +2403,7 @@
 }
 {
   "Name": "PowershellExecEnc",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell",
     "Heuristics"
@@ -2349,6 +2436,7 @@
 }
 {
   "Name": "PowershellLargeCL",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "CL"
@@ -2374,6 +2462,7 @@
 }
 {
   "Name": "PowershellSamlibDll",
+  "LogFormat": "winevt",
   "Tags": [
     "Mimikatz",
     "Credentials",
@@ -2401,6 +2490,7 @@
 }
 {
   "Name": "PowershellStdin",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell"
   ],
@@ -2432,6 +2522,7 @@
 }
 {
   "Name": "ProcPrivEsc",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -2461,6 +2552,7 @@
 }
 {
   "Name": "ProcessCreate",
+  "LogFormat": "winevt",
   "Tags": null,
   "Meta": {
     "Events": {
@@ -2480,6 +2572,7 @@
 }
 {
   "Name": "PsExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell",
     "Heuristics"
@@ -2505,6 +2598,7 @@
 }
 {
   "Name": "PsExec4624",
+  "LogFormat": "winevt",
   "Tags": [
     "Lateral",
     "Security"
@@ -2529,6 +2623,7 @@
 }
 {
   "Name": "PsExecCommand",
+  "LogFormat": "winevt",
   "Tags": [
     "Powershell",
     "Heuristics"
@@ -2553,6 +2648,7 @@
 }
 {
   "Name": "Reg.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -2576,6 +2672,7 @@
 }
 {
   "Name": "Regsvr32ApplockerBypass",
+  "LogFormat": "winevt",
   "Tags": [
     "Regsvr32",
     "AppLockerBypass",
@@ -2612,6 +2709,7 @@
 }
 {
   "Name": "RunningScheduledTask",
+  "LogFormat": "winevt",
   "Tags": [
     "ScheduledTasks"
   ],
@@ -2642,6 +2740,7 @@
 }
 {
   "Name": "SecurityLogClearing",
+  "LogFormat": "winevt",
   "Tags": [
     "PostExploit"
   ],
@@ -2670,6 +2769,7 @@
 }
 {
   "Name": "ServiceDeletion",
+  "LogFormat": "winevt",
   "Tags": [
     "Services"
   ],
@@ -2694,6 +2794,7 @@
 }
 {
   "Name": "StopSvchostAccess",
+  "LogFormat": "winevt",
   "Tags": [
     "Invoke-Phant0m",
     "SvcHost"
@@ -2721,6 +2822,7 @@
 }
 {
   "Name": "SuspWMIC",
+  "LogFormat": "winevt",
   "Tags": [
     "WMI"
   ],
@@ -2745,6 +2847,7 @@
 }
 {
   "Name": "SuspWriteAccess",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -2781,6 +2884,7 @@
 }
 {
   "Name": "SuspiciousADS",
+  "LogFormat": "winevt",
   "Tags": [
     "ADS"
   ],
@@ -2811,6 +2915,7 @@
 }
 {
   "Name": "SuspiciousLsassAccess",
+  "LogFormat": "winevt",
   "Tags": [
     "Mimikatz",
     "Credentials",
@@ -2848,6 +2953,7 @@
 }
 {
   "Name": "SuspiciousRundll32",
+  "LogFormat": "winevt",
   "Tags": [
     "Rundll32"
   ],
@@ -2880,6 +2986,7 @@
 }
 {
   "Name": "SuspiciousService",
+  "LogFormat": "winevt",
   "Tags": [
     "SvcHost",
     "ImageLoaded",
@@ -2907,6 +3014,7 @@
 }
 {
   "Name": "SuspiciousServiceCreated",
+  "LogFormat": "winevt",
   "Tags": [
     "Services"
   ],
@@ -2932,6 +3040,7 @@
 }
 {
   "Name": "SuspiciousServiceInstallation",
+  "LogFormat": "winevt",
   "Tags": [
     "Services",
     "Registry",
@@ -2961,6 +3070,7 @@
 }
 {
   "Name": "SvcHostBadParent",
+  "LogFormat": "winevt",
   "Tags": [
     "SvcHost",
     "Heuristics",
@@ -2987,6 +3097,7 @@
 }
 {
   "Name": "SvcHostMimic",
+  "LogFormat": "winevt",
   "Tags": [
     "SvcHost",
     "Sysmon"
@@ -3012,6 +3123,7 @@
 }
 {
   "Name": "SvcHostUnsignedDll",
+  "LogFormat": "winevt",
   "Tags": [
     "SvcHost",
     "ImageLoaded",
@@ -3038,6 +3150,7 @@
 }
 {
   "Name": "SvcHostUntrustedDLL",
+  "LogFormat": "winevt",
   "Tags": [
     "SvcHost",
     "ImageLoaded",
@@ -3064,6 +3177,7 @@
 }
 {
   "Name": "SysmonConfigChanged",
+  "LogFormat": "winevt",
   "Tags": [
     "Sysmon"
   ],
@@ -3085,6 +3199,7 @@
 }
 {
   "Name": "SysmonConfigTampering",
+  "LogFormat": "winevt",
   "Tags": [
     "Sysmon"
   ],
@@ -3112,6 +3227,7 @@
 }
 {
   "Name": "SysmonDomainInMisp",
+  "LogFormat": "winevt",
   "Tags": [
     "DNS",
     "Sysmon"
@@ -3138,6 +3254,7 @@
 }
 {
   "Name": "SysmonFingerprinting",
+  "LogFormat": "winevt",
   "Tags": [
     "Sysmon"
   ],
@@ -3163,6 +3280,7 @@
 }
 {
   "Name": "SysmonRegFingerprinting",
+  "LogFormat": "winevt",
   "Tags": [
     "Sysmon"
   ],
@@ -3188,6 +3306,7 @@
 }
 {
   "Name": "SysmonStateChanged",
+  "LogFormat": "winevt",
   "Tags": [
     "Sysmon"
   ],
@@ -3211,6 +3330,7 @@
 }
 {
   "Name": "SystemInfo.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -3234,6 +3354,7 @@
 }
 {
   "Name": "Taskkill.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -3257,6 +3378,7 @@
 }
 {
   "Name": "Tasklist.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],
@@ -3280,6 +3402,7 @@
 }
 {
   "Name": "UnkDstPort",
+  "LogFormat": "winevt",
   "Tags": [
     "Network"
   ],
@@ -3307,6 +3430,7 @@
 }
 {
   "Name": "UnkPrivDstPort",
+  "LogFormat": "winevt",
   "Tags": [
     "Network"
   ],
@@ -3335,6 +3459,7 @@
 }
 {
   "Name": "UnknownServices",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -3363,6 +3488,7 @@
 }
 {
   "Name": "UntrustedDriverLoaded",
+  "LogFormat": "winevt",
   "Tags": [
     "DriverLoaded",
     "Sysmon"
@@ -3394,6 +3520,7 @@
 }
 {
   "Name": "UntrustedService",
+  "LogFormat": "winevt",
   "Tags": [
     "WHIDS"
   ],
@@ -3426,6 +3553,7 @@
 }
 {
   "Name": "UserTempExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "Exec"
@@ -3451,6 +3579,7 @@
 }
 {
   "Name": "WMIApplockerBypassAttempt",
+  "LogFormat": "winevt",
   "Tags": [
     "WMI"
   ],
@@ -3482,6 +3611,7 @@
 }
 {
   "Name": "WMIEvents",
+  "LogFormat": "winevt",
   "Tags": [
     "WMI"
   ],
@@ -3512,6 +3642,7 @@
 }
 {
   "Name": "WMIPrvseCommand",
+  "LogFormat": "winevt",
   "Tags": [
     "WMI"
   ],
@@ -3542,6 +3673,7 @@
 }
 {
   "Name": "WindowsTempExec",
+  "LogFormat": "winevt",
   "Tags": [
     "Heuristics",
     "Exec"
@@ -3567,6 +3699,7 @@
 }
 {
   "Name": "Xcopy.exe",
+  "LogFormat": "winevt",
   "Tags": [
     "Tool"
   ],

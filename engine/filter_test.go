@@ -11,11 +11,11 @@ func TestFilter(t *testing.T) {
 		"Microsoft-Windows-Sysmon/Operational": {1, 2, 3, 4, 5},
 	})
 
-	if !f0.Match(&evt) {
+	if !f0.Match(&winevtEvent) {
 		t.Errorf("Filter should match event")
 	}
 
-	if !f1.Match(&evt) {
+	if !f1.Match(&winevtEvent) {
 		t.Errorf("Filter should match event")
 	}
 }

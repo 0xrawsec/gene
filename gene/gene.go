@@ -285,7 +285,12 @@ func main() {
 	// Display rule template and exit if template flag
 	if flTemplate {
 		r := engine.NewRule()
+		r.Name = "ReplaceRuleName"
+		// metadata
+		r.Meta.Events["SomeEventSource"] = []int64{42}
 		r.Meta.Attack = append(r.Meta.Attack, engine.Attack{})
+		r.Meta.OSs = []string{"linux", "windows"}
+		r.Meta.Criticality = 5
 		b, err := json.Marshal(r)
 		if err != nil {
 			log.Abort(exitFail, err)

@@ -19,7 +19,7 @@ var (
 
 func TestExtract(t *testing.T) {
 	for ext, test := range extractMap {
-		ae, err := ParseContainerMatch(ext)
+		ae, err := ParseContainerMatch(ext, &TypeWinevt)
 		if err != nil {
 			t.Logf("Failed to parse extract: %s", err)
 			t.Fail()
@@ -52,7 +52,7 @@ func TestExtractContainerName(t *testing.T) {
 
 	for _, n := range names {
 		atom := fmt.Sprintf(template, n)
-		if cm, err := ParseContainerMatch(atom); err != nil {
+		if cm, err := ParseContainerMatch(atom, &TypeWinevt); err != nil {
 			t.Error(err)
 		} else {
 			if cm.Container != n {
@@ -72,7 +72,7 @@ func TestExtractFromEvent(t *testing.T) {
 		panic(err)
 	}
 	for ext := range extractMap {
-		ae, err := ParseContainerMatch(ext)
+		ae, err := ParseContainerMatch(ext, &TypeWinevt)
 		if err != nil {
 			t.Logf("Failed to parse extract: %s", err)
 			t.Fail()
@@ -110,7 +110,7 @@ func TestExtractMatch(t *testing.T) {
 		panic(err)
 	}
 	for ext := range extractMap {
-		ae, err := ParseContainerMatch(ext)
+		ae, err := ParseContainerMatch(ext, &TypeWinevt)
 		if err != nil {
 			t.Logf("Failed to parse extract: %s", err)
 			t.Fail()

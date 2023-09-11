@@ -29,7 +29,7 @@ func TestLoadTemplateMap(t *testing.T) {
 
 	for _, s := range toReplace {
 		match := tm.ReplaceAll(s)
-		_, err := ParseFieldMatch(match)
+		_, err := ParseFieldMatch(match, &TypeWinevt)
 		if err != nil {
 			t.Errorf("Failed to compile \"%s\": %s", match, err)
 			t.Fail()
