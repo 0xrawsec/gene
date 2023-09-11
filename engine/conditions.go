@@ -9,7 +9,7 @@ import (
 
 /////////////////////////////// Tokenizer //////////////////////////////////////
 
-//Tokenizer structure
+// Tokenizer structure
 type Tokenizer struct {
 	i        int
 	tokens   []string
@@ -25,7 +25,7 @@ var (
 	ErrEmptyToken = fmt.Errorf("Empty token")
 )
 
-//NewTokenizer creates and inits a new Tokenizer struct
+// NewTokenizer creates and inits a new Tokenizer struct
 func NewTokenizer(condition string) (c Tokenizer) {
 	c.tokens = strings.Split(condition, " ")
 	// split parathesis from other tokens
@@ -61,7 +61,7 @@ func NewTokenizer(condition string) (c Tokenizer) {
 	return
 }
 
-//NextToken grabs the next token
+// NextToken grabs the next token
 func (t *Tokenizer) NextToken() (token string, err error) {
 	if t.i >= len(t.tokens) {
 		err = ErrEOT
@@ -77,8 +77,8 @@ func (t *Tokenizer) NextToken() (token string, err error) {
 	return "", ErrEOT
 }
 
-//NextExpectedToken grabs the next token and returns it. ErrUnexpectedToken is returned
-//if the token returned is not in the list of expected tokens
+// NextExpectedToken grabs the next token and returns it. ErrUnexpectedToken is returned
+// if the token returned is not in the list of expected tokens
 func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err error) {
 	etok := datastructs.NewSyncedSet()
 	for _, e := range expects {
@@ -96,7 +96,7 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 	return "", ErrUnexpectedToken
 }
 
-//ParseCondition parses a condition from a Tokenizer object
+// ParseCondition parses a condition from a Tokenizer object
 func (t *Tokenizer) ParseCondition(group, level int) (*ConditionElement, error) {
 	var err error
 	var token string
@@ -178,7 +178,7 @@ func (om OperandMap) Read(operand string) (value, ok bool) {
 	return
 }
 
-//ConditionElement structure definition
+// ConditionElement structure definition
 type ConditionElement struct {
 	Operand  string
 	Operator rune
@@ -272,7 +272,7 @@ func (ce *ConditionElement) Prioritize() {
 	}
 }
 
-//GetOperands retrieves all the operands involed in a condition
+// GetOperands retrieves all the operands involed in a condition
 func GetOperands(ce *ConditionElement) []string {
 	out := make([]string, 0)
 	set := datastructs.NewSyncedSet()
@@ -349,7 +349,7 @@ func (c *ConditionElement) Pretty(group bool) string {
 	return os
 }
 
-//DebugString formats a ConditionElement to be nicely printed
+// DebugString formats a ConditionElement to be nicely printed
 func (c *ConditionElement) DebugString() string {
 	if c.Negate {
 		if c.Next != nil {
@@ -443,7 +443,7 @@ func Pretty(c *ConditionElement, group bool) string {
 	return c.Pretty(group)
 }
 
-//Compute computes a given condition given the operands
+// Compute computes a given condition given the operands
 func Compute(ce *ConditionElement, operands OperandReader) bool {
 	nce, ret := compute(false, ce, operands)
 	for nce != nil {

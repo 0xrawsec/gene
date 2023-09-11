@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	black, white = "blacklist", "whitelist"
+	black = "blacklist"
+
 	// key: extract, value: test string
 	extractMap = map[string]string{
 		fmt.Sprintf("$inTest: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in %s", black):         "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",

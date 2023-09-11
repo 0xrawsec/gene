@@ -4,13 +4,11 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/0xrawsec/golang-evtx/evtx"
+	"github.com/0xrawsec/golang-utils/log"
 	"github.com/0xrawsec/toast"
 )
 
 var (
-	testFile = "./test/data/sysmon.evtx"
-
 	conditions = []string{
 		`$a or $b`,
 		`$a and ( $b or $c )`,
@@ -23,20 +21,21 @@ var (
 )
 
 func TestAtomRule(t *testing.T) {
-	f, err := evtx.OpenDirty(testFile)
-	if err != nil {
-		t.Error(err)
-		return
+	tt := toast.FromT(t)
+
+	fms := []*FieldMatch{
+		{Name: "$foo", Operand: "Hashes", Operator: "~=", Value: "83514D9AAF0E168944B6D3C01110C393", format: &TypeWinevt},
+		{Name: "$foo", Operand: "CommandLine", Operator: "=", Value: "C:\\Windows\\system32\\devicecensus.exe", format: &TypeWinevt},
+		{Name: "$foo", Operand: "LogonId", Operator: "&=", Value: "1", format: &TypeWinevt},
+		{Name: "$foo", Operand: "LogonId", Operator: ">", Value: "1", format: &TypeWinevt},
+		{Name: "$foo", Operand: "LogonId", Operator: ">=", Value: "0x000003e7", format: &TypeWinevt},
+		{Name: "$foo", Operand: "LogonId", Operator: "<=", Value: "0x000003e7", format: &TypeWinevt},
 	}
 
-	fm := &FieldMatch{Name: "$foo", Operand: "Hashes", Operator: "=", Value: "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA", format: &TypeWinevt}
-
-	for e := range f.FastEvents() {
-		ge := GenericEvent(*e)
-		if fm.Match(ge) {
-			t.Log(string(evtx.ToJSON(e)))
-		}
+	for _, fm := range fms {
+		tt.Assert(fm.Match(winevtEvent))
 	}
+
 }
 
 func TestParseAtomRule(t *testing.T) {
@@ -70,7 +69,7 @@ func TestParseCondition(t *testing.T) {
 	for _, cond := range conditions {
 		t.Log(cond)
 		tokenizer := NewTokenizer(cond)
-		cond, err := tokenizer.ParseCondition(0, 0)
+		_, err := tokenizer.ParseCondition(0, 0)
 		if err != nil {
 			t.FailNow()
 			t.Logf("%s Error:%v", cond, err)
@@ -125,59 +124,39 @@ func TestBuggyCondition(t *testing.T) {
 	}
 }
 
-func TestEvtxRule(t *testing.T) {
+func TestRule(t *testing.T) {
+	tt := toast.FromT(t)
+
 	er := NewCompiledRule(Version{})
 	er.EventFilter = NewEventFilter(map[string][]int64{"Microsoft-Windows-Sysmon/Operational": {1, 7}})
 
-	f, err := evtx.OpenDirty(testFile)
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
-
-	as := `$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`
+	as := `$a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'`
 	a, err := ParseFieldMatch(as, &TypeWinevt)
-	if err != nil {
-		t.Logf("Failed to parse: %s", as)
-		t.Fail()
-	}
-
-	bs := `$b: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FB'`
-	b, err := ParseFieldMatch(bs, &TypeWinevt)
-	if err != nil {
-		t.Logf("Failed to parse: %s", bs)
-		t.Fail()
-	}
-
+	tt.CheckErr(err)
 	er.AddMatcher(&a)
+
+	bs := `$b: Hashes ~= '83514D9AAF0E168944B6D3C011424242'`
+	b, err := ParseFieldMatch(bs, &TypeWinevt)
+	tt.CheckErr(err)
 	er.AddMatcher(&b)
+
+	ym := `$y: IntegrityLevel = 'System'`
+	y, err := ParseFieldMatch(ym, &TypeWinevt)
+	tt.CheckErr(err)
+	er.AddMatcher(&y)
 
 	condStr := "$b or ($a and $y)"
 	tokenizer := NewTokenizer(condStr)
 	cond, err := tokenizer.ParseCondition(0, 0)
-	if err != nil {
-		t.Logf("Failed to parse: %s", condStr)
-		t.Fail()
-	}
+	tt.CheckErr(err)
 	er.Conditions = cond
+	tt.Log(cond.DebugString())
 
-	count := 0
-	for e := range f.FastEvents() {
-		ge := GenericEvent(*e)
-		if er.Match(ge) {
-			t.Log(string(evtx.ToJSON(e)))
-		}
-		count++
-	}
-	t.Logf("Scanned events: %d", count)
+	tt.Assert(er.Match(winevtEvent))
 }
 
 func TestLoadRule(t *testing.T) {
-	f, err := evtx.OpenDirty(testFile)
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	tt := toast.FromT(t)
 
 	ruleStr := `{
 	"Name": "Test",
@@ -186,31 +165,21 @@ func TestLoadRule(t *testing.T) {
 		"LogType": "winevt",
 		"EventIDs": [1,7],
 		"Channels": ["Microsoft-Windows-Sysmon/Operational"],
-		"Computer": ["Test"],
-		"Action": "warn"
+		"Computer": ["Test"]
 		},
 	"Matches": [
-		"$a: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'",
-		"$b: Hashes ~= '7D2AB43576DEA34829209710CC711DB172DCC07E'",
-		"$c: ImageLoaded ~= '(?i:wininet\\.dll$)'"
+		"$a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'",
+		"$b: Hashes ~= 'Not'",
+		"$c: Image ~= '(?i:DeviceCENSUS\\.exe$)'"
 		],
-	"Condition": "$c"
+	"Condition": "$c and $a and (!$b)"
 	}`
-	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
-	if err != nil {
-		t.Logf("Error parsing string rule: %s", err)
-		t.FailNow()
-	}
 
-	count := 0
-	for e := range f.FastEvents() {
-		ge := GenericEvent(*e)
-		if er.Match(ge) {
-			t.Log(string(evtx.ToJSON(e)))
-		}
-		count++
-	}
-	t.Logf("Scanned events: %d", count)
+	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
+	tt.CheckErr(err)
+
+	tt.Assert(er.Match(winevtEvent))
+
 }
 
 func TestParseContainerMatch(t *testing.T) {
@@ -236,11 +205,9 @@ func TestParseContainerMatch(t *testing.T) {
 }
 
 func TestBlacklist(t *testing.T) {
-	f, err := evtx.OpenDirty(testFile)
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	log.SetLogLevel(log.LDebug)
+
+	tt := toast.FromT(t)
 
 	ruleStr := `{
 	"Name": "Blacklisted",
@@ -252,38 +219,31 @@ func TestBlacklist(t *testing.T) {
 		"Action": "warn"
 		},
 	"Matches": [
-		"$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
-		"$inBullshit: extract('(?P<md5>B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA)', Hashes) in bullshit"
+		"$sha1In: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
+		"$md5InBl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in blacklist",
+		"$md5InWl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in whitelist"
 		],
-	"Condition": "$inBlacklist"
+	"Condition": "$md5InBl and $sha1In and !$md5InWl"
 	}`
-	containers := NewContainers()
-	containers.AddToContainer(black, "B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA")
-	er, err := Load([]byte(ruleStr), containers, &TypeWinevt)
-	if err != nil {
-		t.Logf("Error parsing string rule: %s", err)
-		t.FailNow()
-	}
 
-	count := 0
-	for e := range f.FastEvents() {
-		ge := GenericEvent(*e)
-		if er.Match(ge) {
-			t.Log(string(evtx.ToJSON(e)))
-		}
-		count++
-	}
-	t.Logf("Scanned events: %d", count)
+	containers := NewContainers()
+	// adding md5
+	containers.AddStringToContainer("blacklist", "83514D9AAF0E168944B6D3C01110C393")
+	// adding sha1
+	containers.AddStringToContainer("blacklist", "65894B0162897F2A6BB8D2EB13684BF2B451FDEE")
+	// bogus value in whitelist, we don't care what's in it
+	containers.AddStringToContainer("whitelist", "turbo fish")
+
+	er, err := Load([]byte(ruleStr), containers, &TypeWinevt)
+
+	tt.CheckErr(err)
+	tt.Assert(er.Match(winevtEvent))
+
 }
 
 func TestIndirectMatch(t *testing.T) {
-	eventCnt, matchCnt := 0, 0
 
-	f, err := evtx.OpenDirty(testFile)
-	if err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	tt := toast.FromT(t)
 
 	ruleStr := `{
 	"Name": "IndirectMatch",
@@ -294,35 +254,19 @@ func TestIndirectMatch(t *testing.T) {
 		"Action": "warn"
 		},
 	"Matches": [
-		"$dummyIndirect: Hashes = @Hashes"
+		"$dummyIndirect: Hashes = @Hashes",
+		"$abs: /Event/System/Computer = @/Event/System/Computer",
+		"$fail: /Event/System/Computer = @/Event/System/Channel"
 		],
-	"Condition": "$dummyIndirect"
+	"Condition": "$dummyIndirect and $abs and !$fail"
 	}`
+
 	er, err := Load([]byte(ruleStr), nil, &TypeWinevt)
-	if err != nil {
-		t.Logf("Error parsing string rule: %s", err)
-		t.FailNow()
-	}
 
-	count := 0
-	for e := range f.FastEvents() {
-		ge := GenericEvent(*e)
-		switch ge.EventID() {
-		case 1, 6, 7:
-			eventCnt++
-		}
-		if er.Match(ge) {
-			matchCnt++
-			t.Log(string(evtx.ToJSON(e)))
-		}
-		count++
-	}
+	tt.CheckErr(err)
 
-	if eventCnt != matchCnt {
-		t.Errorf("Unexpected number of matched events expected %d VS %d matched", eventCnt, matchCnt)
-	}
+	tt.Assert(er.Match(winevtEvent))
 
-	t.Logf("Scanned events: %d", count)
 }
 
 func TestMatchEvent(t *testing.T) {

@@ -36,16 +36,6 @@ func (c *ContainerDB) AddContainer(name string, container *datastructs.SyncedSet
 	return ErrContainerAlreadyExists
 }
 
-// AddToContainer adds a new value into a container and creates a
-// new container if it does not exist yet
-func (c *ContainerDB) AddToContainer(name string, values ...interface{}) {
-	if !c.Has(name) {
-		c.AddNewContainer(name)
-	}
-	container, _ := c.Get(name)
-	container.Add(values...)
-}
-
 // AddStringToContainer adds new strings (converted to lower case)
 // into a container and creates a new container if it does not exist yet.
 func (c *ContainerDB) AddStringToContainer(name string, values ...string) {
@@ -72,18 +62,10 @@ func (c *ContainerDB) Has(name string) bool {
 	return ok
 }
 
-//Get get a container by its name
+// Get get a container by its name
 func (c *ContainerDB) Get(name string) (*datastructs.SyncedSet, bool) {
 	cont, ok := (*c)[name]
 	return cont, ok
-}
-
-// Contains checks if named container contains value
-func (c *ContainerDB) Contains(name string, value string) bool {
-	if cont, ok := (*c)[name]; ok {
-		return cont.Contains(value)
-	}
-	return false
 }
 
 // ContainsString checks if named container contains value ignoring value case

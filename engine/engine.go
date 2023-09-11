@@ -278,14 +278,14 @@ func (e *Engine) AddToContainer(container, value string) {
 	e.containers.AddStringToContainer(container, value)
 }
 
-// Blacklist insert a value to be blacklisted
+// Blacklist insert a value (converted to lowercase) to be blacklisted
 func (e *Engine) Blacklist(value string) {
-	e.containers.AddToContainer(blacklistContainer, value)
+	e.containers.AddStringToContainer(blacklistContainer, value)
 }
 
-// Whitelist insert a value to be whitelisted
+// Whitelist insert a value (converted to lowercase) to be whitelisted
 func (e *Engine) Whitelist(value string) {
-	e.containers.AddToContainer(whitelistContainer, value)
+	e.containers.AddStringToContainer(whitelistContainer, value)
 }
 
 // BlacklistLen returns the size of the blacklist
@@ -481,7 +481,7 @@ func (e *Engine) LoadBytes(data []byte) error {
 
 // LoadString loads rules from string data
 func (e *Engine) LoadString(data string) error {
-	return e.LoadReader(newSeekBuffer([]byte(data)))
+	return e.LoadBytes([]byte(data))
 }
 
 // MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that

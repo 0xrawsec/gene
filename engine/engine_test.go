@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/readers"
 	"github.com/0xrawsec/toast"
 )
@@ -85,14 +84,6 @@ func prettyJSON(i interface{}) string {
 		panic(err)
 	}
 	return string(b)
-}
-
-func openEvtx(path string) *evtx.File {
-	f, err := evtx.OpenDirty(path)
-	if err != nil {
-		panic(err)
-	}
-	return &f
 }
 
 func TestLoad(t *testing.T) {
@@ -730,7 +721,8 @@ func TestLoadContainer(t *testing.T) {
 
 	size := 10000
 	cname := "container"
-	container := "./test/data/tmp/container.cont"
+	tmp := t.TempDir()
+	container := filepath.Join(tmp, "container.cont")
 
 	if cfd, err = os.Create(container); err != nil {
 		t.Error(err)
@@ -759,6 +751,48 @@ func TestLoadContainer(t *testing.T) {
 	if e.containers.Len(cname) != size {
 		t.Error("Unexpected container length")
 	}
+}
+
+func TestGetRule(t *testing.T) {
+	collect := func(c chan string) (out []string) {
+		for s := range c {
+			out = append(out, s)
+		}
+		return
+	}
+
+	tt := toast.FromT(t)
+
+	rule := `{
+	"Name": "ShouldMatch",
+	"Meta": {
+		"LogType": "winevt",
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
+		"Schema": "2.0.0"
+		},
+	"Matches": [
+		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		],
+	"Condition": "$a"
+	}`
+
+	e := NewEngine()
+	e.SetDumpRaw(true)
+
+	tt.CheckErr(e.LoadString(rule))
+
+	tt.Assert(len(collect(e.GetRawRule("Should"))) == 1)
+
+	tt.Assert(e.GetRawRuleByName("ShouldMatch") != "")
+	tt.Assert(e.GetCRuleByName("ShouldMatch") != nil)
+
+	tt.Assert(e.GetRawRuleByName("XYZ") == "")
+	tt.Assert(e.GetCRuleByName("XYZ") == nil)
+
+	names := e.GetRuleNames()
+	tt.Assert(len(names) == 1)
+	tt.Assert(names[0] == "ShouldMatch")
+
 }
 
 /////////////////////////////// Benchmarks /////////////////////////////////////
@@ -833,8 +867,8 @@ func BenchmarkEngine(b *testing.B) {
 
 	b.Logf("Benchmark using real Windows events and production detection rules")
 	b.Logf("Number of rules loaded: %d", e.Count())
-	b.Logf("Number of events scanned: %d", e.Stats.Scanned)
-	b.Logf("Theoretical maximum engine speed: %.2f Event/s", eps)
+	b.Logf("Number of events scanned: %d", e.Stats.Scanned)
+	b.Logf("Theoretical maximum engine speed: %.2f Event/s", eps)
 	b.Logf("                                  %.2f MB/s", mbps)
 
 }

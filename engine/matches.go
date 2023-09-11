@@ -302,9 +302,11 @@ func (c *ContainerMatch) Match(evt Event) bool {
 	}
 
 	if extract, ok := c.Extract(evt); ok {
-		log.Debugf("Extracted: %s", extract)
+		log.Debugf("checking if extracted=%s in=%s", extract, c.Container)
 		if c.containerDB != nil {
-			return c.containerDB.ContainsString(c.Container, extract)
+			res := c.containerDB.ContainsString(c.Container, extract)
+			log.Debugf("result=%t", res)
+			return res
 		}
 	}
 	return false

@@ -327,7 +327,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	return &rule, nil
 }
 
-// Load loads rule to EvtxRule
+// Load loads (unmarshal and compile) rule
 func Load(b []byte, containers *ContainerDB, format *LogType) (*CompiledRule, error) {
 	var jr Rule
 	err := json.Unmarshal(b, &jr)
