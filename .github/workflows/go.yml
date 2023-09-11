@@ -29,3 +29,20 @@ jobs:
 
     - name: Test
       run: go test -failfast -v ./engine ./reducer
+
+    - uses: actions/checkout@v3
+      with:
+          ref: coverage
+          path: coverage-branch
+
+    - name: Coverage
+      run: |
+          ./coverage.sh
+          cp -r .github/coverage $GITHUB_WORKSPACE/coverage-branch/.github/
+          cd $GITHUB_WORKSPACE/coverage-branch
+          git config --local user.name "Coverage Bot"
+          git config --local user.email "<>"
+          git add -A
+          git commit -m "Coverage updated commit=$GITHUB_SHA"
+          git push
+      
