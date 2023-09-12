@@ -1,37 +1,24 @@
+<div align="center"><img src="assets/logo.svg" width="300"/></div>
+
 [![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/0xrawsec/gene/go.yml?style=for-the-badge)](https://github.com/0xrawsec/gene/actions/workflows/go.yml)
 ![coverage](https://raw.githubusercontent.com/0xrawsec/gene/coverage/.github/badge.svg)
 ![GitHub tag (with filter)](https://img.shields.io/github/v/tag/0xrawsec/gene?style=for-the-badge&label=version&color=orange)
-[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=for-the-badge&logo=docsdotrs)](https://rawsec.lu/doc/gene/2.0/)
+[![Documentation](https://img.shields.io/badge/docs-latest-blue.svg?style=for-the-badge&logo=docsdotrs)][doc-link]
 
-# Gene
+[doc-link]: https://rawsec.lu/doc/gene/2.0/
 
-The idea behind this project is to provide an efficient and standard way to
-look into Windows Event Logs (a.k.a EVTX files). For those who are familiar with
-Yara, it can be seen as a Yara engine but to look for information into Windows
-Events.
+# Gene(sis)
 
-Here are some of our motivations:
-  1. By doing IR frequently we quickly notice the importance of the information
-  we can find inside EVTX files (when they don't get cleared :)).
-  2. Some particular events can be considered as IOCs and are sometimes the only
-  ones left on the system.
-  3. To the best of my knowledge, there is no easy way to query the logs and
-  extract directly the interesting events.
-   * because we (at least I) never remember all the interesting events
-   * we cannot benefit of the other's knowledge
-  4. You might tell me, "Yeah! But I push all the interesting events to the SIEM
-  and can query them very easily". To what I would reply that it is not that easy.
-   * there are events you do not know they exist before you find it in an incident
-    so it is very unlikely you push it into your SIEM
-   * considering the example of Sysmon logs, it would be quite challenging to push
-    everything interesting into your SIEM. Either you have few machines on your
-    infra or you are very rich (or at least the company you are working for :)).
-  5. Before writing that tool I was always ending up implementing a custom piece
-  of software in order to extract the information I needed, which in the end is
-  not scalable at all and very time consuming.
-  6. I wanted a cross platform tool
+A long long time ago (in 2017) after doing many responses to incidents, I realized 
+I was always ending up doing the same thing to search inside Windows EVTX logs: 
+writting a custom script to match log entries against our findings ! At that moment I
+decided to start coding this tool, not only to ease my daily work but also to be able
+to share detection rules between parties.
 
-# Use Cases
+Since then, the tool has evolved and it can now be used to match against
+any kind of log (formatted in JSON) and has native support for Windows EVTX parsing.
+
+# Some use cases
 
   1. Gene can be used to quickly grab interesting information from EVTX at whatever
   stage of analysis.
@@ -49,11 +36,7 @@ Here are some of our motivations:
    * Unusual DLL loaded by a given process
    * ...
 
-# Documentation
-
-In order to learn how to write rules please visit: https://rawsec.lu/doc/gene/2.0/
-
-Additional resources:
+# Additional resources
  * To convert old rules (prior to 2.0.0 schema) to the new format, use [migraterule.py](./scripts/migraterule.py)
  * [Where to find rules ?](https://github.com/0xrawsec/gene-rules)
 
