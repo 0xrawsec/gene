@@ -20,21 +20,18 @@ any kind of log (formatted in JSON) and has native support for Windows EVTX par
 
 # Some use cases
 
-  1. Gene can be used to quickly grab interesting information from EVTX at whatever
-  stage of analysis.
-   * Early compromise information collection
-   * Infected host analysis
-   * IOC scan on all your machines
-  2. If you are forwarding the Windows Event somewhere, you can use it as a
-  scheduled task to extract relevant piece of information from those logs.
-  3. It can be used to retro search into your EVTX backup
-  4. It can be combined with Sysmon in order to build up use cases in a minute
-  (the time to write the rule) and it is much more flexible than the Sysmon
-  configuration file.
-   * Suspicious process spawned by another one
-   * Suspicious Driver load events
-   * Unusual DLL loaded by a given process
-   * ...
+* Digital forensic analysis
+  * early compromise information collection
+  * infected host analysis
+  * IOC scan on a whole network
+
+* (Retro)Hunt on cold storage
+  * backups
+  * logs forwarded
+ 
+* Combined with other tools to achieve powerful detection primitives
+  * [Microsoft Sysmon](https://learn.microsoft.com/en-us/sysinternals/downloads/sysmon)
+  * [Kunai](https://github.com/0xrawsec/kunai)
 
 # Additional resources
  * To convert old rules (prior to 2.0.0 schema) to the new format, use [migraterule.py](./scripts/migraterule.py)
