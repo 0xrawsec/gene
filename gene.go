@@ -15,6 +15,7 @@ import (
 
 	"github.com/0xrawsec/gene/v2/engine"
 	"github.com/0xrawsec/gene/v2/reducer"
+	"github.com/0xrawsec/gene/v2/template"
 	"github.com/0xrawsec/golang-evtx/evtx"
 	"github.com/0xrawsec/golang-utils/args"
 	"github.com/0xrawsec/golang-utils/datastructs"
@@ -89,7 +90,7 @@ func jsonEventGenerator() (ec chan *evtx.GoEvtxMap) {
 				// Printing Progress
 				eventCnt++
 				if flShowProgress && eventCnt >= oldEventCnt {
-					delta := time.Now().Sub(start)
+					delta := time.Since(start)
 					prog.Update(fmt.Sprintf("%d (%2.f EPS)", eventCnt, float64(eventCnt)/delta.Seconds()))
 					prog.Print()
 					oldEventCnt = eventCnt + cntChunk
@@ -122,7 +123,7 @@ func evtxEventGenerator() (ec chan *evtx.GoEvtxMap) {
 			for event := range ef.UnorderedEvents() {
 				eventCnt++
 				if flShowProgress && eventCnt >= oldEventCnt {
-					delta := time.Now().Sub(start)
+					delta := time.Since(start)
 					prog.Update(fmt.Sprintf("%d (%2.f EPS)", eventCnt, float64(eventCnt)/delta.Seconds()))
 					prog.Print()
 					oldEventCnt = eventCnt + cntChunk
@@ -142,9 +143,8 @@ func printInfo(writer io.Writer) {
 }
 
 var (
-	criticalityPath = evtx.Path("/Event/GeneInfo/Criticality")
-	sigPath         = evtx.Path("/Event/GeneInfo/Signature")
-	computerPath    = evtx.Path("/Event/System/Computer")
+	sigPath      = evtx.Path("/Event/GeneInfo/Signature")
+	computerPath = evtx.Path("/Event/System/Computer")
 )
 
 func reduce(e *engine.Engine) {
@@ -218,8 +218,6 @@ var (
 	rulesPath string
 	ruleExts  = args.ListVar{".gen", ".gene"}
 	jobs      = 1
-
-	tplExt = ".toml"
 )
 
 func main() {
@@ -284,17 +282,16 @@ func main() {
 
 	// Display rule template and exit if template flag
 	if flTemplate {
-		r := engine.NewRule()
-		r.Name = "ReplaceRuleName"
-		// metadata
-		r.Meta.Events["SomeEventSource"] = []int64{42}
-		r.Meta.Attack = append(r.Meta.Attack, engine.Attack{})
-		r.Meta.OSs = []string{"linux", "windows"}
-		r.Meta.Criticality = 5
+
+		r := engine.Rule{}
+		json.Unmarshal([]byte(template.RuleTemplate), &r)
+
+		// marshaling the stuff out
 		b, err := json.Marshal(r)
 		if err != nil {
 			log.Abort(exitFail, err)
 		}
+
 		fmt.Println(string(b))
 		os.Exit(exitSuccess)
 	}
@@ -360,7 +357,7 @@ func main() {
 
 	// actual rule loading
 	if err := e.LoadDirectory(realPath); err != nil {
-		log.Abort(exitFail, fmt.Errorf("Failed at loading rule directory %s: %s", realPath, err))
+		log.Abort(exitFail, fmt.Errorf("failed at loading rule directory %s: %s", realPath, err))
 	}
 
 	// Show message about successfuly compiled rules
@@ -369,7 +366,7 @@ func main() {
 	// If we just wanted to verify the rules, we should exit whatever
 	// the status of the compilation
 	if flVerify {
-		log.Infof("Rule(s) compilation: SUCCESSFUL")
+		log.Infof("Rule(s) compilation: SUCCESSFUL")
 		os.Exit(exitSuccess)
 	}
 
@@ -395,7 +392,7 @@ func main() {
 		tags := e.Tags()
 		sort.Strings(tags)
 		for _, t := range tags {
-			fmt.Println(fmt.Sprintf("\t%s", t))
+			fmt.Printf("\t%s\n", t)
 		}
 		os.Exit(exitSuccess)
 	}

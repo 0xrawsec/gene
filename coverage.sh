@@ -1,17 +1,13 @@
 #!/bin/bash
 set -e
 
-pkgs=("./engine" "./reducer")
-
 tmp=$(mktemp -d)
 coverprofile="${tmp}/coverage.out"
 coverage_dir=".github/coverage"
 tmp_out="${tmp}/coverage.txt"
 out="${coverage_dir}/coverage.txt"
-commit=$(git rev-parse HEAD)
 
-
-GOOS=linux go test -short -failfast -coverprofile="${coverprofile}" ${pkgs[*]}
+GOOS=linux go test -short -failfast -coverprofile="${coverprofile}" ./...
 go tool cover -func "${coverprofile}" | tee "${tmp_out}"
 
 mkdir -p "${coverage_dir}"
