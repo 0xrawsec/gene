@@ -3,6 +3,7 @@
 import json
 import sys
 
+
 if __name__ == "__main__":
 
     failed = []
@@ -13,10 +14,14 @@ if __name__ == "__main__":
 
         new_meta = {}
         old_meta = rule["Meta"]
+        
+        # cannot migrate rules with more than one channel
+        # because we don't know which event id matches to 
+        # which channel (drawback of old rules)
         if len(rule["Meta"]["Channels"]) > 1:
             failed.append(rule["Name"])
             continue
-    
+        
         new_meta["Events"] = { rule["Meta"]["Channels"][0]: rule["Meta"]["EventIDs"] }
 
         for k in old_meta:
