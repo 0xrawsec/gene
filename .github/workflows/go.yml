@@ -37,7 +37,7 @@ jobs:
 
     - name: Coverage
       run: |
-          ./coverage.sh
+          ./scripts/ci/coverage.sh
           cp -r .github/coverage $GITHUB_WORKSPACE/coverage-branch/.github/
           cd $GITHUB_WORKSPACE/coverage-branch
           git config --local user.name "Coverage Bot"
