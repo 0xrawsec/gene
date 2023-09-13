@@ -25,7 +25,7 @@ jobs:
       run: sudo apt install -y make 
 
     - name: Build
-      run: cd gene && make ci-build
+      run: make ci-build
 
     - name: Test
       run: go test -failfast -v ./engine ./reducer
