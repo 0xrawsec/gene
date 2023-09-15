@@ -28,7 +28,7 @@ jobs:
       run: make ci-build
 
     - name: Test
-      run: go test -failfast -v ./engine ./reducer
+      run: go test -failfast -v ./...
 
     - uses: actions/checkout@v3
       with:
