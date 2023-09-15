@@ -24,7 +24,7 @@ func TestEvent(t *testing.T) {
 
 	// detection must be nil
 	tt.Assert(evt.GetDetection() == nil)
-	det := NewDetection(true, true)
+	det := NewDetection(true, true, CamelCase)
 	evt.SetDetection(det)
 	tt.Assert(evt.GetDetection() == det)
 

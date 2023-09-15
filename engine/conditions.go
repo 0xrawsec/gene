@@ -394,47 +394,6 @@ func splitLevelsByOr(lvls []*ConditionElement, lvl int) [][]*ConditionElement {
 	return split
 }
 
-func PrettySplit(split []*ConditionElement) string {
-	out := make([]string, 0)
-	for _, e := range split {
-		switch e.Type {
-		case TypeNegate:
-			out = append(out, "!")
-		case TypeOperator:
-			switch e.Operator {
-			case '&':
-				out = append(out, "and")
-			case '|':
-				out = append(out, "or")
-			}
-		case TypeOperand:
-			out = append(out, e.Operand)
-		}
-		if e.Next != nil {
-			if e.Next.Level > e.Level {
-				for i := e.Level; i < e.Next.Level; i++ {
-					out = append(out, "(")
-				}
-			}
-			if e.Next.Level < e.Level {
-				for i := e.Next.Level; i < e.Level; i++ {
-					out = append(out, ")")
-				}
-			}
-		} else {
-			for i := e.Level; i > 0; i-- {
-				out = append(out, ")")
-			}
-		}
-	}
-	os := strings.Join(out, " ")
-	os = strings.Replace(os, "( ", "(", -1)
-	os = strings.Replace(os, "( ", "(", -1)
-	os = strings.Replace(os, "! ", "!", -1)
-	os = strings.Replace(os, " )", ")", -1)
-	return os
-}
-
 func Pretty(c *ConditionElement, group bool) string {
 	if c == nil {
 		return "nil"

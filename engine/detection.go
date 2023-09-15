@@ -1,19 +1,49 @@
 package engine
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/0xrawsec/golang-utils/datastructs"
+	"github.com/0xrawsec/jsonobj"
 )
 
 type Detection struct {
-	Signature   *datastructs.Set
-	Criticality int
-	ATTACK      []Attack         `json:",omitempty"`
-	Actions     *datastructs.Set `json:",omitempty"`
-	attackIds   *datastructs.Set
-	filtered    bool
+	Signature     *datastructs.Set
+	Criticality   int
+	ATTACK        []Attack         `json:",omitempty"`
+	Actions       *datastructs.Set `json:",omitempty"`
+	attackIds     *datastructs.Set
+	filtered      bool
+	fieldNameConv NameConv
 }
 
-func NewDetection(attack, action bool) *Detection {
+func (d *Detection) MarshalJSON() ([]byte, error) {
+	o := jsonobj.New()
+
+	switch d.fieldNameConv {
+	case SnakeCase:
+		// snake case cannot be reverted back to structure
+		// if json fields name are not set to camel case
+		o.Options.FieldNameConvention = jsonobj.LowerCase
+	case CamelCase:
+	default:
+		return nil, fmt.Errorf("%w: %d", ErrUnkNameConv, d.fieldNameConv)
+	}
+
+	o.SetField("Signature", d.Signature)
+	o.SetField("Criticality", d.Criticality)
+	if d.HasAttack() {
+		o.SetField("ATTACK", o.ConvertSlice(d.ATTACK))
+	}
+	if d.HasActions() {
+		o.SetField("Actions", d.Actions)
+	}
+
+	return json.Marshal(o)
+}
+
+func NewDetection(attack, action bool, fieldNameConv NameConv) *Detection {
 	var att []Attack
 
 	var act, attIds *datastructs.Set
@@ -28,11 +58,26 @@ func NewDetection(attack, action bool) *Detection {
 	}
 
 	return &Detection{
-		Signature: datastructs.NewSet(),
-		ATTACK:    att,
-		Actions:   act,
-		attackIds: attIds,
+		Signature:     datastructs.NewSet(),
+		ATTACK:        att,
+		Actions:       act,
+		attackIds:     attIds,
+		fieldNameConv: fieldNameConv,
 	}
+}
+
+func (d *Detection) HasActions() bool {
+	if d.Actions == nil {
+		return false
+	}
+	return d.Actions.Len() > 0
+}
+
+func (d *Detection) HasAttack() bool {
+	if d.ATTACK == nil {
+		return false
+	}
+	return len(d.ATTACK) > 0
 }
 
 func (d *Detection) Update(r *CompiledRule) {

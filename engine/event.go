@@ -7,7 +7,7 @@ import (
 )
 
 type Event interface {
-	Format() *LogType
+	Type() *LogType
 	Set(*XPath, interface{}) error
 	SetDetection(d *Detection)
 	Get(*XPath) (interface{}, bool)
@@ -69,12 +69,12 @@ func (e GenericEvent) Get(p *XPath) (interface{}, bool) {
 }
 
 func (g GenericEvent) SetDetection(d *Detection) {
-	p := g.Format().GeneInfo
+	p := g.Type().GeneInfo
 	g.Set(p, d)
 }
 
 func (g GenericEvent) GetDetection() *Detection {
-	p := g.Format().GeneInfo
+	p := g.Type().GeneInfo
 	if i, ok := g.Get(p); ok {
 		if d, ok := i.(*Detection); ok {
 			return d
@@ -84,7 +84,7 @@ func (g GenericEvent) GetDetection() *Detection {
 }
 
 func (g GenericEvent) Channel() string {
-	p := g.Format().Channel
+	p := g.Type().Channel
 	if ch, ok := EventGetString(g, p); ok {
 		return ch
 	}
@@ -92,7 +92,7 @@ func (g GenericEvent) Channel() string {
 }
 
 func (g GenericEvent) Computer() string {
-	p := g.Format().Hostname
+	p := g.Type().Hostname
 	if comp, ok := EventGetString(g, p); ok {
 		return comp
 	}
@@ -102,7 +102,7 @@ func (g GenericEvent) Computer() string {
 func (g GenericEvent) EventID() (id int64) {
 	var err error
 
-	p := g.Format().EventID
+	p := g.Type().EventID
 	if s, ok := EventGetString(g, p); ok {
 		if id, err = strconv.ParseInt(s, 0, 32); err == nil {
 			return
@@ -112,7 +112,7 @@ func (g GenericEvent) EventID() (id int64) {
 }
 
 func (g GenericEvent) Timestamp() time.Time {
-	p := g.Format().Timestamp
+	p := g.Type().Timestamp
 	if sts, ok := EventGetString(g, p); ok {
 		if ts, err := time.Parse(time.RFC3339Nano, sts); err == nil {
 			return ts
@@ -121,7 +121,7 @@ func (g GenericEvent) Timestamp() time.Time {
 	return time.Time{}
 }
 
-func (g GenericEvent) Format() *LogType {
+func (g GenericEvent) Type() *LogType {
 	// should be in any windows event
 	if _, ok := g.Get(systemTimePath); ok {
 		return &TypeWinevt

@@ -85,7 +85,7 @@ func TestCondition(t *testing.T) {
 			t.FailNow()
 		}
 		t.Logf("Condition: %s", strCond)
-		t.Logf("Pretty Co: %s", cond.Pretty(false))
+		t.Logf("Pretty Co: %s", Pretty(cond, false))
 		t.Logf("Parsed Condition: %s", cond)
 		cond.Prioritize()
 		//t.Logf("Priori Condition: %s", cond)

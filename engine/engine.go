@@ -485,7 +485,7 @@ func (e *Engine) LoadString(data string) error {
 func (e *Engine) MatchOrFilter(evt Event) (names []string, criticality int, filtered bool) {
 
 	// initialized variables
-	detection := NewDetection(e.ShowAttack, e.ShowActions)
+	detection := NewDetection(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)
 
 	e.RLock()
 	for _, r := range e.rules {
