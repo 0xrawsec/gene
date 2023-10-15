@@ -230,10 +230,38 @@ func (jr *Rule) JSON() (string, error) {
 	return string(b), err
 }
 
+func (jr *Rule) resolveLogType(logTypes map[string]*LogType) *LogType {
+	// the logtype specified in rule takes precedence
+	if len(jr.Meta.LogType) > 0 {
+		return logTypes[jr.Meta.LogType]
+	}
+
+	// if we wanna match ONLY kunai events
+	if _, ok := jr.Meta.Events["kunai"]; ok && len(jr.Meta.Events) == 1 {
+		return logTypes["kunai"]
+	}
+
+	// based on windows channels frequently matched
+	winMatch := 0
+	for c := range jr.Meta.Events {
+		if c == "Security" ||
+			strings.HasPrefix(c, "Microsoft") {
+			winMatch += 1
+		}
+	}
+
+	// we are sure ONLY all we want to match are windows channels
+	if winMatch == len(jr.Meta.Events) {
+		return logTypes["winevt"]
+	}
+
+	return nil
+}
+
 // Compile a Rule
 func (jr *Rule) Compile(e *Engine) (*CompiledRule, error) {
 	if e != nil {
-		return jr.compile(e.containers, e.logFormats[jr.Meta.LogType])
+		return jr.compile(e.containers, jr.resolveLogType(e.logTypes))
 	}
 	return jr.compile(nil, nil)
 }
@@ -338,7 +366,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 }
 
 // LoadRule loads (unmarshal and compile) a rule
-func LoadRule(b []byte, containers *ContainerDB, format *LogType) (*CompiledRule, error) {
+func LoadRule(b []byte, containers *ContainerDB) (*CompiledRule, error) {
 	var jr Rule
 
 	dec := NewRuleDecoder(bytes.NewBuffer(b))
@@ -346,5 +374,5 @@ func LoadRule(b []byte, containers *ContainerDB, format *LogType) (*CompiledRule
 	if err != nil {
 		return nil, err
 	}
-	return jr.compile(containers, format)
+	return jr.compile(containers, jr.resolveLogType(logTypes))
 }

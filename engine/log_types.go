@@ -9,6 +9,11 @@ const (
 
 var (
 	ErrUnkNameConv = fmt.Errorf("unknown name convension")
+
+	logTypes = map[string]*LogType{
+		"kunai":  &TypeKunai,
+		"winevt": &TypeWinevt,
+	}
 )
 
 // NameConv defines a custom type for identifying

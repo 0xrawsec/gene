@@ -175,7 +175,7 @@ func TestLoadRule(t *testing.T) {
 	"Condition": "$c and $a and (!$b)"
 	}`
 
-	er, err := LoadRule([]byte(ruleStr), nil, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 
 	tt.Assert(er.Match(winevtEvent))
@@ -231,7 +231,7 @@ func TestBlacklist(t *testing.T) {
 	// bogus value in whitelist, we don't care what's in it
 	containers.AddStringToContainer("whitelist", "turbo fish")
 
-	er, err := LoadRule([]byte(ruleStr), containers, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), containers)
 
 	tt.CheckErr(err)
 	tt.Assert(er.Match(winevtEvent))
@@ -257,7 +257,7 @@ func TestIndirectMatch(t *testing.T) {
 	"Condition": "$dummyIndirect and $abs and !$fail"
 	}`
 
-	er, err := LoadRule([]byte(ruleStr), nil, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), nil)
 
 	tt.CheckErr(err)
 
@@ -279,7 +279,7 @@ func TestMatchEvent(t *testing.T) {
 		}
 	}`
 
-	er, err := LoadRule([]byte(ruleStr), nil, &TypeWinevt)
+	er, err := LoadRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
 
@@ -301,7 +301,7 @@ func TestMatchOS(t *testing.T) {
 		}
 	}`
 
-	er, err := LoadRule([]byte(ruleStr), nil, nil)
+	er, err := LoadRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 	tt.Assert(er.OSs.Len() == 3)
 
@@ -320,7 +320,7 @@ func TestMatchOS(t *testing.T) {
 	"Meta": {
 		"OSs": ["invalid_os"]
 		}
-	}`), nil, nil)
+	}`), nil)
 
 	tt.ExpectErr(err, ErrInvalidOS)
 }
@@ -343,6 +343,6 @@ func TestAuthorsComments(t *testing.T) {
 		}
 	}`
 
-	_, err := LoadRule([]byte(ruleStr), nil, nil)
+	_, err := LoadRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 }

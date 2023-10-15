@@ -116,7 +116,7 @@ type Engine struct {
 	// default actions
 	defaultActions map[int][]string
 	// log formats
-	logFormats map[string]*LogType
+	logTypes map[string]*LogType
 
 	// engine statistics
 	Stats       Stats
@@ -141,14 +141,16 @@ func NewEngine() (e *Engine) {
 	e.ruleExtensions = DefaultRuleExtensions
 	e.tplExtensions = DefaultTplExtensions
 	e.defaultActions = make(map[int][]string)
-	e.logFormats = make(map[string]*LogType)
-	e.AddLogFormat("winevt", &TypeWinevt)
-	e.AddLogFormat("kunai", &TypeKunai)
+	e.logTypes = make(map[string]*LogType)
+	// we set all known logTypes
+	for n, t := range logTypes {
+		e.logTypes[n] = t
+	}
 	return
 }
 
 func (e *Engine) AddLogFormat(name string, format *LogType) {
-	e.logFormats[name] = format
+	e.logTypes[name] = format
 }
 
 // addRule adds a rule to the current engine
