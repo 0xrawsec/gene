@@ -116,21 +116,23 @@ func (f *FieldMatch) Compile() error {
 				f.iValue, err = parseToFloat(f.Value)
 			}
 		} else {
+			tmp := Path(f.Value)
 			// setting indirect field path
 			if IsAbsoluteXPath(f.Value) {
-				f.indPath = Path(f.Value)
+				f.indPath = tmp
 			} else if f.format != nil {
-				f.indPath = f.format.Data.Append(f.Value)
+				f.indPath = f.format.Data.Merge(tmp)
 			} else {
 				return fmt.Errorf("%w: either known log format or absolute fields match must be used", ErrLogFormat)
 			}
 		}
 
+		tmp := Path(f.Operand)
 		// setting field path
 		if IsAbsoluteXPath(f.Operand) {
-			f.path = Path(f.Operand)
+			f.path = tmp
 		} else if f.format != nil {
-			f.path = f.format.Data.Append(f.Operand)
+			f.path = f.format.Data.Merge(tmp)
 		} else {
 			return fmt.Errorf("%w: either known log format or absolute fields match must be used", ErrLogFormat)
 		}

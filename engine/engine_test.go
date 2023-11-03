@@ -78,6 +78,15 @@ func init() {
 	}
 }
 
+func eventFromString(s string) (evt *GenericEvent) {
+	evt = &GenericEvent{}
+	err := json.Unmarshal([]byte(s), evt)
+	if err != nil {
+		panic(err)
+	}
+	return
+}
+
 func prettyJSON(i interface{}) string {
 	b, err := json.MarshalIndent(i, "", "    ")
 	if err != nil {
@@ -811,6 +820,58 @@ func TestLoadingOldFormat(t *testing.T) {
 	e := NewEngine()
 
 	tt.Assert(e.LoadString(rule) != nil)
+}
+
+func TestAbsolutePath(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	event := `
+	{
+	"data": {
+		"ancestors": "/usr/lib/systemd/systemd|/usr/bin/bash|/usr/bin/urxvt|/usr/bin/zsh",
+		"parent_exe": "/usr/bin/zsh",
+		"command_line": "ping google.com",
+		"exe": {
+			"file": "/usr/bin/ping",
+			"md5": "2d57c5245652e40bbf51edaaa3be65bd",
+			"sha1": "b35e159eb1ddcfe72a8b0f38cab8c2d889b8b642",
+			"sha256": "17cb2147feadef7158150be9bbc6deb7877054072813f1c29ce172c809e71f86",
+			"sha512": "da08973ee6c40626050e65c1cd4498e1df59a0a0717921f62922f670440dde77b1757bee5c701fae728d7080d9ede440af839a0679f534b2f1d4f0ec03a73f72",
+			"size": 93648
+		}
+	},
+	"info": {
+		"event": {
+			"source": "kunai",
+			"id": 1,
+			"name": "execve",
+			"uuid": "d959b042-e321-be26-1437-6536b2006da0",
+			"batch": 0
+			}
+		}
+	}
+	`
+
+	rule := `{
+	"Name": "ShouldMatch",
+	"Meta": {
+		"Events" : {"kunai": []},
+		"Schema": "2.0.0"
+		},
+	"Matches": [
+		"$a: exe/file = '/usr/bin/ping'",
+		"$b: /data/exe/md5 = '2d57c5245652e40bbf51edaaa3be65bd'"
+	],
+	"Condition": "$a and $b"
+	}`
+
+	e := NewEngine()
+
+	tt.CheckErr(e.LoadString(rule))
+	names, _, _ := e.MatchOrFilter(eventFromString(event))
+	tt.Logf("names: %s", names)
+	tt.Assert(len(names) > 0)
 }
 
 /////////////////////////////// Benchmarks /////////////////////////////////////

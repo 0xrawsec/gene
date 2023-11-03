@@ -79,6 +79,12 @@ func (p *XPath) Last() string {
 	return ""
 }
 
+func (p *XPath) Merge(other *XPath) *XPath {
+	new := XPath{Path: append(p.Path[:], other.Path...)}
+	new.initFlags()
+	return &new
+}
+
 func (p *XPath) Append(s string) *XPath {
 	new := XPath{Path: append(p.Path[:], s)}
 	new.initFlags()
