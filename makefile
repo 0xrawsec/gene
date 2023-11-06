@@ -44,7 +44,7 @@ darwin:
 	cd $(RELEASE)/darwin; md5sum * > md5.txt
 	cd $(RELEASE)/darwin; tar -cvzf ../$(MAIN_BASEN_SRC)-darwin-$(VERSION).tar.gz *
 
-ci-build: buildversion
+ci-build:
 	go build $(OPTS) -o $(shell mktemp) ./
 
 clean:
