@@ -9,4 +9,4 @@ require (
 	github.com/pelletier/go-toml v1.9.3
 )
 
-require github.com/0xrawsec/jsonobj v1.0.2 // indirect
+require github.com/0xrawsec/jsonobj v1.0.2

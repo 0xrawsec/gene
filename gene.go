@@ -218,6 +218,10 @@ var (
 	rulesPath string
 	ruleExts  = args.ListVar{".gen", ".gene"}
 	jobs      = 1
+
+	// set with -ldflags at compile time
+	version  string
+	commitID string
 )
 
 func main() {
