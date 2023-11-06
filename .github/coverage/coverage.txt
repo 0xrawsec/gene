@@ -77,7 +77,7 @@ github.com/0xrawsec/gene/v2/engine/event.go:35:		Set			90.0%
 github.com/0xrawsec/gene/v2/engine/event.go:54:		Get			100.0%
 github.com/0xrawsec/gene/v2/engine/event.go:71:		SetDetection		100.0%
 github.com/0xrawsec/gene/v2/engine/event.go:76:		GetDetection		100.0%
-github.com/0xrawsec/gene/v2/engine/event.go:86:		Channel			75.0%
+github.com/0xrawsec/gene/v2/engine/event.go:86:		Source			75.0%
 github.com/0xrawsec/gene/v2/engine/event.go:94:		Computer		75.0%
 github.com/0xrawsec/gene/v2/engine/event.go:102:	EventID			83.3%
 github.com/0xrawsec/gene/v2/engine/event.go:114:	Timestamp		80.0%
