@@ -12,7 +12,7 @@ type Event interface {
 	SetDetection(d *Detection)
 	Get(*XPath) (interface{}, bool)
 	GetDetection() *Detection
-	Channel() string
+	Source() string
 	Computer() string
 	EventID() int64
 	Timestamp() time.Time
@@ -83,8 +83,8 @@ func (g GenericEvent) GetDetection() *Detection {
 	return nil
 }
 
-func (g GenericEvent) Channel() string {
-	p := g.Type().Channel
+func (g GenericEvent) Source() string {
+	p := g.Type().Source
 	if ch, ok := EventGetString(g, p); ok {
 		return ch
 	}

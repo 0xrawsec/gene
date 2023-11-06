@@ -15,7 +15,7 @@ func TestEvent(t *testing.T) {
 
 	tt.CheckErr(json.Unmarshal([]byte(eventStr), &evt))
 
-	tt.Assert(evt.Channel() == "Microsoft-Windows-Sysmon/Operational")
+	tt.Assert(evt.Source() == "Microsoft-Windows-Sysmon/Operational")
 	t.Log(evt.Computer())
 	tt.Assert(evt.Computer() == "DESKTOP-5SUA567")
 	ts, err := time.Parse(time.RFC3339Nano, "2017-01-19T16:09:30Z")

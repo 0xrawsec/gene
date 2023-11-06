@@ -23,7 +23,7 @@ type NameConv int
 type LogType struct {
 	FieldNameConv NameConv
 	Data          *XPath
-	Channel       *XPath
+	Source        *XPath
 	EventID       *XPath
 	Hostname      *XPath
 	GeneInfo      *XPath
@@ -37,7 +37,7 @@ var (
 	TypeWinevt = LogType{
 		FieldNameConv: CamelCase,
 		Data:          eventDataPath,
-		Channel:       systemPath.Append("Channel"),
+		Source:        systemPath.Append("Channel"),
 		EventID:       systemPath.Append("EventID"),
 		Hostname:      systemPath.Append("Computer"),
 		GeneInfo:      Path("/Event/GeneInfo"),
@@ -50,7 +50,7 @@ var (
 	TypeKunai = LogType{
 		FieldNameConv: SnakeCase,
 		Data:          Path("/data"),
-		Channel:       Path("/info/event/source"),
+		Source:        Path("/info/event/source"),
 		EventID:       Path("/info/event/id"),
 		Hostname:      Path("/info/host/hostname"),
 		GeneInfo:      Path("/gene_info"),

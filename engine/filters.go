@@ -38,5 +38,5 @@ func (f EventFilter) IsEmpty() bool {
 }
 
 func (f EventFilter) Match(e Event) bool {
-	return f.match(e.Channel(), e.EventID())
+	return f.match(e.Source(), e.EventID())
 }
