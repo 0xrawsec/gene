@@ -77,8 +77,7 @@ var (
 	// DefaultRuleExtensions default extensions for rule files
 	DefaultRuleExtensions = datastructs.NewInitSyncedSet(".gen", ".gene")
 	// DefaultTplExtensions default extensions for template files
-	DefaultTplExtensions           = datastructs.NewInitSyncedSet(".toml")
-	EngineMinimalRuleSchemaVersion = ParseVersion("2.0.0")
+	DefaultTplExtensions = datastructs.NewInitSyncedSet(".toml")
 )
 
 // ErrRuleExist definition
