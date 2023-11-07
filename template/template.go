@@ -24,7 +24,7 @@ var (
         "Reference": "https://attack.mitre.org/T4242"
       }
     ],
-    "Criticality": 5,
+    "Severity": 5,
     "Disable": false,
     "Filter": false,
     "Schema": "2.0.0",

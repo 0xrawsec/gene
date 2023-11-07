@@ -164,17 +164,17 @@ var (
 
 // MetaSection defines the section holding the metadata of the rule
 type MetaSection struct {
-	LogType     string
-	Events      map[string][]int64
-	OSs         []string
-	Computers   []string
-	Attack      []Attack `json:"ATTACK,omitempty"`
-	Criticality int
-	Disable     bool
-	Filter      bool
-	Schema      Version
-	Authors     []string
-	Comments    []string
+	LogType   string
+	Events    map[string][]int64
+	OSs       []string
+	Computers []string
+	Attack    []Attack `json:"ATTACK,omitempty"`
+	Severity  int
+	Disable   bool
+	Filter    bool
+	Schema    Version
+	Authors   []string
+	Comments  []string
 }
 
 // Rule is a JSON parsable rule
@@ -199,12 +199,12 @@ func NewRule() Rule {
 		Name: "",
 		Tags: make([]string, 0),
 		Meta: MetaSection{
-			Events:      make(map[string][]int64),
-			OSs:         make([]string, 0),
-			Computers:   make([]string, 0),
-			Attack:      make([]Attack, 0),
-			Criticality: 0,
-			Schema:      EngineMinimalRuleSchemaVersion,
+			Events:    make(map[string][]int64),
+			OSs:       make([]string, 0),
+			Computers: make([]string, 0),
+			Attack:    make([]Attack, 0),
+			Severity:  0,
+			Schema:    EngineMinimalRuleSchemaVersion,
 		},
 		Matches:   make([]string, 0),
 		Condition: "",
@@ -271,7 +271,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	rule := NewCompiledRule(jr.Meta.Schema)
 
 	rule.Name = jr.Name
-	rule.Criticality = bound(jr.Meta.Criticality)
+	rule.Criticality = bound(jr.Meta.Severity)
 	// Pass ATT&CK information to compiled rule
 	rule.Attack = jr.Meta.Attack
 	// Pass Actions to compiled rule
