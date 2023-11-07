@@ -170,7 +170,6 @@ type MetaSection struct {
 	OSs       []string
 	Computers []string
 	Attack    []Attack `json:"ATTACK,omitempty"`
-	Severity  int
 	Disable   bool
 	Filter    bool
 	Schema    Version
@@ -185,6 +184,7 @@ type Rule struct {
 	Meta      MetaSection
 	Matches   map[string]string
 	Condition string
+	Severity  int
 	Actions   []string
 }
 
@@ -204,11 +204,11 @@ func NewRule() Rule {
 			OSs:       make([]string, 0),
 			Computers: make([]string, 0),
 			Attack:    make([]Attack, 0),
-			Severity:  0,
 			Schema:    EngineMinimalRuleSchemaVersion,
 		},
 		Matches:   make(map[string]string),
 		Condition: "",
+		Severity:  0,
 		Actions:   make([]string, 0)}
 	return r
 }
@@ -272,7 +272,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	rule := NewCompiledRule(jr.Meta.Schema)
 
 	rule.Name = jr.Name
-	rule.Severity = boundSeverity(jr.Meta.Severity)
+	rule.Severity = boundSeverity(jr.Severity)
 	// Pass ATT&CK information to compiled rule
 	rule.Attack = jr.Meta.Attack
 	// Pass Actions to compiled rule

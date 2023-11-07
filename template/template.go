@@ -24,7 +24,6 @@ var (
         "Reference": "https://attack.mitre.org/T4242"
       }
     ],
-    "Severity": 5,
     "Disable": false,
     "Filter": false,
     "Schema": "2.0.0",
@@ -41,6 +40,7 @@ var (
     "$b": "/Absolute/Field/Path ~= 'SomeRegex'"
   },
   "Condition": "$a or $b",
+  "Severity": 5,
   "Actions": []
 }
 	`
