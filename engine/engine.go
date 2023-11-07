@@ -242,7 +242,7 @@ func (e *Engine) SetFilters(names, tags []string) {
 }
 
 // SetDefaultActions sets default actions given to event reaching
-// certain criticality within [low; high]
+// certain severity within [low; high]
 func (e *Engine) SetDefaultActions(low, high int, actions []string) {
 	for i := low; i <= high; i++ {
 		e.defaultActions[i] = actions
@@ -484,7 +484,7 @@ func (e *Engine) LoadString(data string) error {
 
 // MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that
 // it also return a flag indicating if the event is filtered.
-func (e *Engine) MatchOrFilter(evt Event) (names []string, criticality int, filtered bool) {
+func (e *Engine) MatchOrFilter(evt Event) (names []string, severity int, filtered bool) {
 
 	// initialized variables
 	detection := NewDetection(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)
@@ -518,11 +518,11 @@ func (e *Engine) MatchOrFilter(evt Event) (names []string, criticality int, filt
 	}
 
 	// Set default actions if present
-	if actions, ok := e.defaultActions[detection.Criticality]; ok {
+	if actions, ok := e.defaultActions[detection.Severity]; ok {
 		detection.Actions.Add(datastructs.ToInterfaceSlice(actions)...)
 	}
 
 	evt.SetDetection(detection)
 
-	return detection.Names(), detection.Criticality, detection.AlsoMatchedFilter()
+	return detection.Names(), detection.Severity, detection.AlsoMatchedFilter()
 }

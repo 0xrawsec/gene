@@ -18,14 +18,14 @@ var (
 )
 
 const (
-	CriticalityBound = 10
+	SeverityBound = 10
 )
 
-func bound(i int) int {
-	if i >= CriticalityBound {
-		return CriticalityBound
+func boundSeverity(sev int) int {
+	if sev >= SeverityBound {
+		return SeverityBound
 	}
-	return i
+	return sev
 }
 
 // CompiledRule definition
@@ -33,7 +33,7 @@ type CompiledRule struct {
 	containers *ContainerDB
 
 	Name        string
-	Criticality int
+	Severity    int
 	EventFilter EventFilter
 	OSs         *datastructs.SyncedSet
 	Computers   *datastructs.SyncedSet
@@ -159,7 +159,8 @@ var supportedOS = datastructs.NewInitSyncedSet(
 )
 
 var (
-	ErrInvalidOS = fmt.Errorf("invalid OS")
+	ErrInvalidOS        = fmt.Errorf("invalid OS")
+	ErrInvalidFieldName = fmt.Errorf("invalid field name")
 )
 
 // MetaSection defines the section holding the metadata of the rule
@@ -182,7 +183,7 @@ type Rule struct {
 	Name      string
 	Tags      []string
 	Meta      MetaSection
-	Matches   []string
+	Matches   map[string]string
 	Condition string
 	Actions   []string
 }
@@ -206,7 +207,7 @@ func NewRule() Rule {
 			Severity:  0,
 			Schema:    EngineMinimalRuleSchemaVersion,
 		},
-		Matches:   make([]string, 0),
+		Matches:   make(map[string]string),
 		Condition: "",
 		Actions:   make([]string, 0)}
 	return r
@@ -219,8 +220,8 @@ func (jr *Rule) IsDisabled() bool {
 
 // ReplaceTemplate the regexp templates found in the matches
 func (jr *Rule) ReplaceTemplate(tm *TemplateMap) {
-	for i, match := range jr.Matches {
-		jr.Matches[i] = tm.ReplaceAll(match)
+	for name, match := range jr.Matches {
+		jr.Matches[name] = tm.ReplaceAll(match)
 	}
 }
 
@@ -271,7 +272,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	rule := NewCompiledRule(jr.Meta.Schema)
 
 	rule.Name = jr.Name
-	rule.Criticality = bound(jr.Meta.Severity)
+	rule.Severity = boundSeverity(jr.Meta.Severity)
 	// Pass ATT&CK information to compiled rule
 	rule.Attack = jr.Meta.Attack
 	// Pass Actions to compiled rule
@@ -302,18 +303,22 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	rule.Filter = jr.Meta.Filter
 
 	// Parse predicates
-	for _, p := range jr.Matches {
+	for mname, p := range jr.Matches {
+		if !isValidName(mname) {
+			return nil, fmt.Errorf("%w: %s", ErrInvalidFieldName, mname)
+		}
+
 		switch {
-		case IsFieldMatch(p):
+		case isFieldMatch(p):
 			var a FieldMatch
-			a, err = ParseFieldMatch(p, format)
+			a, err = parseFieldMatch(mname, p, format)
 			if err != nil {
 				return nil, err
 			}
 			rule.AddMatcher(&a)
-		case IsContainerMatch(p):
+		case isContainerMatch(p):
 			var cm *ContainerMatch
-			cm, err = ParseContainerMatch(p, format)
+			cm, err = parseContainerMatch(mname, p, format)
 			if err != nil {
 				return nil, err
 			}
@@ -332,7 +337,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 				log.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
 				return &rule, nil
 			}
-			cm.SetContainerDB(rule.containers)
+			cm.setContainerDB(rule.containers)
 			rule.AddMatcher(cm)
 		default:
 			return nil, fmt.Errorf("unknown match statement: %s", p)

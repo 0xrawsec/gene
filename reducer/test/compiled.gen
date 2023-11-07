@@ -16,10 +16,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$net: Image ~= '(?i:C:\\\\Windows\\\\Sys(tem32|wow64)\\\\net1?\\.exe)'",
-    "$command: CommandLine ~= 'user.*/ADD'"
-  ],
+  "Matches": {
+    "$net": "Image ~= '(?i:C:\\\\Windows\\\\Sys(tem32|wow64)\\\\net1?\\.exe)'",
+    "$command": "CommandLine ~= 'user.*/ADD'"
+  },
   "Condition": "$net and $command",
   "Actions": null
 }
@@ -42,13 +42,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$iplh1: IpAddress = '-'",
-    "$iplh2: IpAddress = '127.0.0.1'",
-    "$iplh3: IpAddress = '::1'",
-    "$wlpn: ProcessName ~= 'C:\\\\Windows\\\\System32\\\\winlogon\\.exe'",
-    "$wltsn: TargetServerName = 'localhost'"
-  ],
+  "Matches": {
+    "$iplh1": "IpAddress = '-'",
+    "$iplh2": "IpAddress = '127.0.0.1'",
+    "$iplh3": "IpAddress = '::1'",
+    "$wlpn": "ProcessName ~= 'C:\\\\Windows\\\\System32\\\\winlogon\\.exe'",
+    "$wltsn": "TargetServerName = 'localhost'"
+  },
   "Condition": "!$iplh1 and !$iplh2 and !$iplh3 and !$wlpn and !$wltsn",
   "Actions": null
 }
@@ -71,13 +71,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$logt: LogonType = '3'",
-    "$kerb: AuthenticationPackageName = 'Kerberos'",
-    "$user: TargetUserName = 'ANONYMOUS LOGON'",
-    "$iplh1: IpAddress = '-'",
-    "$iplh2: IpAddress = '127.0.0.1'"
-  ],
+  "Matches": {
+    "$logt": "LogonType = '3'",
+    "$kerb": "AuthenticationPackageName = 'Kerberos'",
+    "$user": "TargetUserName = 'ANONYMOUS LOGON'",
+    "$iplh1": "IpAddress = '-'",
+    "$iplh2": "IpAddress = '127.0.0.1'"
+  },
   "Condition": "$logt and !$kerb and $user and !$iplh1 and !$iplh2",
   "Actions": null
 }
@@ -99,11 +99,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$parent: ParentImage ~= '(?i:C:\\\\windows\\\\explorer.exe)'",
-    "$exe: Image ~= '(?i:\\\\cmd.exe$)'",
-    "$cmd: CommandLine ~= '(?i:dir.*?/s)'"
-  ],
+  "Matches": {
+    "$parent": "ParentImage ~= '(?i:C:\\\\windows\\\\explorer.exe)'",
+    "$exe": "Image ~= '(?i:\\\\cmd.exe$)'",
+    "$cmd": "CommandLine ~= '(?i:dir.*?/s)'"
+  },
   "Condition": "!$parent and $exe and $cmd",
   "Actions": null
 }
@@ -123,11 +123,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$domainBL: extract('(?P<dom>\\w+\\.\\w+$)',QueryName) in blacklist'",
-    "$subdomainBL: extract('(?P<sub>\\w+\\.\\w+\\.\\w+$)',QueryName) in blacklist'",
-    "$subsubdomainBL: extract('(?P<subsub>\\w+\\.\\w+\\.\\w+\\.\\w+$)',QueryName) in blacklist'"
-  ],
+  "Matches": {
+    "$domainBL": "extract('(?P<dom>\\w+\\.\\w+$)',QueryName) in blacklist'",
+    "$subdomainBL": "extract('(?P<sub>\\w+\\.\\w+\\.\\w+$)',QueryName) in blacklist'",
+    "$subsubdomainBL": "extract('(?P<subsub>\\w+\\.\\w+\\.\\w+\\.\\w+$)',QueryName) in blacklist'"
+  },
   "Condition": "$domainBL or $subdomainBL or $subsubdomainBL",
   "Actions": null
 }
@@ -151,11 +151,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
-    "$sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
-    "$sha256: extract('SHA256=(?P<sha256>[A-F0-9]{64})', Hashes) in blacklist"
-  ],
+  "Matches": {
+    "$md5": "extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
+    "$sha1": "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
+    "$sha256": "extract('SHA256=(?P<sha256>[A-F0-9]{64})', Hashes) in blacklist"
+  },
   "Condition": "$md5 or $sha1 or $sha256",
   "Actions": null
 }
@@ -179,9 +179,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$imphash: extract('IMPHASH=(?P<imphash>[A-F0-9]{32})', Hashes) in blacklist"
-  ],
+  "Matches": {
+    "$imphash": "extract('IMPHASH=(?P<imphash>[A-F0-9]{32})', Hashes) in blacklist"
+  },
   "Condition": "$imphash",
   "Actions": null
 }
@@ -203,9 +203,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$browser: ParentImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'"
-  ],
+  "Matches": {
+    "$browser": "ParentImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'"
+  },
   "Condition": "$browser",
   "Actions": null
 }
@@ -227,11 +227,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$browser: ParentImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'",
-    "$susp: Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'",
-    "$allowed: CommandLine ~= '(?i:rundll32\\.exe.*?(shell32\\.dll\"{0,1},(OpenAs_RunDLL|SHCreateLocalServerRunDll)|inetcpl\\.cpl\"{0,1},ClearMyTracksByProcess|ieframe.dll\"{0,1},OpenURL))'"
-  ],
+  "Matches": {
+    "$browser": "ParentImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'",
+    "$susp": "Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'",
+    "$allowed": "CommandLine ~= '(?i:rundll32\\.exe.*?(shell32\\.dll\"{0,1},(OpenAs_RunDLL|SHCreateLocalServerRunDll)|inetcpl\\.cpl\"{0,1},ClearMyTracksByProcess|ieframe.dll\"{0,1},OpenURL))'"
+  },
   "Condition": "$browser and $susp and !$allowed",
   "Actions": null
 }
@@ -253,10 +253,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$access: AccessMask &= '0x1'",
-    "$canary: ObjectName ~= '(?i:C:\\\\PutYourCanaryHere\\\\)'"
-  ],
+  "Matches": {
+    "$access": "AccessMask &= '0x1'",
+    "$canary": "ObjectName ~= '(?i:C:\\\\PutYourCanaryHere\\\\)'"
+  },
   "Condition": "$access and $canary",
   "Actions": null
 }
@@ -285,12 +285,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$certutil: Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\certutil\\.exe$)'",
-    "$urlcache: CommandLine ~= '(?i: -urlcache )'",
-    "$force: CommandLine ~= '(?i: -f )'",
-    "$split: CommandLine ~= '(?i: -split )'"
-  ],
+  "Matches": {
+    "$certutil": "Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\certutil\\.exe$)'",
+    "$urlcache": "CommandLine ~= '(?i: -urlcache )'",
+    "$force": "CommandLine ~= '(?i: -f )'",
+    "$split": "CommandLine ~= '(?i: -split )'"
+  },
   "Condition": "$certutil and $urlcache and $force and $split",
   "Actions": null
 }
@@ -319,10 +319,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$certutil: Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\certutil\\.exe$)'",
-    "$suspdecode: CommandLine ~= '(?i: -decode.*((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))))'"
-  ],
+  "Matches": {
+    "$certutil": "Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\certutil\\.exe$)'",
+    "$suspdecode": "CommandLine ~= '(?i: -decode.*((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))))'"
+  },
   "Condition": "$certutil and $suspdecode",
   "Actions": null
 }
@@ -344,11 +344,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$allowed: Image ~= '(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)'",
-    "$empty_ext: Extension = ''",
-    "$count_by_ext: CountByExt >= '50'"
-  ],
+  "Matches": {
+    "$allowed": "Image ~= '(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)'",
+    "$empty_ext": "Extension = ''",
+    "$count_by_ext": "CountByExt >= '50'"
+  },
   "Condition": "!$empty_ext and $count_by_ext",
   "Actions": [
     "kill",
@@ -374,7 +374,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -396,7 +396,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -418,7 +418,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -441,7 +441,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -464,7 +464,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -484,11 +484,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$domainBL: extract('(?P<dom>\\w+\\.\\w+$)',QueryName) in misp'",
-    "$subdomainBL: extract('(?P<sub>\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'",
-    "$subsubdomainBL: extract('(?P<subsub>\\w+\\.\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'"
-  ],
+  "Matches": {
+    "$domainBL": "extract('(?P<dom>\\w+\\.\\w+$)',QueryName) in misp'",
+    "$subdomainBL": "extract('(?P<sub>\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'",
+    "$subsubdomainBL": "extract('(?P<subsub>\\w+\\.\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'"
+  },
   "Condition": "$domainBL or $subdomainBL or $subsubdomainBL",
   "Actions": null
 }
@@ -512,10 +512,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$path1: CommandLine ~= '(?i:\\\\Downloads\\\\)'",
-    "$path2: CommandLine ~= '(?i:appdata\\\\local\\\\microsoft\\\\windows\\\\temporary internet files\\\\)'"
-  ],
+  "Matches": {
+    "$path1": "CommandLine ~= '(?i:\\\\Downloads\\\\)'",
+    "$path2": "CommandLine ~= '(?i:appdata\\\\local\\\\microsoft\\\\windows\\\\temporary internet files\\\\)'"
+  },
   "Condition": "$path1 or $path2",
   "Actions": null
 }
@@ -538,9 +538,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$valid: SignatureStatus = 'Valid'"
-  ],
+  "Matches": {
+    "$valid": "SignatureStatus = 'Valid'"
+  },
   "Condition": "!$valid",
   "Actions": null
 }
@@ -563,10 +563,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$valid: SignatureStatus = 'Valid'",
-    "$unavailable: SignatureStatus = 'Unavailable'"
-  ],
+  "Matches": {
+    "$valid": "SignatureStatus = 'Valid'",
+    "$unavailable": "SignatureStatus = 'Unavailable'"
+  },
   "Condition": "!$valid and !$unavailable",
   "Actions": null
 }
@@ -588,10 +588,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$uspath1: ImageLoaded ~= '(?i:C:\\\\Windows\\\\Sys(wow64|tem32))'",
-    "$uspath2: ImageLoaded ~= '(?i:C:\\\\Windows\\\\Sys(tem32|wow64)\\\\drivers)'"
-  ],
+  "Matches": {
+    "$uspath1": "ImageLoaded ~= '(?i:C:\\\\Windows\\\\Sys(wow64|tem32))'",
+    "$uspath2": "ImageLoaded ~= '(?i:C:\\\\Windows\\\\Sys(tem32|wow64)\\\\drivers)'"
+  },
   "Condition": "!$uspath1 and !$uspath2",
   "Actions": null
 }
@@ -614,9 +614,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$http: CommandLine ~= '(?i:https?://)'"
-  ],
+  "Matches": {
+    "$http": "CommandLine ~= '(?i:https?://)'"
+  },
   "Condition": "$http",
   "Actions": null
 }
@@ -645,10 +645,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$im: Image ~= '(?i:\\\\wevtutil\\.exe$)'",
-    "$cmd: CommandLine ~= '(?i: cl | clear-log )'"
-  ],
+  "Matches": {
+    "$im": "Image ~= '(?i:\\\\wevtutil\\.exe$)'",
+    "$cmd": "CommandLine ~= '(?i: cl | clear-log )'"
+  },
   "Condition": "$im and $cmd",
   "Actions": null
 }
@@ -672,10 +672,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$path1: Image ~= '(?i:appdata\\\\local\\\\microsoft\\\\windows\\\\temporary internet files\\\\)'",
-    "$path2: Image ~= '(?i:\\\\Downloads\\\\)'"
-  ],
+  "Matches": {
+    "$path1": "Image ~= '(?i:appdata\\\\local\\\\microsoft\\\\windows\\\\temporary internet files\\\\)'",
+    "$path2": "Image ~= '(?i:\\\\Downloads\\\\)'"
+  },
   "Condition": "$path1 or $path2",
   "Actions": null
 }
@@ -697,12 +697,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exec: TargetFilename ~= '(?i:((?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))|(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))))'",
-    "$wl1: TargetFilename ~= '(?i:^C:\\\\Users\\\\.*?\\\\AppData\\\\Roaming\\\\Microsoft\\\\Windows\\\\Recent\\\\CustomDestinations)\\\\[A-Z0-9]{20}.temp$'",
-    "$wl2: TargetFilename ~= '(?i:.*~tmp$)'",
-    "$wl3: TargetFilename ~= '(?i:C:\\\\Windows\\\\SoftwareDistribution\\\\Download\\\\)'"
-  ],
+  "Matches": {
+    "$exec": "TargetFilename ~= '(?i:((?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))|(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))))'",
+    "$wl1": "TargetFilename ~= '(?i:^C:\\\\Users\\\\.*?\\\\AppData\\\\Roaming\\\\Microsoft\\\\Windows\\\\Recent\\\\CustomDestinations)\\\\[A-Z0-9]{20}.temp$'",
+    "$wl2": "TargetFilename ~= '(?i:.*~tmp$)'",
+    "$wl3": "TargetFilename ~= '(?i:C:\\\\Windows\\\\SoftwareDistribution\\\\Download\\\\)'"
+  },
   "Condition": "$exec and !($wl1 or $wl2 or $wl3)",
   "Actions": null
 }
@@ -731,10 +731,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$unk:  Hash = 'Unknown'",
-    "$impash:  Hash ~= '(?i:(IMPHASH=00000000000000000000000000000000))'"
-  ],
+  "Matches": {
+    "$unk": "Hash = 'Unknown'",
+    "$impash": "Hash ~= '(?i:(IMPHASH=00000000000000000000000000000000))'"
+  },
   "Condition": "!($impash or $unk)",
   "Actions": null
 }
@@ -757,12 +757,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$system: Image ~= '(?i:C:\\\\Windows)'",
-    "$defender: Image ~= '(?i:((?i:C:\\\\(PROGRA~(1|2)|Program Files.*?)\\\\)Windows Defender\\\\MsMpEng\\.exe|(?i:C:\\\\(PROGRA~3|ProgramData)\\\\)Microsoft\\\\Windows Defender\\\\platform\\\\.*?\\\\MpCmdRun\\.exe))'",
-    "$browsers: Image ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)'",
-    "$target: TargetFilename ~= '(?i:c:\\\\.*((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$)'"
-  ],
+  "Matches": {
+    "$system": "Image ~= '(?i:C:\\\\Windows)'",
+    "$defender": "Image ~= '(?i:((?i:C:\\\\(PROGRA~(1|2)|Program Files.*?)\\\\)Windows Defender\\\\MsMpEng\\.exe|(?i:C:\\\\(PROGRA~3|ProgramData)\\\\)Microsoft\\\\Windows Defender\\\\platform\\\\.*?\\\\MpCmdRun\\.exe))'",
+    "$browsers": "Image ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)'",
+    "$target": "TargetFilename ~= '(?i:c:\\\\.*((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$)'"
+  },
   "Condition": "!($system or $browsers or $defender) and $target",
   "Actions": null
 }
@@ -784,9 +784,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$knownext: ImageLoaded ~= '(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))$'"
-  ],
+  "Matches": {
+    "$knownext": "ImageLoaded ~= '(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))$'"
+  },
   "Condition": "!$knownext",
   "Actions": null
 }
@@ -809,13 +809,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$logt: LogonType = '3'",
-    "$user: TargetUserName = 'ANONYMOUS LOGON'",
-    "$iplh1: IpAddress = '-'",
-    "$iplh2: IpAddress = '127.0.0.1'",
-    "$enddol: TargetUserName ~= '\\$$'"
-  ],
+  "Matches": {
+    "$logt": "LogonType = '3'",
+    "$user": "TargetUserName = 'ANONYMOUS LOGON'",
+    "$iplh1": "IpAddress = '-'",
+    "$iplh2": "IpAddress = '127.0.0.1'",
+    "$enddol": "TargetUserName ~= '\\$$'"
+  },
   "Condition": "$logt and !($user or $iplh1 or $iplh2 or $enddol)",
   "Actions": null
 }
@@ -844,16 +844,16 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ga: GrantedAccess &= '0x20'",
-    "$srcwl: SourceImage ~= '(?i:C:\\\\Windows\\\\System32\\\\(csrss)\\.exe)'",
-    "$hosted: SourceImage ~= '(?i:\\\\(lsass|svchost)\\.exe$)'",
-    "$win10shared: SourceServices ~= '(?i:(^|,)(AJRouter|AppIDSvc|AppMgmt|AssignedAccessManagerSvc|AxInstSV|BDESVC|BFE|BrokerInfrastructure|BTAGService|bthserv|CertPropSvc|CoreMessagingRegistrar|CscService|DcomLaunch|DeviceAssociationService|DevQueryBroker|diagsvc|DisplayEnhancementService|dmwappushservice|dot3svc|DsSvc|Eaphost|EFS|embeddedmode|EntAppSvc|fdPHost|FDResPub|fhsvc|FrameServer|GraphicsPerfSvc|hidserv|HvHost|icssvc|IKEEXT|IpxlatCfgSvc|KeyIso|KtmRm|lltdsvc|LxpSvc|mpssvc|MSiSCSI|NaturalAuthentication|NcaSvc|NcdAutoSetup|Netlogon|Netman|NetSetupSvc|NetTcpPortSharing|p2pimsvc|p2psvc|PeerDistSvc|pla|PNRPAutoReg|PNRPsvc|PolicyAgent|Power|PrintNotify|QWAVE|RasAuto|RasMan|RemoteAccess|RemoteRegistry|RetailDemo|RmSvc|RpcEptMapper|RpcSs|SamSs|SCardSvr|ScDeviceEnum|SCPolicySvc|seclogon|SensorService|SensrSvc|SessionEnv|SharedAccess|SharedRealitySvc|shpamsvc|SmsRouter|svsvc|SystemEventsBroker|TapiSrv|TermService|TroubleshootingSvc|tzautoupdate|UmRdpService|upnphost|VaultSvc|vmicguestinterface|vmicheartbeat|vmickvpexchange|vmicrdv|vmicshutdown|vmictimesync|vmicvmsession|vmicvss|W32Time|WalletService|WbioSrvc|wcncsvc|WebClient|Wecsvc|WEPHOSTSVC|wercplsupport|WFDSConMgrSvc|WiaRpc|WinRM|wlpasvc|WManSvc|workfolderssvc|WwanSvc|XblAuthManager|XblGameSave|XboxGipSvc|XboxNetApiSvc|AarSvc_\\w+|BcastDVRUserService_\\w+|BluetoothUserService_\\w+|CaptureService_\\w+|ConsentUxUserSvc_\\w+|DeviceAssociationBrokerSvc_\\w+|DevicePickerUserSvc_\\w+|DevicesFlowUserSvc_\\w+|MessagingService_\\w+|OneSyncSvc_\\w+|PimIndexMaintenanceSvc_\\w+|PrintWorkflowUserSvc_\\w+|UnistoreSvc_\\w+|UserDataSvc_\\w+)(,|$))'",
-    "$win10svcs: SourceServices ~= '(?i:^(ALG|Appinfo|AppReadiness|AppVClient|AppXSvc|AudioEndpointBuilder|Audiosrv|autotimesvc|BITS|BthAvctpSvc|camsvc|CDPSvc|ClipSVC|COMSysApp|CryptSvc|defragsvc|DeviceInstall|Dhcp|diagnosticshub.standardcollector.service|DiagTrack|DispBrokerDesktopSvc|DmEnrollmentSvc|Dnscache|DoSvc|DPS|DsmSvc|DusmSvc|EventLog|EventSystem|Fax|FontCache|gpsvc|InstallService|iphlpsvc|LanmanServer|LanmanWorkstation|lfsvc|LicenseManager|lmhosts|LSM|MapsBroker|MSDTC|msiserver|NcbService|netprofm|NgcCtnrSvc|NgcSvc|NlaSvc|nsi|PcaSvc|perceptionsimulation|PerfHost|PhoneSvc|PlugPlay|ProfSvc|PushToInstall|RpcLocator|Schedule|SDRSVC|SecurityHealthService|SEMgrSvc|SENS|Sense|SensorDataService|SgrmBroker|ShellHWDetection|smphost|SNMPTRAP|spectrum|Spooler|sppsvc|SSDPSRV|ssh-agent|SstpSvc|StateRepository|stisvc|StorSvc|swprv|SysMain|TabletInputService|Themes|TieringEngineService|TimeBrokerSvc|TokenBroker|TrkWks|TrustedInstaller|UevAgentService|UserManager|UsoSvc|VacSvc|vds|VSS|WaaSMedicSvc|WarpJITSvc|wbengine|Wcmsvc|WdiServiceHost|WdiSystemHost|WdNisSvc|WerSvc|WinDefend|WinHttpAutoProxySvc|Winmgmt|wisvc|WlanSvc|wlidsvc|wmiApSrv|WMPNetworkSvc|WpcMonSvc|WPDBusEnum|WpnService|wscsvc|WSearch|wuauserv|cbdhsvc_\\w+|CDPUserSvc_\\w+|WpnUserService_\\w+)$)'",
-    "$sysmon: SourceServices ~= 'Sysmon64'",
-    "$expl: TargetImage ~= '(?i:C:\\\\Windows\\\\Explorer\\.exe)'",
-    "$srcisparent: SourceProcessGUID = @TargetParentProcessGuid"
-  ],
+  "Matches": {
+    "$ga": "GrantedAccess &= '0x20'",
+    "$srcwl": "SourceImage ~= '(?i:C:\\\\Windows\\\\System32\\\\(csrss)\\.exe)'",
+    "$hosted": "SourceImage ~= '(?i:\\\\(lsass|svchost)\\.exe$)'",
+    "$win10shared": "SourceServices ~= '(?i:(^|,)(AJRouter|AppIDSvc|AppMgmt|AssignedAccessManagerSvc|AxInstSV|BDESVC|BFE|BrokerInfrastructure|BTAGService|bthserv|CertPropSvc|CoreMessagingRegistrar|CscService|DcomLaunch|DeviceAssociationService|DevQueryBroker|diagsvc|DisplayEnhancementService|dmwappushservice|dot3svc|DsSvc|Eaphost|EFS|embeddedmode|EntAppSvc|fdPHost|FDResPub|fhsvc|FrameServer|GraphicsPerfSvc|hidserv|HvHost|icssvc|IKEEXT|IpxlatCfgSvc|KeyIso|KtmRm|lltdsvc|LxpSvc|mpssvc|MSiSCSI|NaturalAuthentication|NcaSvc|NcdAutoSetup|Netlogon|Netman|NetSetupSvc|NetTcpPortSharing|p2pimsvc|p2psvc|PeerDistSvc|pla|PNRPAutoReg|PNRPsvc|PolicyAgent|Power|PrintNotify|QWAVE|RasAuto|RasMan|RemoteAccess|RemoteRegistry|RetailDemo|RmSvc|RpcEptMapper|RpcSs|SamSs|SCardSvr|ScDeviceEnum|SCPolicySvc|seclogon|SensorService|SensrSvc|SessionEnv|SharedAccess|SharedRealitySvc|shpamsvc|SmsRouter|svsvc|SystemEventsBroker|TapiSrv|TermService|TroubleshootingSvc|tzautoupdate|UmRdpService|upnphost|VaultSvc|vmicguestinterface|vmicheartbeat|vmickvpexchange|vmicrdv|vmicshutdown|vmictimesync|vmicvmsession|vmicvss|W32Time|WalletService|WbioSrvc|wcncsvc|WebClient|Wecsvc|WEPHOSTSVC|wercplsupport|WFDSConMgrSvc|WiaRpc|WinRM|wlpasvc|WManSvc|workfolderssvc|WwanSvc|XblAuthManager|XblGameSave|XboxGipSvc|XboxNetApiSvc|AarSvc_\\w+|BcastDVRUserService_\\w+|BluetoothUserService_\\w+|CaptureService_\\w+|ConsentUxUserSvc_\\w+|DeviceAssociationBrokerSvc_\\w+|DevicePickerUserSvc_\\w+|DevicesFlowUserSvc_\\w+|MessagingService_\\w+|OneSyncSvc_\\w+|PimIndexMaintenanceSvc_\\w+|PrintWorkflowUserSvc_\\w+|UnistoreSvc_\\w+|UserDataSvc_\\w+)(,|$))'",
+    "$win10svcs": "SourceServices ~= '(?i:^(ALG|Appinfo|AppReadiness|AppVClient|AppXSvc|AudioEndpointBuilder|Audiosrv|autotimesvc|BITS|BthAvctpSvc|camsvc|CDPSvc|ClipSVC|COMSysApp|CryptSvc|defragsvc|DeviceInstall|Dhcp|diagnosticshub.standardcollector.service|DiagTrack|DispBrokerDesktopSvc|DmEnrollmentSvc|Dnscache|DoSvc|DPS|DsmSvc|DusmSvc|EventLog|EventSystem|Fax|FontCache|gpsvc|InstallService|iphlpsvc|LanmanServer|LanmanWorkstation|lfsvc|LicenseManager|lmhosts|LSM|MapsBroker|MSDTC|msiserver|NcbService|netprofm|NgcCtnrSvc|NgcSvc|NlaSvc|nsi|PcaSvc|perceptionsimulation|PerfHost|PhoneSvc|PlugPlay|ProfSvc|PushToInstall|RpcLocator|Schedule|SDRSVC|SecurityHealthService|SEMgrSvc|SENS|Sense|SensorDataService|SgrmBroker|ShellHWDetection|smphost|SNMPTRAP|spectrum|Spooler|sppsvc|SSDPSRV|ssh-agent|SstpSvc|StateRepository|stisvc|StorSvc|swprv|SysMain|TabletInputService|Themes|TieringEngineService|TimeBrokerSvc|TokenBroker|TrkWks|TrustedInstaller|UevAgentService|UserManager|UsoSvc|VacSvc|vds|VSS|WaaSMedicSvc|WarpJITSvc|wbengine|Wcmsvc|WdiServiceHost|WdiSystemHost|WdNisSvc|WerSvc|WinDefend|WinHttpAutoProxySvc|Winmgmt|wisvc|WlanSvc|wlidsvc|wmiApSrv|WMPNetworkSvc|WpcMonSvc|WPDBusEnum|WpnService|wscsvc|WSearch|wuauserv|cbdhsvc_\\w+|CDPUserSvc_\\w+|WpnUserService_\\w+)$)'",
+    "$sysmon": "SourceServices ~= 'Sysmon64'",
+    "$expl": "TargetImage ~= '(?i:C:\\\\Windows\\\\Explorer\\.exe)'",
+    "$srcisparent": "SourceProcessGUID = @TargetParentProcessGuid"
+  },
   "Condition": "$ga and $expl and !($srcisparent or ($hosted and $win10shared) or $win10svcs or $sysmon or $srcwl)",
   "Actions": null
 }
@@ -875,10 +875,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$wl: TargetFilename ~= '(?i:C:\\\\(Users|ProgramData)\\\\.*)'",
-    "$il: IntegrityLevel ~= '(Low|Medium)'"
-  ],
+  "Matches": {
+    "$wl": "TargetFilename ~= '(?i:C:\\\\(Users|ProgramData)\\\\.*)'",
+    "$il": "IntegrityLevel ~= '(Low|Medium)'"
+  },
   "Condition": "$il and !$wl",
   "Actions": null
 }
@@ -901,10 +901,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$pimsoffice: ParentImage ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
-    "$pcl: ParentCommandLine ~= '(?i:appdata\\\\local\\\\microsoft\\\\windows\\\\temporary internet files\\\\)'"
-  ],
+  "Matches": {
+    "$pimsoffice": "ParentImage ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
+    "$pcl": "ParentCommandLine ~= '(?i:appdata\\\\local\\\\microsoft\\\\windows\\\\temporary internet files\\\\)'"
+  },
   "Condition": "$pimsoffice and $pcl",
   "Actions": null
 }
@@ -935,11 +935,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$pi: ParentImage ~= '(?i:\\\\7zFM\\.exe$)'",
-    "$i: Image ~= '(?i:^C:\\\\Users\\\\.*\\\\AppData\\\\Local\\\\Temp\\\\)'",
-    "$cl: CommandLine ~= '(\\\\Temp\\\\.*?((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))))'"
-  ],
+  "Matches": {
+    "$pi": "ParentImage ~= '(?i:\\\\7zFM\\.exe$)'",
+    "$i": "Image ~= '(?i:^C:\\\\Users\\\\.*\\\\AppData\\\\Local\\\\Temp\\\\)'",
+    "$cl": "CommandLine ~= '(\\\\Temp\\\\.*?((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))))'"
+  },
   "Condition": "$pi and ($i or $cl)",
   "Actions": null
 }
@@ -969,9 +969,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ads:  CommandLine ~= '(?i:\\.[a-z0-9]{2,5}:\\w*?\\.[a-z0-9]{2,5})'"
-  ],
+  "Matches": {
+    "$ads": "CommandLine ~= '(?i:\\.[a-z0-9]{2,5}:\\w*?\\.[a-z0-9]{2,5})'"
+  },
   "Condition": "$ads",
   "Actions": null
 }
@@ -993,12 +993,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ct: CallTrace ~= 'UNKNOWN'",
-    "$src: SourceImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'",
-    "$dst: TargetImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'",
-    "$write: GrantedAccess &= '0x20'"
-  ],
+  "Matches": {
+    "$ct": "CallTrace ~= 'UNKNOWN'",
+    "$src": "SourceImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'",
+    "$dst": "TargetImage ~= '(?i:\\\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\\.exe)$'",
+    "$write": "GrantedAccess &= '0x20'"
+  },
   "Condition": "$dst and !$src and $ct and $write",
   "Actions": null
 }
@@ -1021,11 +1021,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ruser: CommandLine ~= '(?i: /U )'",
-    "$rhost: CommandLine ~= '(?i: /S )'",
-    "$rpwd: CommandLine ~= '(?i: /P )'"
-  ],
+  "Matches": {
+    "$ruser": "CommandLine ~= '(?i: /U )'",
+    "$rhost": "CommandLine ~= '(?i: /S )'",
+    "$rpwd": "CommandLine ~= '(?i: /P )'"
+  },
   "Condition": "$ruser and $rhost and $rpwd",
   "Actions": null
 }
@@ -1049,10 +1049,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$stfunc: StartFunction = ''",
-    "$stmod: StartModule = ''"
-  ],
+  "Matches": {
+    "$stfunc": "StartFunction = ''",
+    "$stmod": "StartModule = ''"
+  },
   "Condition": "$stfunc and $stmod",
   "Actions": null
 }
@@ -1075,9 +1075,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$susp: Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'"
-  ],
+  "Matches": {
+    "$susp": "Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'"
+  },
   "Condition": "$susp",
   "Actions": null
 }
@@ -1100,11 +1100,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$susp: Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'",
-    "$target: TargetFilename ~= '((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$'",
-    "$poltest: TargetFilename ~= '(?i:C:\\\\Users\\\\.*?\\\\AppData\\\\Local\\\\Temp\\\\__PSScriptPolicyTest_.*?\\.ps1)'"
-  ],
+  "Matches": {
+    "$susp": "Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'",
+    "$target": "TargetFilename ~= '((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$'",
+    "$poltest": "TargetFilename ~= '(?i:C:\\\\Users\\\\.*?\\\\AppData\\\\Local\\\\Temp\\\\__PSScriptPolicyTest_.*?\\.ps1)'"
+  },
   "Condition": "$susp and $target and !$poltest",
   "Actions": null
 }
@@ -1125,9 +1125,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ldomain: QueryName ~= '.{50,}'"
-  ],
+  "Matches": {
+    "$ldomain": "QueryName ~= '.{50,}'"
+  },
   "Condition": "$ldomain",
   "Actions": null
 }
@@ -1150,14 +1150,14 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ct: CallTrace ~= 'UNKNOWN'",
-    "$whitelist: SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)(sdiagnhost|svchost)\\.exe)'",
-    "$windows: TargetImage ~= '(?i:C:\\\\Windows\\\\)'",
-    "$write: GrantedAccess &= '0x20'",
-    "$read: GrantedAccess &= '0x10'",
-    "$srcisparent: SourceProcessGUID = @TargetParentProcessGuid"
-  ],
+  "Matches": {
+    "$ct": "CallTrace ~= 'UNKNOWN'",
+    "$whitelist": "SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)(sdiagnhost|svchost)\\.exe)'",
+    "$windows": "TargetImage ~= '(?i:C:\\\\Windows\\\\)'",
+    "$write": "GrantedAccess &= '0x20'",
+    "$read": "GrantedAccess &= '0x10'",
+    "$srcisparent": "SourceProcessGUID = @TargetParentProcessGuid"
+  },
   "Condition": "!$srcisparent and $windows and $ct and ($write or $read) and !$whitelist",
   "Actions": null
 }
@@ -1181,10 +1181,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$anc: Ancestors ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)'",
-    "$tools: Image ~= '((?i:\\\\(rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm|dnx|rcsi|WinDbg|cdb|tracker|cmstp|msiexec|mavinject|SyncAppvPublishingServer|Odbcconf|msxsl|wmic)\\.exe)|(?i:\\\\(certutil)\\.exe))'"
-  ],
+  "Matches": {
+    "$anc": "Ancestors ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)'",
+    "$tools": "Image ~= '((?i:\\\\(rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm|dnx|rcsi|WinDbg|cdb|tracker|cmstp|msiexec|mavinject|SyncAppvPublishingServer|Odbcconf|msxsl|wmic)\\.exe)|(?i:\\\\(certutil)\\.exe))'"
+  },
   "Condition": "$tools and $anc",
   "Actions": null
 }
@@ -1207,12 +1207,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exist: Ancestors ~= '(?i:^System\\|)'",
-    "$anc: Ancestors ~= '(?i:C:\\\\Windows\\\\explorer\\.exe)'",
-    "$schedsvc: ParentServices ~= '^(Schedule|BrokerInfrastructure,DcomLaunch,Power,SystemEventsBroker)$'",
-    "$tools: Image ~= '(?i:\\\\(ping|systeminfo|net1?|xcopy|nbtstat|bitsadmin|netstat|powershell|cmd|cscript|wscript|arp|at|certutil|dsquery|ipconfig|netsh|reg|route|schtasks|wusa|wmic|sc|rundll32|qprocess|tasklist|query)\\.exe$)'"
-  ],
+  "Matches": {
+    "$exist": "Ancestors ~= '(?i:^System\\|)'",
+    "$anc": "Ancestors ~= '(?i:C:\\\\Windows\\\\explorer\\.exe)'",
+    "$schedsvc": "ParentServices ~= '^(Schedule|BrokerInfrastructure,DcomLaunch,Power,SystemEventsBroker)$'",
+    "$tools": "Image ~= '(?i:\\\\(ping|systeminfo|net1?|xcopy|nbtstat|bitsadmin|netstat|powershell|cmd|cscript|wscript|arp|at|certutil|dsquery|ipconfig|netsh|reg|route|schtasks|wusa|wmic|sc|rundll32|qprocess|tasklist|query)\\.exe$)'"
+  },
   "Condition": "$exist and $tools and !$anc and !$schedsvc",
   "Actions": null
 }
@@ -1234,10 +1234,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$tools: Image ~= '(?i:\\\\(ping|systeminfo|net1?|xcopy|nbtstat)\\.exe$)'",
-    "$parent: ParentImage ~= '(?i:C:\\\\Windows\\\\.*\\\\(powershell|cmd|wscript|cscript|msiexec|net)\\.exe$)'"
-  ],
+  "Matches": {
+    "$tools": "Image ~= '(?i:\\\\(ping|systeminfo|net1?|xcopy|nbtstat)\\.exe$)'",
+    "$parent": "ParentImage ~= '(?i:C:\\\\Windows\\\\.*\\\\(powershell|cmd|wscript|cscript|msiexec|net)\\.exe$)'"
+  },
   "Condition": "$tools and !$parent",
   "Actions": null
 }
@@ -1259,10 +1259,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$susp: Image ~= '((?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)|(?i:\\\\wmic\\.exe))'",
-    "$rempld: CommandLine ~= '(?i:(\\\\\\\\.*?\\\\|https?://).*\\.\\w{2,5})'"
-  ],
+  "Matches": {
+    "$susp": "Image ~= '((?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)|(?i:\\\\wmic\\.exe))'",
+    "$rempld": "CommandLine ~= '(?i:(\\\\\\\\.*?\\\\|https?://).*\\.\\w{2,5})'"
+  },
   "Condition": "$susp and $rempld",
   "Actions": null
 }
@@ -1284,10 +1284,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$shell: Image ~= '(?i:\\\\(powershell|cmd)\\.exe$)'",
-    "$validparent: ParentImage ~= '(?i:(c:\\\\Windows\\\\Explorer\\.exe|c:\\\\Windows\\\\.*\\\\(powershell|cmd)\\.exe)$)'"
-  ],
+  "Matches": {
+    "$shell": "Image ~= '(?i:\\\\(powershell|cmd)\\.exe$)'",
+    "$validparent": "ParentImage ~= '(?i:(c:\\\\Windows\\\\Explorer\\.exe|c:\\\\Windows\\\\.*\\\\(powershell|cmd)\\.exe)$)'"
+  },
   "Condition": "$shell and !$validparent",
   "Actions": null
 }
@@ -1309,11 +1309,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$access: AccessMask &= '0x2'",
-    "$user_proc: ProcessName ~= '(?i:C:\\\\Users\\\\)'",
-    "$target: ObjectName ~= '(?i:C:\\\\Windows\\\\).*((?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))|(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node)))$'"
-  ],
+  "Matches": {
+    "$access": "AccessMask &= '0x2'",
+    "$user_proc": "ProcessName ~= '(?i:C:\\\\Users\\\\)'",
+    "$target": "ObjectName ~= '(?i:C:\\\\Windows\\\\).*((?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))|(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node)))$'"
+  },
   "Condition": "$access and $target",
   "Actions": null
 }
@@ -1337,10 +1337,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ldomain: QueryName ~= '.{50,}'",
-    "$ip6: QueryName ~= 'ip6\\.arpa\\.$'"
-  ],
+  "Matches": {
+    "$ldomain": "QueryName ~= '.{50,}'",
+    "$ip6": "QueryName ~= 'ip6\\.arpa\\.$'"
+  },
   "Condition": "$ldomain and !$ip6",
   "Actions": null
 }
@@ -1364,10 +1364,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$anc: Ancestors ~= '(?:\\\\(tomcat.*?|w3wp|php-cgi|nginx|httpd|apache.*?)\\.exe)'",
-    "$tools: Image ~= '(?i:\\\\(ping|systeminfo|net1?|xcopy|nbtstat|bitsadmin|netstat|powershell|cmd|cscript|wscript|arp|at|certutil|dsquery|ipconfig|netsh|reg|route|schtasks|wusa|wmic|sc|rundll32|qprocess|tasklist|query)\\.exe$)'"
-  ],
+  "Matches": {
+    "$anc": "Ancestors ~= '(?:\\\\(tomcat.*?|w3wp|php-cgi|nginx|httpd|apache.*?)\\.exe)'",
+    "$tools": "Image ~= '(?i:\\\\(ping|systeminfo|net1?|xcopy|nbtstat|bitsadmin|netstat|powershell|cmd|cscript|wscript|arp|at|certutil|dsquery|ipconfig|netsh|reg|route|schtasks|wusa|wmic|sc|rundll32|qprocess|tasklist|query)\\.exe$)'"
+  },
   "Condition": "$tools and $anc",
   "Actions": null
 }
@@ -1398,10 +1398,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$pi: ParentImage ~= '(?i:C:\\\\Windows\\\\Explorer\\.exe$)'",
-    "$cl: CommandLine ~= '(?i:\\\\Temp.*?\\\\[^\\\\]*\\.zip\\\\[^\\\\]*((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))))'"
-  ],
+  "Matches": {
+    "$pi": "ParentImage ~= '(?i:C:\\\\Windows\\\\Explorer\\.exe$)'",
+    "$cl": "CommandLine ~= '(?i:\\\\Temp.*?\\\\[^\\\\]*\\.zip\\\\[^\\\\]*((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))))'"
+  },
   "Condition": "$pi and $cl",
   "Actions": null
 }
@@ -1425,12 +1425,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$il1: ImageLoaded ~= '(?i:\\\\samlib.dll$)'",
-    "$system32: Image ~= '(?i:C:\\\\Windows\\\\System32\\\\[^\\\\]*?\\.exe)'",
-    "$programfile: Image ~= '(?i:C:\\\\Program Files.*?\\\\.*)'",
-    "$exp: Image ~= '(?i:^C:\\\\Windows\\\\explorer.exe$)'"
-  ],
+  "Matches": {
+    "$il1": "ImageLoaded ~= '(?i:\\\\samlib.dll$)'",
+    "$system32": "Image ~= '(?i:C:\\\\Windows\\\\System32\\\\[^\\\\]*?\\.exe)'",
+    "$programfile": "Image ~= '(?i:C:\\\\Program Files.*?\\\\.*)'",
+    "$exp": "Image ~= '(?i:^C:\\\\Windows\\\\explorer.exe$)'"
+  },
   "Condition": "$il1 and !$system32 and !$programfile and !$exp",
   "Actions": null
 }
@@ -1454,11 +1454,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$il1: ImageLoaded ~= '(?i:\\\\vaultcli.dll$)'",
-    "$system32: Image ~= '(?i:C:\\\\Windows\\\\System32\\\\[^\\\\]*?\\.exe)'",
-    "$searchui: Image ~= '(?i:(?i:C:\\\\Windows\\\\SystemApps\\\\).*?\\\\searchui\\.exe)'"
-  ],
+  "Matches": {
+    "$il1": "ImageLoaded ~= '(?i:\\\\vaultcli.dll$)'",
+    "$system32": "Image ~= '(?i:C:\\\\Windows\\\\System32\\\\[^\\\\]*?\\.exe)'",
+    "$searchui": "Image ~= '(?i:(?i:C:\\\\Windows\\\\SystemApps\\\\).*?\\\\searchui\\.exe)'"
+  },
   "Condition": "$il1 and !($system32 or $searchui)",
   "Actions": null
 }
@@ -1481,10 +1481,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$psexec: Product = 'Sysinternals PsExec'",
-    "$im: Image ~= '(?i:\\\\psexe(c|svc).exe$)'"
-  ],
+  "Matches": {
+    "$psexec": "Product = 'Sysinternals PsExec'",
+    "$im": "Image ~= '(?i:\\\\psexe(c|svc).exe$)'"
+  },
   "Condition": "$psexec and !$im",
   "Actions": null
 }
@@ -1513,9 +1513,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$lowboundproc: ProcessIntegrity >= '50'"
-  ],
+  "Matches": {
+    "$lowboundproc": "ProcessIntegrity >= '50'"
+  },
   "Condition": "$lowboundproc",
   "Actions": null
 }
@@ -1538,9 +1538,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$rpath: CommandLine ~= '(?i:\\\\\\\\[\\w\\.]+)'"
-  ],
+  "Matches": {
+    "$rpath": "CommandLine ~= '(?i:\\\\\\\\[\\w\\.]+)'"
+  },
   "Condition": "$rpath",
   "Actions": null
 }
@@ -1562,9 +1562,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$susp: ParentImage ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'"
-  ],
+  "Matches": {
+    "$susp": "ParentImage ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'"
+  },
   "Condition": "$susp",
   "Actions": null
 }
@@ -1586,9 +1586,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$lb64: CommandLine ~= '[0-9A-Za-z]{512,}'"
-  ],
+  "Matches": {
+    "$lb64": "CommandLine ~= '[0-9A-Za-z]{512,}'"
+  },
   "Condition": "$lb64",
   "Actions": null
 }
@@ -1610,14 +1610,14 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$lcl: CommandLine ~= '.{512,}'",
-    "$llcl: CommandLine ~= '.{999,}'",
-    "$wlp1: Image ~= '^C:\\\\Program Files.*?\\\\Mozilla Firefox\\\\firefox\\.exe$'",
-    "$wlp2: Image ~= '^C:\\\\Program Files.*?\\\\Google\\\\Chrome\\\\Application\\\\chrome\\.exe$'",
-    "$wlp3: Image ~= '(?i:Java.*\\\\jp2launcher.exe$)'",
-    "$wlp4: Image ~= '(?i:\\\\(java\\.exe))'"
-  ],
+  "Matches": {
+    "$lcl": "CommandLine ~= '.{512,}'",
+    "$llcl": "CommandLine ~= '.{999,}'",
+    "$wlp1": "Image ~= '^C:\\\\Program Files.*?\\\\Mozilla Firefox\\\\firefox\\.exe$'",
+    "$wlp2": "Image ~= '^C:\\\\Program Files.*?\\\\Google\\\\Chrome\\\\Application\\\\chrome\\.exe$'",
+    "$wlp3": "Image ~= '(?i:Java.*\\\\jp2launcher.exe$)'",
+    "$wlp4": "Image ~= '(?i:\\\\(java\\.exe))'"
+  },
   "Condition": "$lcl and !($llcl or $wlp1 or $wlp2 $wlp3 or $wlp4)",
   "Actions": null
 }
@@ -1639,13 +1639,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$lcl: CommandLine ~= '.{999,}'",
-    "$wlp1: Image ~= '^C:\\\\Program Files.*?\\\\Mozilla Firefox\\\\firefox\\.exe$'",
-    "$wlp2: Image ~= '^C:\\\\Program Files.*?\\\\Google\\\\Chrome\\\\Application\\\\chrome\\.exe$'",
-    "$wlp3: Image ~= '(?i:Java.*\\\\jp2launcher.exe$)'",
-    "$wlp4: Image ~= '(?i:\\\\(java\\.exe))'"
-  ],
+  "Matches": {
+    "$lcl": "CommandLine ~= '.{999,}'",
+    "$wlp1": "Image ~= '^C:\\\\Program Files.*?\\\\Mozilla Firefox\\\\firefox\\.exe$'",
+    "$wlp2": "Image ~= '^C:\\\\Program Files.*?\\\\Google\\\\Chrome\\\\Application\\\\chrome\\.exe$'",
+    "$wlp3": "Image ~= '(?i:Java.*\\\\jp2launcher.exe$)'",
+    "$wlp4": "Image ~= '(?i:\\\\(java\\.exe))'"
+  },
   "Condition": "$lcl and !$wlp1 and !$wlp2 and !$wlp3 and !$wlp4",
   "Actions": null
 }
@@ -1668,10 +1668,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$wmi: Image ~= '(?i:\\\\wmic\\.exe$)'",
-    "$node: CommandLine ~= '(?i:/node:)'"
-  ],
+  "Matches": {
+    "$wmi": "Image ~= '(?i:\\\\wmic\\.exe$)'",
+    "$node": "CommandLine ~= '(?i:/node:)'"
+  },
   "Condition": "$wmi and $node",
   "Actions": null
 }
@@ -1694,12 +1694,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$iplh1: IpAddress = '-'",
-    "$iplh2: IpAddress = '127.0.0.1'",
-    "$iplh3: IpAddress = '::1'",
-    "$privip: IpAddress ~= '(?i:(^127\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^192\\.168\\.))'"
-  ],
+  "Matches": {
+    "$iplh1": "IpAddress = '-'",
+    "$iplh2": "IpAddress = '127.0.0.1'",
+    "$iplh3": "IpAddress = '::1'",
+    "$privip": "IpAddress ~= '(?i:(^127\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^192\\.168\\.))'"
+  },
   "Condition": "!($privip or $iplh1 or $iplh2 or $iplh3)",
   "Actions": null
 }
@@ -1729,11 +1729,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$pimsoffice: ParentImage ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
-    "$susp: Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'",
-    "$fp1: CommandLine ~= '(?i:shell32\\.dll,(OpenAs_RunDLL|SHCreateLocalServerRunDll|Control_RunDLL))'"
-  ],
+  "Matches": {
+    "$pimsoffice": "ParentImage ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
+    "$susp": "Image ~= '(?i:\\\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\\.exe)$'",
+    "$fp1": "CommandLine ~= '(?i:shell32\\.dll,(OpenAs_RunDLL|SHCreateLocalServerRunDll|Control_RunDLL))'"
+  },
   "Condition": "$pimsoffice and !$fp1 and $susp",
   "Actions": null
 }
@@ -1764,10 +1764,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ct: CallTrace ~= 'UNKNOWN'",
-    "$lsass: TargetImage ~= '(?i:\\\\lsass\\.exe$)'"
-  ],
+  "Matches": {
+    "$ct": "CallTrace ~= 'UNKNOWN'",
+    "$lsass": "TargetImage ~= '(?i:\\\\lsass\\.exe$)'"
+  },
   "Condition": "$lsass and $ct",
   "Actions": null
 }
@@ -1790,10 +1790,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ct: CallTrace ~= 'UNKNOWN'",
-    "$svchost: TargetImage ~= '(?i:windows\\\\sys(tem32|wow64)\\\\svchost\\.exe$)'"
-  ],
+  "Matches": {
+    "$ct": "CallTrace ~= 'UNKNOWN'",
+    "$svchost": "TargetImage ~= '(?i:windows\\\\sys(tem32|wow64)\\\\svchost\\.exe$)'"
+  },
   "Condition": "$svchost and $ct",
   "Actions": null
 }
@@ -1822,10 +1822,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$lowboundproc: ProcessIntegrity >= '15'",
-    "$upboundproc: ProcessIntegrity < '50'"
-  ],
+  "Matches": {
+    "$lowboundproc": "ProcessIntegrity >= '15'",
+    "$upboundproc": "ProcessIntegrity < '50'"
+  },
   "Condition": "$lowboundproc and $upboundproc",
   "Actions": null
 }
@@ -1855,15 +1855,15 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ntlmminclientsec: TargetObject ~= '^(?i:HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\MSV1_0\\\\NtlmMinClientSec)'",
-    "$lmcompatlevel: TargetObject ~= '^(?i:HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\LMCompatibilityLevel)'",
-    "$restsendntlmtraffic: TargetObject ~= '^(?i:HKLM\\\\System\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\MSV1_0\\\\RestrictSendingNTLMTraffic)'",
-    "$setval: EventType = 'SetValue'",
-    "$v0x0: Details = 'DWORD (0x00000000)'",
-    "$v0x1: Details = 'DWORD (0x00000001)'",
-    "$v0x2: Details = 'DWORD (0x00000002)'"
-  ],
+  "Matches": {
+    "$ntlmminclientsec": "TargetObject ~= '^(?i:HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\MSV1_0\\\\NtlmMinClientSec)'",
+    "$lmcompatlevel": "TargetObject ~= '^(?i:HKLM\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\LMCompatibilityLevel)'",
+    "$restsendntlmtraffic": "TargetObject ~= '^(?i:HKLM\\\\System\\\\CurrentControlSet\\\\Control\\\\Lsa\\\\MSV1_0\\\\RestrictSendingNTLMTraffic)'",
+    "$setval": "EventType = 'SetValue'",
+    "$v0x0": "Details = 'DWORD (0x00000000)'",
+    "$v0x1": "Details = 'DWORD (0x00000001)'",
+    "$v0x2": "Details = 'DWORD (0x00000002)'"
+  },
   "Condition": "($lmcompatlevel and $setval and ($v0x0 or $v0x1 or $v0x2)) or ($restsendntlmtraffic and $setval and $v0x0) or $ntlmminclientsec",
   "Actions": null
 }
@@ -1892,13 +1892,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$msv1key: ObjectName ~= '(?i:\\\\SYSTEM\\\\ControlSet.*?\\\\Control\\\\Lsa\\\\MSV1_0)'",
-    "$lsakey: ObjectName ~= '(?i:\\\\SYSTEM\\\\ControlSet.*?\\\\Control\\\\Lsa)'",
-    "$restsendntlmtraffic:  ObjectValueName = 'RestrictSendingNTLMTraffic'",
-    "$lmcompatlevel:  ObjectValueName = 'LMCompatibilityLevel'",
-    "$ntlmminclientsec:  ObjectValueName = 'NtlmMinClientSec'"
-  ],
+  "Matches": {
+    "$msv1key": "ObjectName ~= '(?i:\\\\SYSTEM\\\\ControlSet.*?\\\\Control\\\\Lsa\\\\MSV1_0)'",
+    "$lsakey": "ObjectName ~= '(?i:\\\\SYSTEM\\\\ControlSet.*?\\\\Control\\\\Lsa)'",
+    "$restsendntlmtraffic": "ObjectValueName = 'RestrictSendingNTLMTraffic'",
+    "$lmcompatlevel": "ObjectValueName = 'LMCompatibilityLevel'",
+    "$ntlmminclientsec": "ObjectValueName = 'NtlmMinClientSec'"
+  },
   "Condition": "($lsakey and $lmcompatlevel) or ($msv1key and ($restsendntlmtraffic or $ntlmminclientsec)) ",
   "Actions": null
 }
@@ -1920,9 +1920,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\nbtstat\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\nbtstat\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -1944,9 +1944,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\net1?\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\net1?\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -1975,10 +1975,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$broker: Image ~= '(?i:C:\\\\Windows\\\\system32\\\\browser_broker.exe)'",
-    "$target: TargetFilename ~= '(?i::Zone\\.Identifier$)'"
-  ],
+  "Matches": {
+    "$broker": "Image ~= '(?i:C:\\\\Windows\\\\system32\\\\browser_broker.exe)'",
+    "$target": "TargetFilename ~= '(?i::Zone\\.Identifier$)'"
+  },
   "Condition": "!($broker and $target)",
   "Actions": null
 }
@@ -2008,13 +2008,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$eventtype: EventType = 'SetValue'",
-    "$run: TargetObject ~= '(?i:(?i:\\\\SOFTWARE(\\\\WOW6432Node)??)\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run)'",
-    "$runonce: TargetObject ~= '(?i:(?i:\\\\SOFTWARE(\\\\WOW6432Node)??)\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunOnce)'",
-    "$uimls: TargetObject ~= '(?i:\\\\Environment\\\\UserInitMprLogonScript$)'",
-    "$com: TargetObject ~= '(?i:(?i:HKCR(\\\\WOW6432Node)??)\\\\CLSID)'"
-  ],
+  "Matches": {
+    "$eventtype": "EventType = 'SetValue'",
+    "$run": "TargetObject ~= '(?i:(?i:\\\\SOFTWARE(\\\\WOW6432Node)??)\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\Run)'",
+    "$runonce": "TargetObject ~= '(?i:(?i:\\\\SOFTWARE(\\\\WOW6432Node)??)\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\RunOnce)'",
+    "$uimls": "TargetObject ~= '(?i:\\\\Environment\\\\UserInitMprLogonScript$)'",
+    "$com": "TargetObject ~= '(?i:(?i:HKCR(\\\\WOW6432Node)??)\\\\CLSID)'"
+  },
   "Condition": "$eventtype and ($run or $runonce or $uimls or $com)",
   "Actions": null
 }
@@ -2037,11 +2037,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$smss: Image ~= '(?i:C:\\\\Windows\\\\System32\\\\smss\\.exe)'",
-    "$pageswap: TargetFilename ~= '(?i:C:\\\\(page|swap)file\\.sys)'",
-    "$target: TargetFilename ~= '(?i:c:\\\\[^\\\\]*?((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$)'"
-  ],
+  "Matches": {
+    "$smss": "Image ~= '(?i:C:\\\\Windows\\\\System32\\\\smss\\.exe)'",
+    "$pageswap": "TargetFilename ~= '(?i:C:\\\\(page|swap)file\\.sys)'",
+    "$target": "TargetFilename ~= '(?i:c:\\\\[^\\\\]*?((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$)'"
+  },
   "Condition": "$target and !($smss and $pageswap)",
   "Actions": null
 }
@@ -2063,10 +2063,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$net: Image ~= '(?i:C:\\\\Windows\\\\Sys(tem32|wow64)\\\\net1?\\.exe)'",
-    "$command: CommandLine ~= '(?i:localgroup\\s+Administrators.*?/ADD)'"
-  ],
+  "Matches": {
+    "$net": "Image ~= '(?i:C:\\\\Windows\\\\Sys(tem32|wow64)\\\\net1?\\.exe)'",
+    "$command": "CommandLine ~= '(?i:localgroup\\s+Administrators.*?/ADD)'"
+  },
   "Condition": "$net and $command",
   "Actions": null
 }
@@ -2096,11 +2096,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$schtasks: Image ~= '(?i:^c:\\\\windows\\\\system32\\\\schtasks\\.exe$)'",
-    "$create: CommandLine ~= '(?i:/(create|xml))'",
-    "$remote: CommandLine ~= '(?i:/S )'"
-  ],
+  "Matches": {
+    "$schtasks": "Image ~= '(?i:^c:\\\\windows\\\\system32\\\\schtasks\\.exe$)'",
+    "$create": "CommandLine ~= '(?i:/(create|xml))'",
+    "$remote": "CommandLine ~= '(?i:/S )'"
+  },
   "Condition": "$schtasks and $remote and $create ",
   "Actions": null
 }
@@ -2131,10 +2131,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$eventtype: EventType = 'SetValue'",
-    "$newid: TargetObject ~= '(?i:\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Schedule\\\\TaskCache\\\\Tree\\\\.*?\\\\Id$)'"
-  ],
+  "Matches": {
+    "$eventtype": "EventType = 'SetValue'",
+    "$newid": "TargetObject ~= '(?i:\\\\SOFTWARE\\\\Microsoft\\\\Windows NT\\\\CurrentVersion\\\\Schedule\\\\TaskCache\\\\Tree\\\\.*?\\\\Id$)'"
+  },
   "Condition": "$eventtype and $newid",
   "Actions": null
 }
@@ -2163,9 +2163,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$target: TargetFilename ~= '(?i:^C:\\\\Windows\\\\Sys(tem32|wow64)\\\\Tasks\\\\)'"
-  ],
+  "Matches": {
+    "$target": "TargetFilename ~= '(?i:^C:\\\\Windows\\\\Sys(tem32|wow64)\\\\Tasks\\\\)'"
+  },
   "Condition": "$target",
   "Actions": null
 }
@@ -2194,11 +2194,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$schtasks: Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\schtasks\\.exe$)'",
-    "$create: CommandLine ~= '(?i:/(xml|create))'",
-    "$remote: CommandLine ~= '(?i:/S )'"
-  ],
+  "Matches": {
+    "$schtasks": "Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\schtasks\\.exe$)'",
+    "$create": "CommandLine ~= '(?i:/(xml|create))'",
+    "$remote": "CommandLine ~= '(?i:/S )'"
+  },
   "Condition": "$schtasks and !$remote and $create",
   "Actions": null
 }
@@ -2222,11 +2222,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in whitelist",
-    "$sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in whitelist",
-    "$sha256: extract('SHA256=(?P<sha256>[A-F0-9]{64})', Hashes) in whitelist"
-  ],
+  "Matches": {
+    "$md5": "extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in whitelist",
+    "$sha1": "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in whitelist",
+    "$sha256": "extract('SHA256=(?P<sha256>[A-F0-9]{64})', Hashes) in whitelist"
+  },
   "Condition": "!($md5 and $sha1 and $sha256)",
   "Actions": null
 }
@@ -2256,10 +2256,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$office: Image ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
-    "$target: TargetFilename ~= '((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$'"
-  ],
+  "Matches": {
+    "$office": "Image ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
+    "$target": "TargetFilename ~= '((?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))|(?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf)))$'"
+  },
   "Condition": "$office and $target",
   "Actions": null
 }
@@ -2289,10 +2289,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$pimsoffice: ParentImage ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
-    "$whitelisted: Image ~= '^((?i:C:\\\\Windows\\\\)|(?i:C:\\\\(PROGRA~(1|2)|Program Files.*?)\\\\)|(?i:C:\\\\ProgramData\\\\AppV\\\\))'"
-  ],
+  "Matches": {
+    "$pimsoffice": "ParentImage ~= '(?i:\\\\(excel|winword|powerpnt|outlook)\\.exe)$'",
+    "$whitelisted": "Image ~= '^((?i:C:\\\\Windows\\\\)|(?i:C:\\\\(PROGRA~(1|2)|Program Files.*?)\\\\)|(?i:C:\\\\ProgramData\\\\AppV\\\\))'"
+  },
   "Condition": "$pimsoffice and !$whitelisted",
   "Actions": null
 }
@@ -2314,9 +2314,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$api: ScriptBlockText ~= '(?i:(OpenProcess|OpenThread|SetThreadContext|OpenThreadToken|GetProcAddress|OpenThreadToken|OpenProcessToken|CreateProcess|WriteProcessMemory|ReadProcessMemory|VirtualAlloc))'"
-  ],
+  "Matches": {
+    "$api": "ScriptBlockText ~= '(?i:(OpenProcess|OpenThread|SetThreadContext|OpenThreadToken|GetProcAddress|OpenThreadToken|OpenProcessToken|CreateProcess|WriteProcessMemory|ReadProcessMemory|VirtualAlloc))'"
+  },
   "Condition": "$api",
   "Actions": null
 }
@@ -2345,9 +2345,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ci: Payload ~= 'CommandInvocation\\(Invoke-Expression\\)'"
-  ],
+  "Matches": {
+    "$ci": "Payload ~= 'CommandInvocation\\(Invoke-Expression\\)'"
+  },
   "Condition": "$ci",
   "Actions": null
 }
@@ -2369,9 +2369,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\ping\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\ping\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -2394,10 +2394,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ps: ParentImage ~= '(?i:\\\\powershell.exe$)'",
-    "$csc: Image ~= '(?i:\\\\csc.exe$)'"
-  ],
+  "Matches": {
+    "$ps": "ParentImage ~= '(?i:\\\\powershell.exe$)'",
+    "$csc": "Image ~= '(?i:\\\\csc.exe$)'"
+  },
   "Condition": "$csc and $ps",
   "Actions": null
 }
@@ -2427,10 +2427,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$i: Image ~= '(?i:\\\\powershell.exe$)'",
-    "$enc: CommandLine ~= '(?i: (-|/)e[ncodedcommands]* )'"
-  ],
+  "Matches": {
+    "$i": "Image ~= '(?i:\\\\powershell.exe$)'",
+    "$enc": "CommandLine ~= '(?i: (-|/)e[ncodedcommands]* )'"
+  },
   "Condition": "$i and $enc",
   "Actions": null
 }
@@ -2453,10 +2453,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$lcl: CommandLine ~= '.{512,}'",
-    "$ps: Image ~= '(?i:\\\\powershell.exe$)'"
-  ],
+  "Matches": {
+    "$lcl": "CommandLine ~= '.{512,}'",
+    "$ps": "Image ~= '(?i:\\\\powershell.exe$)'"
+  },
   "Condition": "$lcl and $ps",
   "Actions": null
 }
@@ -2481,10 +2481,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$il: ImageLoaded ~= '(?i:\\\\samlib.dll$)'",
-    "$ps: Image ~= '(?i:\\\\powershell\\.exe$)'"
-  ],
+  "Matches": {
+    "$il": "ImageLoaded ~= '(?i:\\\\samlib.dll$)'",
+    "$ps": "Image ~= '(?i:\\\\powershell\\.exe$)'"
+  },
   "Condition": "$ps and $il",
   "Actions": null
 }
@@ -2513,10 +2513,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ps: Image ~= '(?i:\\\\powershell.exe$)'",
-    "$arg: CommandLine ~= '(?i: (-|/)c[ommand]*\\s+-)'"
-  ],
+  "Matches": {
+    "$ps": "Image ~= '(?i:\\\\powershell.exe$)'",
+    "$arg": "CommandLine ~= '(?i: (-|/)c[ommand]*\\s+-)'"
+  },
   "Condition": "$ps and $arg",
   "Actions": null
 }
@@ -2538,15 +2538,15 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ga: GrantedAccess &= '0x20'",
-    "$srclow: SourceIntegrityLevel = 'Low'",
-    "$srcmed: SourceIntegrityLevel = 'Medium'",
-    "$srchigh: SourceIntegrityLevel = 'High'",
-    "$tgtmed: TargetIntegrityLevel = 'Medium'",
-    "$tgthigh: TargetIntegrityLevel = 'High'",
-    "$tgtsys: TargetIntegrityLevel = 'System'"
-  ],
+  "Matches": {
+    "$ga": "GrantedAccess &= '0x20'",
+    "$srclow": "SourceIntegrityLevel = 'Low'",
+    "$srcmed": "SourceIntegrityLevel = 'Medium'",
+    "$srchigh": "SourceIntegrityLevel = 'High'",
+    "$tgtmed": "TargetIntegrityLevel = 'Medium'",
+    "$tgthigh": "TargetIntegrityLevel = 'High'",
+    "$tgtsys": "TargetIntegrityLevel = 'System'"
+  },
   "Condition": "$ga and (($srclow and ($tgtmed or $tgthigh or $tgtsys)) or ($srcmed and ($tgthigh or $tgtsys)) or ($srchigh and $tgtsys))",
   "Actions": null
 }
@@ -2566,7 +2566,7 @@
     "Filter": true,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -2589,10 +2589,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$psexec: Product = 'Sysinternals PsExec'",
-    "$im: Image ~= '(?i:\\\\psexe(c|svc).exe$)'"
-  ],
+  "Matches": {
+    "$psexec": "Product = 'Sysinternals PsExec'",
+    "$im": "Image ~= '(?i:\\\\psexe(c|svc).exe$)'"
+  },
   "Condition": "$psexec and $im",
   "Actions": null
 }
@@ -2615,9 +2615,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$psexec: ProcessName ~= '(?i:\\\\PSEXESVC\\.exe$)'"
-  ],
+  "Matches": {
+    "$psexec": "ProcessName ~= '(?i:\\\\PSEXESVC\\.exe$)'"
+  },
   "Condition": "$psexec",
   "Actions": null
 }
@@ -2640,9 +2640,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$psexesvc: ParentImage ~= '(?i:\\\\psexesvc.exe$)'"
-  ],
+  "Matches": {
+    "$psexesvc": "ParentImage ~= '(?i:\\\\psexesvc.exe$)'"
+  },
   "Condition": "$psexesvc",
   "Actions": null
 }
@@ -2664,9 +2664,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\reg\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\reg\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -2697,13 +2697,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$im: Image ~= '(?i:^c:\\\\windows\\\\sys(wow64|tem32)\\\\regsvr32.exe$)'",
-    "$sw1: CommandLine ~= '(?i: /n )'",
-    "$sw2: CommandLine ~= '(?i: /s )'",
-    "$sw3: CommandLine ~= '(?i: /u )'",
-    "$sw4: CommandLine ~= '(?i: /i:)'"
-  ],
+  "Matches": {
+    "$im": "Image ~= '(?i:^c:\\\\windows\\\\sys(wow64|tem32)\\\\regsvr32.exe$)'",
+    "$sw1": "CommandLine ~= '(?i: /n )'",
+    "$sw2": "CommandLine ~= '(?i: /s )'",
+    "$sw3": "CommandLine ~= '(?i: /u )'",
+    "$sw4": "CommandLine ~= '(?i: /i:)'"
+  },
   "Condition": "$im and $sw4 and $sw3 and $sw2 and $sw1",
   "Actions": null
 }
@@ -2732,9 +2732,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$schtasks: ParentImage ~= '(?i:^c:\\\\windows\\\\system32\\\\schtasks\\.exe$)'"
-  ],
+  "Matches": {
+    "$schtasks": "ParentImage ~= '(?i:^c:\\\\windows\\\\system32\\\\schtasks\\.exe$)'"
+  },
   "Condition": "$schtasks",
   "Actions": null
 }
@@ -2763,7 +2763,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -2785,10 +2785,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$sc: Image ~= '(?i:sc.exe$)'",
-    "$op: CommandLine ~= '(?i: (delete) )'"
-  ],
+  "Matches": {
+    "$sc": "Image ~= '(?i:sc.exe$)'",
+    "$op": "CommandLine ~= '(?i: (delete) )'"
+  },
   "Condition": "$sc and $op",
   "Actions": null
 }
@@ -2811,12 +2811,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$svchost: TargetImage ~= '(?i:C:\\\\windows\\\\sys(tem32|wow64)\\\\svchost\\.exe)'",
-    "$wl: SourceImage ~= '((?i:C:\\\\ProgramData\\\\Microsoft\\\\Windows Defender\\\\platform\\\\.*?\\\\MsMpEng\\.exe|C:\\\\Program Files.*?\\\\Windows Defender\\\\.*?\\.exe)|(?i:C:\\\\Windows\\\\sysmon(64)?\\.exe)|(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\[^\\\\]*\\.exe)|(?i:C:\\\\Windows\\\\sys(tem32|wow64)\\\\wbem\\\\wmiprvse\\.exe))'",
-    "$stopresume: GrantedAccess &= '0x0800'",
-    "$terminate: GrantedAccess &= '0x0001'"
-  ],
+  "Matches": {
+    "$svchost": "TargetImage ~= '(?i:C:\\\\windows\\\\sys(tem32|wow64)\\\\svchost\\.exe)'",
+    "$wl": "SourceImage ~= '((?i:C:\\\\ProgramData\\\\Microsoft\\\\Windows Defender\\\\platform\\\\.*?\\\\MsMpEng\\.exe|C:\\\\Program Files.*?\\\\Windows Defender\\\\.*?\\.exe)|(?i:C:\\\\Windows\\\\sysmon(64)?\\.exe)|(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\[^\\\\]*\\.exe)|(?i:C:\\\\Windows\\\\sys(tem32|wow64)\\\\wbem\\\\wmiprvse\\.exe))'",
+    "$stopresume": "GrantedAccess &= '0x0800'",
+    "$terminate": "GrantedAccess &= '0x0001'"
+  },
   "Condition": "$svchost and ($stopresume or $terminate) and !$wl",
   "Actions": null
 }
@@ -2838,10 +2838,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$wmic: Image ~= '(?i:\\\\wmic\\.exe$)'",
-    "$proc: CommandLine ~= '(?i:process\\s+call\\s+create)'"
-  ],
+  "Matches": {
+    "$wmic": "Image ~= '(?i:\\\\wmic\\.exe$)'",
+    "$proc": "CommandLine ~= '(?i:process\\s+call\\s+create)'"
+  },
   "Condition": "$wmic and $proc",
   "Actions": null
 }
@@ -2870,15 +2870,15 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ga: GrantedAccess &= '0x20'",
-    "$wlsvcs: SourceServices ~= '(?i:(Sysmon64|Appinfo|PcaSvc|Themes))'",
-    "$srcwl: SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)(conhost|csrss|lsass)\\.exe)'",
-    "$trgwl: TargetImage ~= '(?i:(?i:C:\\\\(PROGRA~(1|2)|Program Files.*?)\\\\WindowsApps\\\\)(Microsoft\\.MicrosoftOfficeHub_.*?\\\\LocalBridge\\.exe))'",
-    "$srcisparent: SourceProcessGUID = @TargetParentProcessGuid",
-    "$srcistarget: SourceImage = @TargetImage",
-    "$srcissystem: SourceIntegrityLevel = 'System'"
-  ],
+  "Matches": {
+    "$ga": "GrantedAccess &= '0x20'",
+    "$wlsvcs": "SourceServices ~= '(?i:(Sysmon64|Appinfo|PcaSvc|Themes))'",
+    "$srcwl": "SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)(conhost|csrss|lsass)\\.exe)'",
+    "$trgwl": "TargetImage ~= '(?i:(?i:C:\\\\(PROGRA~(1|2)|Program Files.*?)\\\\WindowsApps\\\\)(Microsoft\\.MicrosoftOfficeHub_.*?\\\\LocalBridge\\.exe))'",
+    "$srcisparent": "SourceProcessGUID = @TargetParentProcessGuid",
+    "$srcistarget": "SourceImage = @TargetImage",
+    "$srcissystem": "SourceIntegrityLevel = 'System'"
+  },
   "Condition": "$ga and !($wlsvcs or $srcwl or $trgwl or $srcissystem or $srcisparent or $srcistarget)",
   "Actions": null
 }
@@ -2907,9 +2907,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$target: TargetFilename ~= '(?i:((?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))|(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))))$'"
-  ],
+  "Matches": {
+    "$target": "TargetFilename ~= '(?i:((?i:(\\.ps1|\\.bat|\\.cmd|\\.vb|\\.vbs|\\.vbscript|\\.vbe|\\.js|\\.jse|\\.ws|\\.wsf))|(?i:(\\.acm|\\.ax|\\.com|\\.cpl|\\.dic|\\.dll|\\.drv|\\.ds|\\.efi|\\.exe|\\.grm|\\.iec|\\.ime|\\.lex|\\.msstyles|\\.mui|\\.ocx|\\.olb|\\.rll|\\.rs|\\.scr|\\.sys|\\.tlb|\\.tsp|\\.winmd|\\.node))))$'"
+  },
   "Condition": "$target",
   "Actions": null
 }
@@ -2940,14 +2940,14 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$ctwdef: CallTrace ~= '(?i:windows defender)'",
-    "$ga: GrantedAccess &= '0x10'",
-    "$lsass: TargetImage ~= '(?i:\\\\lsass\\.exe$)'",
-    "$wmiprvse: SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)wbem\\\\wmiprvse\\.exe)'",
-    "$taskmgr: SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)taskmgr\\.exe)'",
-    "$boot: SourceImage ~= '(?i:C:\\\\Windows\\\\system32\\\\(wininit|csrss)\\.exe)'"
-  ],
+  "Matches": {
+    "$ctwdef": "CallTrace ~= '(?i:windows defender)'",
+    "$ga": "GrantedAccess &= '0x10'",
+    "$lsass": "TargetImage ~= '(?i:\\\\lsass\\.exe$)'",
+    "$wmiprvse": "SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)wbem\\\\wmiprvse\\.exe)'",
+    "$taskmgr": "SourceImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)taskmgr\\.exe)'",
+    "$boot": "SourceImage ~= '(?i:C:\\\\Windows\\\\system32\\\\(wininit|csrss)\\.exe)'"
+  },
   "Condition": "$lsass and $ga and !($ctwdef or $wmiprvse or $taskmgr or $boot)",
   "Actions": null
 }
@@ -2976,11 +2976,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$im: Image ~= '(?i:^c:\\\\windows\\\\sys(wow64|tem32)\\\\rundll32.exe$)'",
-    "$pgfiles: ImageLoaded ~= '(?i:^C:\\\\(PROGRA~2|Program Files.*?)\\\\)'",
-    "$windows: ImageLoaded ~= '(?i:^C:\\\\Windows\\\\)'"
-  ],
+  "Matches": {
+    "$im": "Image ~= '(?i:^c:\\\\windows\\\\sys(wow64|tem32)\\\\rundll32.exe$)'",
+    "$pgfiles": "ImageLoaded ~= '(?i:^C:\\\\(PROGRA~2|Program Files.*?)\\\\)'",
+    "$windows": "ImageLoaded ~= '(?i:^C:\\\\Windows\\\\)'"
+  },
   "Condition": "$im and !($pgfiles or $windows)",
   "Actions": null
 }
@@ -3004,11 +3004,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$parent: ParentImage ~= '(?i:C:\\\\Windows\\\\(System32|SysWOW64)\\\\services\\.exe)'",
-    "$windows: Image ~= '(?i:C:\\\\Windows\\\\)'",
-    "$programfile: Image ~= '(?i:C:\\\\(PROGRA~2|Program Files.*?)\\\\.*)'"
-  ],
+  "Matches": {
+    "$parent": "ParentImage ~= '(?i:C:\\\\Windows\\\\(System32|SysWOW64)\\\\services\\.exe)'",
+    "$windows": "Image ~= '(?i:C:\\\\Windows\\\\)'",
+    "$programfile": "Image ~= '(?i:C:\\\\(PROGRA~2|Program Files.*?)\\\\.*)'"
+  },
   "Condition": "$parent and !$windows and !$programfile",
   "Actions": null
 }
@@ -3030,11 +3030,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$sc: Image ~= '(?i:sc.exe$)'",
-    "$op: CommandLine ~= '(?i: (create) )'",
-    "$binpath: CommandLine ~= '?i:(binPath=.*?C:\\\\Windows)'"
-  ],
+  "Matches": {
+    "$sc": "Image ~= '(?i:sc.exe$)'",
+    "$op": "CommandLine ~= '(?i: (create) )'",
+    "$binpath": "CommandLine ~= '?i:(binPath=.*?C:\\\\Windows)'"
+  },
   "Condition": "$sc and $op and !$binpath",
   "Actions": null
 }
@@ -3058,13 +3058,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$eventtype: EventType = 'SetValue'",
-    "$key1: TargetObject ~= '(?i:^HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\.*?\\\\ImagePath$)'",
-    "$key2: TargetObject ~= '(?i:^HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\.*?\\\\Parameters\\\\ServiceDll$)'",
-    "$systemroot: Details ~= '(?i:%%SystemRoot%%)'",
-    "$service: Image ~= '(?i:C:\\\\Windows\\\\system32\\\\services.exe)'"
-  ],
+  "Matches": {
+    "$eventtype": "EventType = 'SetValue'",
+    "$key1": "TargetObject ~= '(?i:^HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\.*?\\\\ImagePath$)'",
+    "$key2": "TargetObject ~= '(?i:^HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\.*?\\\\Parameters\\\\ServiceDll$)'",
+    "$systemroot": "Details ~= '(?i:%%SystemRoot%%)'",
+    "$service": "Image ~= '(?i:C:\\\\Windows\\\\system32\\\\services.exe)'"
+  },
   "Condition": "$eventtype and ($key1 or $key2) and !($systemroot or $service)",
   "Actions": null
 }
@@ -3088,10 +3088,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$svchost: Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\svchost\\.exe$)'",
-    "$pservices: ParentImage ~= '(?i:^C:\\\\Windows\\\\sys(tem32|wow64)\\\\(services|svchost)\\.exe$)'"
-  ],
+  "Matches": {
+    "$svchost": "Image ~= '(?i:^c:\\\\windows\\\\sys(tem32|wow64)\\\\svchost\\.exe$)'",
+    "$pservices": "ParentImage ~= '(?i:^C:\\\\Windows\\\\sys(tem32|wow64)\\\\(services|svchost)\\.exe$)'"
+  },
   "Condition": "$svchost and !$pservices",
   "Actions": null
 }
@@ -3114,10 +3114,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$im: Image ~= '(?i:\\\\svchost)'",
-    "$svchost: Image ~= '(?i:c:\\\\windows\\\\sys(tem32|wow64)\\\\svchost.exe$)'"
-  ],
+  "Matches": {
+    "$im": "Image ~= '(?i:\\\\svchost)'",
+    "$svchost": "Image ~= '(?i:c:\\\\windows\\\\sys(tem32|wow64)\\\\svchost.exe$)'"
+  },
   "Condition": "$im and !$svchost",
   "Actions": null
 }
@@ -3141,10 +3141,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$im: Image ~= '(?i:C:\\\\Windows\\\\System32\\\\svchost\\.exe)'",
-    "$unsigned: Signed = 'false'"
-  ],
+  "Matches": {
+    "$im": "Image ~= '(?i:C:\\\\Windows\\\\System32\\\\svchost\\.exe)'",
+    "$unsigned": "Signed = 'false'"
+  },
   "Condition": "$im and $unsigned",
   "Actions": null
 }
@@ -3168,10 +3168,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$im: Image ~= '(?i:C:\\\\Windows\\\\System32\\\\svchost\\.exe)'",
-    "$trusted: Signature ~= '^(Microsoft Windows|Microsoft Corporation|Microsoft Windows Component Publisher|Microsoft Windows Publisher|Microsoft Windows 3rd party Component)$'"
-  ],
+  "Matches": {
+    "$im": "Image ~= '(?i:C:\\\\Windows\\\\System32\\\\svchost\\.exe)'",
+    "$trusted": "Signature ~= '^(Microsoft Windows|Microsoft Corporation|Microsoft Windows Component Publisher|Microsoft Windows Publisher|Microsoft Windows 3rd party Component)$'"
+  },
   "Condition": "$im and !$trusted",
   "Actions": null
 }
@@ -3193,7 +3193,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -3216,12 +3216,12 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$set: EventType = 'SetValue'",
-    "$del: EventType = 'DeleteValue'",
-    "$sysmon: Image ~= '(?i:C:\\\\Windows\\\\Sysmon.exe)'",
-    "$target: TargetObject ~= '(?i:HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\SysmonDrv\\\\Parameters\\\\(Options|HashingAlgorithm|Rules))'"
-  ],
+  "Matches": {
+    "$set": "EventType = 'SetValue'",
+    "$del": "EventType = 'DeleteValue'",
+    "$sysmon": "Image ~= '(?i:C:\\\\Windows\\\\Sysmon.exe)'",
+    "$target": "TargetObject ~= '(?i:HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\SysmonDrv\\\\Parameters\\\\(Options|HashingAlgorithm|Rules))'"
+  },
   "Condition": "$target and ($set or $del) and !$sysmon",
   "Actions": null
 }
@@ -3244,11 +3244,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$domainBL: extract('(?P<dom>\\w+\\.\\w+$)',QueryName) in misp'",
-    "$subdomainBL: extract('(?P<sub>\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'",
-    "$subsubdomainBL: extract('(?P<subsub>\\w+\\.\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'"
-  ],
+  "Matches": {
+    "$domainBL": "extract('(?P<dom>\\w+\\.\\w+$)',QueryName) in misp'",
+    "$subdomainBL": "extract('(?P<sub>\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'",
+    "$subsubdomainBL": "extract('(?P<subsub>\\w+\\.\\w+\\.\\w+\\.\\w+$)',QueryName) in misp'"
+  },
   "Condition": "$domainBL or $subdomainBL or $subsubdomainBL",
   "Actions": null
 }
@@ -3270,11 +3270,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$sysmon: Product = 'Sysinternals Sysmon'",
-    "$sysmonim: Image ~= '(?i:C:\\\\Windows\\\\.*sysmon.*)'",
-    "$arg: CommandLine ~= '(?i:\\s-c\\s*$)'"
-  ],
+  "Matches": {
+    "$sysmon": "Product = 'Sysinternals Sysmon'",
+    "$sysmonim": "Image ~= '(?i:C:\\\\Windows\\\\.*sysmon.*)'",
+    "$arg": "CommandLine ~= '(?i:\\s-c\\s*$)'"
+  },
   "Condition": "($sysmon or $sysmonim) and $arg",
   "Actions": null
 }
@@ -3296,11 +3296,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$create: EventType = 'CreateKey'",
-    "$sysmon: Image ~= '(?i:C:\\\\Windows\\\\Sysmon.exe)'",
-    "$target: TargetObject ~= '(?i:^HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\SysmonDrv\\\\Parameters)'"
-  ],
+  "Matches": {
+    "$create": "EventType = 'CreateKey'",
+    "$sysmon": "Image ~= '(?i:C:\\\\Windows\\\\Sysmon.exe)'",
+    "$target": "TargetObject ~= '(?i:^HKLM\\\\System\\\\CurrentControlSet\\\\services\\\\SysmonDrv\\\\Parameters)'"
+  },
   "Condition": "$target and $create and !$sysmon",
   "Actions": null
 }
@@ -3322,9 +3322,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$start: State = 'Started'"
-  ],
+  "Matches": {
+    "$start": "State = 'Started'"
+  },
   "Condition": "!$start",
   "Actions": null
 }
@@ -3346,9 +3346,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\systeminfo\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\systeminfo\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -3370,9 +3370,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\taskkill\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\taskkill\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -3394,9 +3394,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\tasklist\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\tasklist\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }
@@ -3418,13 +3418,13 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$dstlocalhost: DestinationIp = '127.0.0.1'",
-    "$dstprivip: DestinationIp ~= '(?i:(^127\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^192\\.168\\.))'",
-    "$unk: DestinationPortName ~= '^$'",
-    "$system: Image ~= '^(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)'",
-    "$init: Initiated = 'true'"
-  ],
+  "Matches": {
+    "$dstlocalhost": "DestinationIp = '127.0.0.1'",
+    "$dstprivip": "DestinationIp ~= '(?i:(^127\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^192\\.168\\.))'",
+    "$unk": "DestinationPortName ~= '^$'",
+    "$system": "Image ~= '^(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)'",
+    "$init": "Initiated = 'true'"
+  },
   "Condition": "!$system and !$dstprivip and !$dstlocalhost and $unk and $init",
   "Actions": null
 }
@@ -3446,14 +3446,14 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$dstlocalhostv6: DestinationIp = '0:0:0:0:0:0:0:1'",
-    "$dstlocalhost: DestinationIp = '127.0.0.1'",
-    "$dstprivip: DestinationIp ~= '(?i:(^127\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^192\\.168\\.))'",
-    "$unk: DestinationPortName ~= '^$'",
-    "$system: Image ~= '^(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)'",
-    "$init: Initiated = 'true'"
-  ],
+  "Matches": {
+    "$dstlocalhostv6": "DestinationIp = '0:0:0:0:0:0:0:1'",
+    "$dstlocalhost": "DestinationIp = '127.0.0.1'",
+    "$dstprivip": "DestinationIp ~= '(?i:(^127\\.)|(^10\\.)|(^172\\.1[6-9]\\.)|(^172\\.2[0-9]\\.)|(^172\\.3[0-1]\\.)|(^192\\.168\\.))'",
+    "$unk": "DestinationPortName ~= '^$'",
+    "$system": "Image ~= '^(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)'",
+    "$init": "Initiated = 'true'"
+  },
   "Condition": "!$system and $dstprivip and !($dstlocalhost or $dstlocalhostv6) and $unk and $init",
   "Actions": null
 }
@@ -3475,14 +3475,14 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exist: Services ~= '.'",
-    "$na: Services = 'N/A'",
-    "$hosted: Image ~= '(?i:\\\\(lsass|svchost)\\.exe$)'",
-    "$sysmon: Services = 'Sysmon64'",
-    "$win10shared: Services ~= '(?i:(^|,)(AJRouter|AppIDSvc|AppMgmt|AssignedAccessManagerSvc|AxInstSV|BDESVC|BFE|BrokerInfrastructure|BTAGService|bthserv|CertPropSvc|CoreMessagingRegistrar|CscService|DcomLaunch|DeviceAssociationService|DevQueryBroker|diagsvc|DisplayEnhancementService|dmwappushservice|dot3svc|DsSvc|Eaphost|EFS|embeddedmode|EntAppSvc|fdPHost|FDResPub|fhsvc|FrameServer|GraphicsPerfSvc|hidserv|HvHost|icssvc|IKEEXT|IpxlatCfgSvc|KeyIso|KtmRm|lltdsvc|LxpSvc|mpssvc|MSiSCSI|NaturalAuthentication|NcaSvc|NcdAutoSetup|Netlogon|Netman|NetSetupSvc|NetTcpPortSharing|p2pimsvc|p2psvc|PeerDistSvc|pla|PNRPAutoReg|PNRPsvc|PolicyAgent|Power|PrintNotify|QWAVE|RasAuto|RasMan|RemoteAccess|RemoteRegistry|RetailDemo|RmSvc|RpcEptMapper|RpcSs|SamSs|SCardSvr|ScDeviceEnum|SCPolicySvc|seclogon|SensorService|SensrSvc|SessionEnv|SharedAccess|SharedRealitySvc|shpamsvc|SmsRouter|svsvc|SystemEventsBroker|TapiSrv|TermService|TroubleshootingSvc|tzautoupdate|UmRdpService|upnphost|VaultSvc|vmicguestinterface|vmicheartbeat|vmickvpexchange|vmicrdv|vmicshutdown|vmictimesync|vmicvmsession|vmicvss|W32Time|WalletService|WbioSrvc|wcncsvc|WebClient|Wecsvc|WEPHOSTSVC|wercplsupport|WFDSConMgrSvc|WiaRpc|WinRM|wlpasvc|WManSvc|workfolderssvc|WwanSvc|XblAuthManager|XblGameSave|XboxGipSvc|XboxNetApiSvc|AarSvc_\\w+|BcastDVRUserService_\\w+|BluetoothUserService_\\w+|CaptureService_\\w+|ConsentUxUserSvc_\\w+|DeviceAssociationBrokerSvc_\\w+|DevicePickerUserSvc_\\w+|DevicesFlowUserSvc_\\w+|MessagingService_\\w+|OneSyncSvc_\\w+|PimIndexMaintenanceSvc_\\w+|PrintWorkflowUserSvc_\\w+|UnistoreSvc_\\w+|UserDataSvc_\\w+)(,|$))'",
-    "$win10svcs: Services ~= '(?i:^(ALG|Appinfo|AppReadiness|AppVClient|AppXSvc|AudioEndpointBuilder|Audiosrv|autotimesvc|BITS|BthAvctpSvc|camsvc|CDPSvc|ClipSVC|COMSysApp|CryptSvc|defragsvc|DeviceInstall|Dhcp|diagnosticshub.standardcollector.service|DiagTrack|DispBrokerDesktopSvc|DmEnrollmentSvc|Dnscache|DoSvc|DPS|DsmSvc|DusmSvc|EventLog|EventSystem|Fax|FontCache|gpsvc|InstallService|iphlpsvc|LanmanServer|LanmanWorkstation|lfsvc|LicenseManager|lmhosts|LSM|MapsBroker|MSDTC|msiserver|NcbService|netprofm|NgcCtnrSvc|NgcSvc|NlaSvc|nsi|PcaSvc|perceptionsimulation|PerfHost|PhoneSvc|PlugPlay|ProfSvc|PushToInstall|RpcLocator|Schedule|SDRSVC|SecurityHealthService|SEMgrSvc|SENS|Sense|SensorDataService|SgrmBroker|ShellHWDetection|smphost|SNMPTRAP|spectrum|Spooler|sppsvc|SSDPSRV|ssh-agent|SstpSvc|StateRepository|stisvc|StorSvc|swprv|SysMain|TabletInputService|Themes|TieringEngineService|TimeBrokerSvc|TokenBroker|TrkWks|TrustedInstaller|UevAgentService|UserManager|UsoSvc|VacSvc|vds|VSS|WaaSMedicSvc|WarpJITSvc|wbengine|Wcmsvc|WdiServiceHost|WdiSystemHost|WdNisSvc|WerSvc|WinDefend|WinHttpAutoProxySvc|Winmgmt|wisvc|WlanSvc|wlidsvc|wmiApSrv|WMPNetworkSvc|WpcMonSvc|WPDBusEnum|WpnService|wscsvc|WSearch|wuauserv|cbdhsvc_\\w+|CDPUserSvc_\\w+|WpnUserService_\\w+)$)'"
-  ],
+  "Matches": {
+    "$exist": "Services ~= '.'",
+    "$na": "Services = 'N/A'",
+    "$hosted": "Image ~= '(?i:\\\\(lsass|svchost)\\.exe$)'",
+    "$sysmon": "Services = 'Sysmon64'",
+    "$win10shared": "Services ~= '(?i:(^|,)(AJRouter|AppIDSvc|AppMgmt|AssignedAccessManagerSvc|AxInstSV|BDESVC|BFE|BrokerInfrastructure|BTAGService|bthserv|CertPropSvc|CoreMessagingRegistrar|CscService|DcomLaunch|DeviceAssociationService|DevQueryBroker|diagsvc|DisplayEnhancementService|dmwappushservice|dot3svc|DsSvc|Eaphost|EFS|embeddedmode|EntAppSvc|fdPHost|FDResPub|fhsvc|FrameServer|GraphicsPerfSvc|hidserv|HvHost|icssvc|IKEEXT|IpxlatCfgSvc|KeyIso|KtmRm|lltdsvc|LxpSvc|mpssvc|MSiSCSI|NaturalAuthentication|NcaSvc|NcdAutoSetup|Netlogon|Netman|NetSetupSvc|NetTcpPortSharing|p2pimsvc|p2psvc|PeerDistSvc|pla|PNRPAutoReg|PNRPsvc|PolicyAgent|Power|PrintNotify|QWAVE|RasAuto|RasMan|RemoteAccess|RemoteRegistry|RetailDemo|RmSvc|RpcEptMapper|RpcSs|SamSs|SCardSvr|ScDeviceEnum|SCPolicySvc|seclogon|SensorService|SensrSvc|SessionEnv|SharedAccess|SharedRealitySvc|shpamsvc|SmsRouter|svsvc|SystemEventsBroker|TapiSrv|TermService|TroubleshootingSvc|tzautoupdate|UmRdpService|upnphost|VaultSvc|vmicguestinterface|vmicheartbeat|vmickvpexchange|vmicrdv|vmicshutdown|vmictimesync|vmicvmsession|vmicvss|W32Time|WalletService|WbioSrvc|wcncsvc|WebClient|Wecsvc|WEPHOSTSVC|wercplsupport|WFDSConMgrSvc|WiaRpc|WinRM|wlpasvc|WManSvc|workfolderssvc|WwanSvc|XblAuthManager|XblGameSave|XboxGipSvc|XboxNetApiSvc|AarSvc_\\w+|BcastDVRUserService_\\w+|BluetoothUserService_\\w+|CaptureService_\\w+|ConsentUxUserSvc_\\w+|DeviceAssociationBrokerSvc_\\w+|DevicePickerUserSvc_\\w+|DevicesFlowUserSvc_\\w+|MessagingService_\\w+|OneSyncSvc_\\w+|PimIndexMaintenanceSvc_\\w+|PrintWorkflowUserSvc_\\w+|UnistoreSvc_\\w+|UserDataSvc_\\w+)(,|$))'",
+    "$win10svcs": "Services ~= '(?i:^(ALG|Appinfo|AppReadiness|AppVClient|AppXSvc|AudioEndpointBuilder|Audiosrv|autotimesvc|BITS|BthAvctpSvc|camsvc|CDPSvc|ClipSVC|COMSysApp|CryptSvc|defragsvc|DeviceInstall|Dhcp|diagnosticshub.standardcollector.service|DiagTrack|DispBrokerDesktopSvc|DmEnrollmentSvc|Dnscache|DoSvc|DPS|DsmSvc|DusmSvc|EventLog|EventSystem|Fax|FontCache|gpsvc|InstallService|iphlpsvc|LanmanServer|LanmanWorkstation|lfsvc|LicenseManager|lmhosts|LSM|MapsBroker|MSDTC|msiserver|NcbService|netprofm|NgcCtnrSvc|NgcSvc|NlaSvc|nsi|PcaSvc|perceptionsimulation|PerfHost|PhoneSvc|PlugPlay|ProfSvc|PushToInstall|RpcLocator|Schedule|SDRSVC|SecurityHealthService|SEMgrSvc|SENS|Sense|SensorDataService|SgrmBroker|ShellHWDetection|smphost|SNMPTRAP|spectrum|Spooler|sppsvc|SSDPSRV|ssh-agent|SstpSvc|StateRepository|stisvc|StorSvc|swprv|SysMain|TabletInputService|Themes|TieringEngineService|TimeBrokerSvc|TokenBroker|TrkWks|TrustedInstaller|UevAgentService|UserManager|UsoSvc|VacSvc|vds|VSS|WaaSMedicSvc|WarpJITSvc|wbengine|Wcmsvc|WdiServiceHost|WdiSystemHost|WdNisSvc|WerSvc|WinDefend|WinHttpAutoProxySvc|Winmgmt|wisvc|WlanSvc|wlidsvc|wmiApSrv|WMPNetworkSvc|WpcMonSvc|WPDBusEnum|WpnService|wscsvc|WSearch|wuauserv|cbdhsvc_\\w+|CDPUserSvc_\\w+|WpnUserService_\\w+)$)'"
+  },
   "Condition": "$exist and !($na or $sysmon or ($hosted and $win10shared) or $win10svcs)",
   "Actions": null
 }
@@ -3512,9 +3512,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$trusted: Signature ~= '^(Microsoft Windows|Microsoft Corporation)$'"
-  ],
+  "Matches": {
+    "$trusted": "Signature ~= '^(Microsoft Windows|Microsoft Corporation)$'"
+  },
   "Condition": "!$trusted",
   "Actions": null
 }
@@ -3543,11 +3543,11 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$loaded: ImageLoaded ~= '(?i:\\.exe$)'",
-    "$pservice: ParentImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)services\\.exe)'",
-    "$trusted: Signature ~= '^(Microsoft Windows|Microsoft Corporation|Microsoft Windows Component Publisher|Microsoft Windows Publisher|Microsoft Windows 3rd party Component)$'"
-  ],
+  "Matches": {
+    "$loaded": "ImageLoaded ~= '(?i:\\.exe$)'",
+    "$pservice": "ParentImage ~= '(?i:(?i:C:\\\\Windows\\\\Sys(wow64|tem32)\\\\)services\\.exe)'",
+    "$trusted": "Signature ~= '^(Microsoft Windows|Microsoft Corporation|Microsoft Windows Component Publisher|Microsoft Windows Publisher|Microsoft Windows 3rd party Component)$'"
+  },
   "Condition": "$loaded and $pservice and !$trusted",
   "Actions": null
 }
@@ -3570,10 +3570,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$pi: ParentImage ~= '^C:\\\\Users\\\\.*\\\\AppData\\\\Local\\\\Temp\\\\'",
-    "$i: Image ~= '^C:\\\\Users\\\\.*\\\\AppData\\\\Local\\\\Temp\\\\'"
-  ],
+  "Matches": {
+    "$pi": "ParentImage ~= '^C:\\\\Users\\\\.*\\\\AppData\\\\Local\\\\Temp\\\\'",
+    "$i": "Image ~= '^C:\\\\Users\\\\.*\\\\AppData\\\\Local\\\\Temp\\\\'"
+  },
   "Condition": "$pi or $i",
   "Actions": null
 }
@@ -3602,10 +3602,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$wmi: Image ~= '(?i:\\\\wmic\\.exe$)'",
-    "$format: CommandLine ~= '(?i:/format:.*\\.xsl)'"
-  ],
+  "Matches": {
+    "$wmi": "Image ~= '(?i:\\\\wmic\\.exe$)'",
+    "$format": "CommandLine ~= '(?i:/format:.*\\.xsl)'"
+  },
   "Condition": "$wmi and $format",
   "Actions": null
 }
@@ -3636,7 +3636,7 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [],
+  "Matches": {},
   "Condition": "",
   "Actions": null
 }
@@ -3665,9 +3665,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$wmi: ParentImage ~= '(?i:\\\\wmiprvse\\.exe$)'"
-  ],
+  "Matches": {
+    "$wmi": "ParentImage ~= '(?i:\\\\wmiprvse\\.exe$)'"
+  },
   "Condition": "$wmi",
   "Actions": null
 }
@@ -3690,10 +3690,10 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$wtpi: ParentImage ~= '^C:\\\\Windows\\\\Temp'",
-    "$wti: Image ~= '^C:\\\\Windows\\\\Temp'"
-  ],
+  "Matches": {
+    "$wtpi": "ParentImage ~= '^C:\\\\Windows\\\\Temp'",
+    "$wti": "Image ~= '^C:\\\\Windows\\\\Temp'"
+  },
   "Condition": "$wtpi or $wti",
   "Actions": null
 }
@@ -3715,9 +3715,9 @@
     "Filter": false,
     "Schema": "2.0.0"
   },
-  "Matches": [
-    "$exe: Image ~= '(?i:\\\\xcopy\\.exe$)'"
-  ],
+  "Matches": {
+    "$exe": "Image ~= '(?i:\\\\xcopy\\.exe$)'"
+  },
   "Condition": "$exe",
   "Actions": null
 }

@@ -102,9 +102,9 @@ func TestLoad(t *testing.T) {
 		"LogType": "winevt",
 		"Schema": "2.0.0"
 	},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}`
 	e := NewEngine()
@@ -123,9 +123,9 @@ func TestMatch(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}`
 
@@ -149,7 +149,7 @@ func TestShouldNotMatch(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [666]},
 		"Schema": "2.0.0"
 		},
-	"Matches": [],
+	"Matches": {},
 	"Condition": ""
 	}`
 
@@ -186,9 +186,9 @@ func TestMatchAttck(t *testing.T) {
 		],
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}`
 
@@ -215,9 +215,9 @@ func TestMatchByTag(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}
 
@@ -229,9 +229,9 @@ func TestMatchByTag(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}
 	`
@@ -262,9 +262,9 @@ func TestSimpleRule(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}
 	`
@@ -307,10 +307,10 @@ func TestNotOrRule(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
-		"$b: CurrentDirectory = 'C:\\Windows\\system32\\'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
+		"$b": "CurrentDirectory = 'C:\\Windows\\system32\\'"
+		},
 	"Condition": "!($a or $b)"
 	}
 	`
@@ -353,10 +353,10 @@ func TestNotAndRule(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
-		"$b: CurrentDirectory = 'C:\\Windows\\system32\\'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
+		"$b": "CurrentDirectory = 'C:\\Windows\\system32\\'"
+		},
 	"Condition": "!($a and !$b)"
 	}
 	`
@@ -399,14 +399,14 @@ func TestComplexRule(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
-		"$b: CurrentDirectory = 'C:\\Windows\\system32\\'",
-		"$c: CommandLine = 'C:\\Windows\\system32\\devicecensus.exe'",
-		"$d: Image = 'C:\\Windows\\System32\\DeviceCensus.exe'",
-		"$e: IntegrityLevel = 'Blop'",
-		"$f: LogonGuid = 'B2796A13-618F-5881-0000-0020E7030000'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
+		"$b": "CurrentDirectory = 'C:\\Windows\\system32\\'",
+		"$c": "CommandLine = 'C:\\Windows\\system32\\devicecensus.exe'",
+		"$d": "Image = 'C:\\Windows\\System32\\DeviceCensus.exe'",
+		"$e": "IntegrityLevel = 'Blop'",
+		"$f": "LogonGuid = 'B2796A13-618F-5881-0000-0020E7030000'"
+		},
 	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and $f"
 	}
 	`
@@ -450,11 +450,11 @@ func TestContainer(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
-		"$sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
-		"$sha256: extract('SHA256=(?P<sha1>[A-F0-9]{64})', Hashes) in blacklist"
-		],
+	"Matches": {
+		"$md5": "extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
+		"$sha1": "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
+		"$sha256": "extract('SHA256=(?P<sha1>[A-F0-9]{64})', Hashes) in blacklist"
+		},
 	"Condition": "$md5 and $sha1 and $sha256"
 	}
 	`
@@ -502,7 +502,7 @@ func TestFiltered1(t *testing.T) {
 		"Filter": true,
 		"Schema": "2.0.0"
 		},
-	"Matches": [],
+	"Matches": {},
 	"Condition": ""
 	}
 	`
@@ -548,7 +548,7 @@ func TestFiltered2(t *testing.T) {
 		"Filter": true,
 		"Schema": "2.0.0"
 		},
-	"Matches": [],
+	"Matches": {},
 	"Condition": ""
 	}
 	
@@ -559,9 +559,9 @@ func TestFiltered2(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}
 	`
@@ -608,7 +608,7 @@ func TestNotFiltered(t *testing.T) {
 		"Filter": true,
 		"Schema": "2.0.0"
 		},
-	"Matches": [],
+	"Matches": {},
 	"Condition": ""
 	}
 	`
@@ -641,9 +641,9 @@ func TestLoadDirectory(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a",
 	"Actions": ["kill", "kill", "block", "block"]
 	}`, i)
@@ -663,9 +663,9 @@ func TestActions(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a",
 	"Actions": ["kill", "kill", "block", "block"]
 	}`
@@ -692,9 +692,9 @@ func TestDefaultActions(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}`
 
@@ -779,9 +779,9 @@ func TestGetRule(t *testing.T) {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
+		},
 	"Condition": "$a"
 	}`
 
@@ -859,10 +859,10 @@ func TestAbsolutePath(t *testing.T) {
 		"Events" : {"kunai": []},
 		"Schema": "2.0.0"
 		},
-	"Matches": [
-		"$a: exe/file = '/usr/bin/ping'",
-		"$b: /data/exe/md5 = '2d57c5245652e40bbf51edaaa3be65bd'"
-	],
+	"Matches": {
+		"$a": "exe/file = '/usr/bin/ping'",
+		"$b": "/data/exe/md5 = '2d57c5245652e40bbf51edaaa3be65bd'"
+	},
 	"Condition": "$a and $b"
 	}`
 

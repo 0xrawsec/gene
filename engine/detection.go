@@ -10,7 +10,7 @@ import (
 
 type Detection struct {
 	Signature     *datastructs.Set
-	Criticality   int
+	Severity      int
 	ATTACK        []Attack         `json:",omitempty"`
 	Actions       *datastructs.Set `json:",omitempty"`
 	attackIds     *datastructs.Set
@@ -32,7 +32,7 @@ func (d *Detection) MarshalJSON() ([]byte, error) {
 	}
 
 	o.SetField("Signature", d.Signature)
-	o.SetField("Criticality", d.Criticality)
+	o.SetField("Severity", d.Severity)
 	if d.HasAttack() {
 		o.SetField("ATTACK", o.ConvertSlice(d.ATTACK))
 	}
@@ -87,11 +87,11 @@ func (d *Detection) Update(r *CompiledRule) {
 		return
 	}
 
-	// updating criticality information
-	if r.Criticality+d.Criticality > 10 {
-		d.Criticality = 10
+	// updating severity information
+	if r.Severity+d.Severity > 10 {
+		d.Severity = 10
 	} else {
-		d.Criticality += r.Criticality
+		d.Severity += r.Severity
 	}
 
 	// updating attack information

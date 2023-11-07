@@ -28,7 +28,7 @@ import (
 //////////////////////////// Utilities //////////////////////////////
 
 func matchEvent(e *engine.Engine, evt engine.Event) {
-	matches, criticality, filtered := e.MatchOrFilter(evt)
+	matches, severity, filtered := e.MatchOrFilter(evt)
 	// if we don't want to display filtered events
 	if flNoFilter && len(matches) == 0 && filtered {
 		return
@@ -37,10 +37,10 @@ func matchEvent(e *engine.Engine, evt engine.Event) {
 	// We print only if we are not in test mode
 	if (len(matches) > 0 || filtered) && !flTest {
 		// Prints out the events with timestamp or not
-		if flShowTimestamp && (criticality >= criticalityThresh || filtered) {
+		if flShowTimestamp && (severity >= severityTresh || filtered) {
 			fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
 		} else {
-			if criticality >= criticalityThresh || filtered {
+			if severity >= severityTresh || filtered {
 				fmt.Println(string(evtx.ToJSON(evt)))
 			}
 		}
@@ -210,7 +210,7 @@ var (
 	namesVar   args.ListVar
 	dumpsVar   args.ListVar
 
-	criticalityThresh int
+	severityTresh int
 
 	whitelist string
 	blacklist string
@@ -242,7 +242,7 @@ func main() {
 	flag.StringVar(&cpuprofile, "cpuprofile", cpuprofile, "Profile CPU")
 	flag.StringVar(&whitelist, "whitelist", whitelist, "File containing values to insert into the whitelist")
 	flag.StringVar(&blacklist, "blacklist", blacklist, "File containing values to insert into the blacklist")
-	flag.IntVar(&criticalityThresh, "c", criticalityThresh, "Criticality treshold. Prints only if criticality above threshold")
+	flag.IntVar(&severityTresh, "s", severityTresh, "Severity treshold. Prints only if severity above threshold")
 	flag.IntVar(&jobs, "jobs", jobs, "Number of parallel jobs to run. It may result in events printed in different order than provided (use -t to print timestamp and re-order). If <= 0 takes all available processors")
 	flag.Var(&ruleExts, "e", "Rule file extensions to load")
 	flag.Var(&tagsVar, "tags", "Tags to select rules to compile (comma separated)")

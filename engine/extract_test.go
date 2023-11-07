@@ -11,22 +11,22 @@ var (
 
 	// key: extract, value: test string
 	extractMap = map[string]string{
-		fmt.Sprintf("$inTest: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in %s", black):         "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
-		fmt.Sprintf("$inTest: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in %s", black):       "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
-		fmt.Sprintf("$inTest: extract('SHA256=(?P<sha256>[A-F0-9]{64})', Hashes) in %s", black):   "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
-		fmt.Sprintf("$inTest: extract('IMPHASH=(?P<imphash>[A-F0-9]{32})', Hashes) in %s", black): "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
+		fmt.Sprintf("extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in %s", black):         "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
+		fmt.Sprintf("extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in %s", black):       "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
+		fmt.Sprintf("extract('SHA256=(?P<sha256>[A-F0-9]{64})', Hashes) in %s", black):   "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
+		fmt.Sprintf("extract('IMPHASH=(?P<imphash>[A-F0-9]{32})', Hashes) in %s", black): "SHA1=AAE17944782B25F41F7B3A756532B4923F4AE817,MD5=6C60B5ACA7442EFB794082CDACFC001C,SHA256=FC1D9124856A70FF232EF3057D66BEE803295847624CE23B4D0217F23AF52C75,IMPHASH=FAAD2D5BF5C0CA9639E07A49E8C5D8AE",
 	}
 )
 
 func TestExtract(t *testing.T) {
 	for ext, test := range extractMap {
-		ae, err := ParseContainerMatch(ext, &TypeWinevt)
+		ae, err := parseContainerMatch("$inTest", ext, &TypeWinevt)
 		if err != nil {
 			t.Logf("Failed to parse extract: %s", err)
 			t.Fail()
 		} else {
 			t.Logf("Parsed extract: %s", ae)
-			err = ae.Compile()
+			err = ae.compile()
 			if err != nil {
 				t.Logf("Failed to compile: %s", err)
 				t.Fail()
@@ -44,7 +44,7 @@ func TestExtract(t *testing.T) {
 }
 
 func TestExtractContainerName(t *testing.T) {
-	template := "$inTest: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in %s"
+	template := "extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in %s"
 	names := []string{
 		"container-a",
 		"container_b",
@@ -53,7 +53,7 @@ func TestExtractContainerName(t *testing.T) {
 
 	for _, n := range names {
 		atom := fmt.Sprintf(template, n)
-		if cm, err := ParseContainerMatch(atom, &TypeWinevt); err != nil {
+		if cm, err := parseContainerMatch("$inTest", atom, &TypeWinevt); err != nil {
 			t.Error(err)
 		} else {
 			if cm.Container != n {
@@ -73,13 +73,13 @@ func TestExtractFromEvent(t *testing.T) {
 		panic(err)
 	}
 	for ext := range extractMap {
-		ae, err := ParseContainerMatch(ext, &TypeWinevt)
+		ae, err := parseContainerMatch("$inTest", ext, &TypeWinevt)
 		if err != nil {
 			t.Logf("Failed to parse extract: %s", err)
 			t.Fail()
 		} else {
 			t.Logf("Parsed extract: %s", ae)
-			err = ae.Compile()
+			err = ae.compile()
 			if err != nil {
 				t.Logf("Failed to compile: %s", err)
 				t.Fail()
@@ -111,19 +111,19 @@ func TestExtractMatch(t *testing.T) {
 		panic(err)
 	}
 	for ext := range extractMap {
-		ae, err := ParseContainerMatch(ext, &TypeWinevt)
+		ae, err := parseContainerMatch("$inTest", ext, &TypeWinevt)
 		if err != nil {
 			t.Logf("Failed to parse extract: %s", err)
 			t.Fail()
 		} else {
 			t.Logf("Parsed extract: %s", ae)
-			err = ae.Compile()
+			err = ae.compile()
 			if err != nil {
 				t.Logf("Failed to compile: %s", err)
 				t.Fail()
 				continue
 			}
-			ae.SetContainerDB(containers)
+			ae.setContainerDB(containers)
 			if !ae.Match(&evt) {
 				t.Logf("Not matching: %s", ae)
 				t.Fail()

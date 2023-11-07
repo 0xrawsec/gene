@@ -36,10 +36,10 @@ var (
       "https://super.ttp.com"
     ]
   },
-  "Matches": [
-    "$a: SomeField = '42'",
-    "$b: /Absolute/Field/Path ~= 'SomeRegex'"
-  ],
+  "Matches": {
+    "$a": "SomeField = '42'",
+    "$b": "/Absolute/Field/Path ~= 'SomeRegex'"
+  },
   "Condition": "$a or $b",
   "Actions": []
 }

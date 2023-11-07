@@ -41,27 +41,27 @@ func TestParseAtomRule(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	parse := func(m string) (err error) {
-		_, err = ParseFieldMatch(m, &TypeWinevt)
+	parse := func(mn, m string) (err error) {
+		_, err = parseFieldMatch(mn, m, &TypeWinevt)
 		return
 	}
 
-	tt.CheckErr(parse(`$hello: "Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
-	tt.CheckErr(parse(`$test: "Hashes" = 'c'est un super test'`))
-	tt.CheckErr(parse(`$h: Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
-	tt.CheckErr(parse(`$h: /Event/EventData/Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
-	tt.CheckErr(parse(`$h: Event/EventData/Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse("$hello", `"Hashes = Test" = 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse("$test", `"Hashes" = 'c'est un super test'`))
+	tt.CheckErr(parse("$h", `Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse("$h", `/Event/EventData/Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse("$h", `Event/EventData/Hashes ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
 
 	// Syntax is not correct, space is not allowed in field without quotes
-	tt.ExpectErr(parse(`$h: Event/EventData/Some Field ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`), ErrSyntax)
+	tt.ExpectErr(parse("$h", `Event/EventData/Some Field ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`), ErrSyntax)
 
 	// Spaces are accepted when field is quoted
-	tt.CheckErr(parse(`$h: "Event/EventData/Some Field" ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
+	tt.CheckErr(parse("$h", `"Event/EventData/Some Field" ~= 'B6BCE6C5312EEC2336613FF08F748DF7FA1E55FA'`))
 
 	// testing indirect matches
-	tt.CheckErr(parse(`$indmatch: SourceProcessGuid = @TargetProcessGuid`))
-	tt.CheckErr(parse(`$indmatch: /Event/EventData/SourceProcessGuid = @TargetProcessGuid`))
-	tt.CheckErr(parse(`$indmatch: /Event/EventData/SourceProcessGuid = @/Event/EventData/TargetProcessGuid`))
+	tt.CheckErr(parse("$indmatch", `SourceProcessGuid = @TargetProcessGuid`))
+	tt.CheckErr(parse("$indmatch", `/Event/EventData/SourceProcessGuid = @TargetProcessGuid`))
+	tt.CheckErr(parse("$indmatch", `/Event/EventData/SourceProcessGuid = @/Event/EventData/TargetProcessGuid`))
 }
 
 func TestParseCondition(t *testing.T) {
@@ -129,18 +129,18 @@ func TestRule(t *testing.T) {
 	er := NewCompiledRule(Version{})
 	er.EventFilter = NewEventFilter(map[string][]int64{"Microsoft-Windows-Sysmon/Operational": {1, 7}})
 
-	as := `$a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'`
-	a, err := ParseFieldMatch(as, &TypeWinevt)
+	as := `Hashes ~= '83514D9AAF0E168944B6D3C01110C393'`
+	a, err := parseFieldMatch("$a", as, &TypeWinevt)
 	tt.CheckErr(err)
 	er.AddMatcher(&a)
 
-	bs := `$b: Hashes ~= '83514D9AAF0E168944B6D3C011424242'`
-	b, err := ParseFieldMatch(bs, &TypeWinevt)
+	bs := `Hashes ~= '83514D9AAF0E168944B6D3C011424242'`
+	b, err := parseFieldMatch("$b", bs, &TypeWinevt)
 	tt.CheckErr(err)
 	er.AddMatcher(&b)
 
-	ym := `$y: IntegrityLevel = 'System'`
-	y, err := ParseFieldMatch(ym, &TypeWinevt)
+	ym := `IntegrityLevel = 'System'`
+	y, err := parseFieldMatch("$y", ym, &TypeWinevt)
 	tt.CheckErr(err)
 	er.AddMatcher(&y)
 
@@ -167,11 +167,11 @@ func TestLoadRule(t *testing.T) {
 		},
 		"Computers": ["DESKTOP-5SUA567"]
 		},
-	"Matches": [
-		"$a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'",
-		"$b: Hashes ~= 'Not'",
-		"$c: Image ~= '(?i:DeviceCENSUS\\.exe$)'"
-		],
+	"Matches": {
+		"$a": "Hashes ~= '83514D9AAF0E168944B6D3C01110C393'",
+		"$b": "Hashes ~= 'Not'",
+		"$c": "Image ~= '(?i:DeviceCENSUS\\.exe$)'"
+		},
 	"Condition": "$c and $a and (!$b)"
 	}`
 
@@ -186,20 +186,20 @@ func TestParseContainerMatch(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	parse := func(m string) (err error) {
-		_, err = ParseContainerMatch(m, &TypeWinevt)
+	parse := func(mn, m string) (err error) {
+		_, err = parseContainerMatch(mn, m, &TypeWinevt)
 		return
 	}
 
-	tt.CheckErr(parse("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist"))
-	tt.CheckErr(parse("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Hashes) in blacklist"))
+	tt.CheckErr(parse("$inBlacklist", "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist"))
+	tt.CheckErr(parse("$inBlacklist", "extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Hashes) in blacklist"))
 
 	// testing syntax error
-	tt.ExpectErr(parse("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Some Hashes) in blacklist"), ErrSyntax)
+	tt.ExpectErr(parse("$inBlacklist", "extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Some Hashes) in blacklist"), ErrSyntax)
 	// quoted path should not raise syntax error
-	tt.CheckErr(parse(`$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', "/Event/EventData/Some Hashes") in blacklist`))
+	tt.CheckErr(parse("$inBlacklist", `extract('SHA1=(?P<sha1>[A-F0-9]{40})', "/Event/EventData/Some Hashes") in blacklist`))
 
-	r, err := ParseContainerMatch("$inBlacklist: extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Hashes) in blacklist", &TypeWinevt)
+	r, err := parseContainerMatch("$inBlacklist", "extract('SHA1=(?P<sha1>[A-F0-9]{40})', /Event/EventData/Hashes) in blacklist", &TypeWinevt)
 	tt.CheckErr(err)
 	tt.Assert(r.path.Flags.EventDataField)
 }
@@ -215,11 +215,11 @@ func TestBlacklist(t *testing.T) {
 			"Microsoft-Windows-Sysmon/Operational": [1,7]
 		}
 	},
-	"Matches": [
-		"$sha1In: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
-		"$md5InBl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in blacklist",
-		"$md5InWl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in whitelist"
-		],
+	"Matches": {
+		"$sha1In": "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
+		"$md5InBl": "extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in blacklist",
+		"$md5InWl": "extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in whitelist"
+		},
 	"Condition": "$md5InBl and $sha1In and !$md5InWl"
 	}`
 
@@ -249,11 +249,11 @@ func TestIndirectMatch(t *testing.T) {
 			"Microsoft-Windows-Sysmon/Operational": [1,7]
 		}
 	},
-	"Matches": [
-		"$dummyIndirect: Hashes = @Hashes",
-		"$abs: /Event/System/Computer = @/Event/System/Computer",
-		"$fail: /Event/System/Computer = @/Event/System/Channel"
-		],
+	"Matches": {
+		"$dummyIndirect": "Hashes = @Hashes",
+		"$abs": "/Event/System/Computer = @/Event/System/Computer",
+		"$fail": "/Event/System/Computer = @/Event/System/Channel"
+		},
 	"Condition": "$dummyIndirect and $abs and !$fail"
 	}`
 

@@ -23,9 +23,10 @@ var (
 
 	//Regexp and its helper to ease AtomRule parsing
 	pathRe                  = `([\w/]+|".*?")`
-	fieldMatchRegexp        = regexp.MustCompile(fmt.Sprintf(`(?P<name>\$\w+):\s*(?P<operand>%s)\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`, pathRe))
+	fieldNameRegexp         = regexp.MustCompile(`^\$\w+`)
+	fieldMatchRegexp        = regexp.MustCompile(fmt.Sprintf(`^(?P<operand>%s)\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`, pathRe))
 	fieldMatchRegexpHlpr    = submatch.NewHelper(fieldMatchRegexp)
-	indFieldMatchRegexp     = regexp.MustCompile(fmt.Sprintf(`(?P<name>\$\w+):\s*(?P<operand>%s)\s*(?P<operator>=)\s+@(?P<value>%s)`, pathRe, pathRe))
+	indFieldMatchRegexp     = regexp.MustCompile(fmt.Sprintf(`^(?P<operand>%s)\s*(?P<operator>=)\s+@(?P<value>%s)`, pathRe, pathRe))
 	indFieldMatchRegexpHlpr = submatch.NewHelper(indFieldMatchRegexp)
 )
 
@@ -44,13 +45,17 @@ type FieldMatch struct {
 	iValue   interface{} // interface to store Value in another form as string
 }
 
-// IsFieldMatch returns true if s compiliant with FieldMatch syntax
-func IsFieldMatch(s string) bool {
+func isValidName(s string) bool {
+	return fieldNameRegexp.MatchString(s)
+}
+
+// isFieldMatch returns true if s compiliant with FieldMatch syntax
+func isFieldMatch(s string) bool {
 	return fieldMatchRegexp.MatchString(s) || indFieldMatchRegexp.MatchString(s)
 }
 
-// ParseFieldMatch parses a string and returns a FieldMatch
-func ParseFieldMatch(match string, format *LogType) (m FieldMatch, err error) {
+// parseFieldMatch parses a string and returns a FieldMatch
+func parseFieldMatch(name, match string, format *LogType) (m FieldMatch, err error) {
 	var hlpr submatch.Helper
 
 	// Check if the syntax of the match is valid
@@ -75,14 +80,17 @@ func ParseFieldMatch(match string, format *LogType) (m FieldMatch, err error) {
 			err = nil
 		}
 	}
+
 	if err != nil {
 		return
 	}
+
+	m.Name = name
 	m.Operand = strings.Trim(m.Operand, `"'`)
 	m.Value = strings.Trim(m.Value, `"'`)
 	m.format = format
 	// Compile the rule into a Regexp
-	err = m.Compile()
+	err = m.compile()
 	if err != nil {
 		log.Debugf("Compiling error in \"%s\": %s", match, err)
 		return m, fmt.Errorf("%w: %s", err, match)
@@ -100,8 +108,8 @@ func parseToFloat(s string) (f float64, err error) {
 	return 0, fmt.Errorf("unknown type to parse")
 }
 
-// Compile FieldMatch into a regexp
-func (f *FieldMatch) Compile() error {
+// compile FieldMatch into a regexp
+func (f *FieldMatch) compile() error {
 	var err error
 	if !f.compiled {
 		if !f.indirect {
@@ -150,9 +158,9 @@ func (f *FieldMatch) GetName() string {
 	return f.Name
 }
 
-// Match checks whether the AtomRule match the SysmonEvent
+// Match checks whether the AtomRule match an Event
 func (f *FieldMatch) Match(se Event) bool {
-	if err := f.Compile(); err != nil {
+	if err := f.compile(); err != nil {
 		panic(err)
 	}
 
@@ -208,7 +216,7 @@ func (f *FieldMatch) String() string {
 ////////////////////////////// ContainerMatch ///////////////////////////////
 
 var (
-	atomContainerMatchRegexp = regexp.MustCompile(fmt.Sprintf(`(?P<name>\$\w+):\s+extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>%s)\s*\)\s+in\s+(?P<container>[\w\.\-]+)`, pathRe))
+	atomContainerMatchRegexp = regexp.MustCompile(fmt.Sprintf(`^extract\(\s*'(?P<regexp>.*?\(\?P<(?P<rexname>.*?)>.*?\).*?)'\s*,\s*(?P<operand>%s)\s*\)\s+in\s+(?P<container>[\w\.\-]+)`, pathRe))
 	atomContainerMatchHelper = submatch.NewHelper(atomContainerMatchRegexp)
 )
 
@@ -226,8 +234,8 @@ type ContainerMatch struct {
 	containerDB    *ContainerDB
 }
 
-// ParseContainerMatch parses an extract and returns an AtomExtract from it
-func ParseContainerMatch(extract string, format *LogType) (cm *ContainerMatch, err error) {
+// parseContainerMatch parses an extract and returns an AtomExtract from it
+func parseContainerMatch(name, extract string, format *LogType) (cm *ContainerMatch, err error) {
 	cm = NewContainerMatch()
 	if !atomContainerMatchRegexp.MatchString(extract) {
 		return nil, fmt.Errorf("%w \"%s\"", ErrSyntax, extract)
@@ -235,6 +243,7 @@ func ParseContainerMatch(extract string, format *LogType) (cm *ContainerMatch, e
 	atomContainerMatchHelper.Prepare([]byte(extract))
 	atomContainerMatchHelper.Unmarshal(cm)
 
+	cm.Name = name
 	if IsAbsoluteXPath(cm.Operand) {
 		cm.path = Path(cm.Operand)
 	} else if format != nil {
@@ -246,8 +255,8 @@ func ParseContainerMatch(extract string, format *LogType) (cm *ContainerMatch, e
 	return
 }
 
-// IsContainerMatch returns true if match is compliant with ContainerMatch syntax
-func IsContainerMatch(s string) bool {
+// isContainerMatch returns true if match is compliant with ContainerMatch syntax
+func isContainerMatch(s string) bool {
 	return atomContainerMatchRegexp.MatchString(s)
 }
 
@@ -259,13 +268,13 @@ func NewContainerMatch() *ContainerMatch {
 	return ae
 }
 
-// SetContainerDB sets the containerDB member
-func (c *ContainerMatch) SetContainerDB(db *ContainerDB) {
+// setContainerDB sets the containerDB member
+func (c *ContainerMatch) setContainerDB(db *ContainerDB) {
 	c.containerDB = db
 }
 
-// Compile compiles an AtomExtract, any AtomExtract must be compiled before use
-func (c *ContainerMatch) Compile() (err error) {
+// compile compiles an AtomExtract, any AtomExtract must be compiled before use
+func (c *ContainerMatch) compile() (err error) {
 	if !c.compiled {
 		c.cExtract, err = regexp.Compile(c.Regexp)
 		if err == nil {
@@ -299,7 +308,7 @@ func (c *ContainerMatch) Extract(evt Event) (string, bool) {
 // Matcher interface the string matched against the container are converted
 // to lower case (default behaviour of ContainsString method)
 func (c *ContainerMatch) Match(evt Event) bool {
-	if err := c.Compile(); err != nil {
+	if err := c.compile(); err != nil {
 		panic(err)
 	}
 

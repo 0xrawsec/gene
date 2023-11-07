@@ -23,25 +23,25 @@ func BoundedScoreFormula(score, max int) float64 {
 
 // ReducedStats structrure definition
 type ReducedStats struct {
-	Identifier      string         `json:"identifier"`
-	CntAlerts       int            `json:"alert-count"`
-	CntBySig        map[string]int `json:"count-by-signature"`
-	UniqSigs        []string       `json:"signatures"`
-	Techniques      []string       `json:"techniques"`
-	Tactics         []string       `json:"tactics"`
-	TotalSigs       int            `json:"signature-count"`
-	SumAlertCrit    int            `json:"sum-alert-criticality"`
-	AvgAlertCrit    float64        `json:"avg-alert-criticality"`
-	StdDevAlertCrit float64        `json:"std-dev-alert-criticality"`
-	SumRuleCrit     int            `json:"sum-rule-criticality"`
-	AvgSigCrit      float64        `json:"avg-signature-criticality"`
-	StdDevSigCrit   float64        `json:"std-dev-signature-criticality"`
-	SigDiv          float64        `json:"signature-diversity"`
-	CntUniqSigs     int            `json:"count-uniq-signatures"`
-	// signature criticality metric, the higher it is the more attention should be given to the report
-	CntUniqByAvgCritBySig int `json:"signature-criticality-metric"`
-	// alert criticality metric, the higher it is the more attention should be given to the report
-	AvgAlertCritBySigDiv int `json:"alert-criticality-metric"`
+	Identifier    string         `json:"identifier"`
+	CntAlerts     int            `json:"alert-count"`
+	CntBySig      map[string]int `json:"count-by-signature"`
+	UniqSigs      []string       `json:"signatures"`
+	Techniques    []string       `json:"techniques"`
+	Tactics       []string       `json:"tactics"`
+	TotalSigs     int            `json:"signature-count"`
+	SumAlertSev   int            `json:"sum-alert-severity"`
+	AvgAlertSev   float64        `json:"avg-alert-severity"`
+	StdDevAlerSev float64        `json:"std-dev-alert-severity"`
+	SumRuleSev    int            `json:"sum-rule-severity"`
+	AvgSigSev     float64        `json:"avg-signature-severity"`
+	StdDevSigSev  float64        `json:"std-dev-signature-severity"`
+	SigDiv        float64        `json:"signature-diversity"`
+	CntUniqSigs   int            `json:"count-uniq-signatures"`
+	// signature severity metric, the higher it is the more attention should be given to the report
+	CntUniqByAvgSevBySig int `json:"signature-severity-metric"`
+	// alert severity metric, the higher it is the more attention should be given to the report
+	AvgAlertSevBySigDiv int `json:"alert-severity-metric"`
 	// aggregated metric used to sort statistic reports between them. Higher the score higher the priority
 	Score        int       `json:"score"`
 	BoundedScore float64   `json:"bounded-score"`
@@ -75,7 +75,7 @@ func (rs *ReducedStats) Copy() *ReducedStats {
 
 // Update ReducedStats with data
 func (rs *ReducedStats) Update(t time.Time, matches []string) {
-	evtCrit := 0
+	evtSev := 0
 
 	// Set StartTime
 	if t.Before(rs.StartTime) || rs.StartTime.IsZero() {
@@ -98,20 +98,20 @@ func (rs *ReducedStats) Update(t time.Time, matches []string) {
 			}
 
 			// don't take informative rules into account
-			if r.Criticality != 0 {
-				rs.SumRuleCrit += r.Criticality
-				evtCrit += r.Criticality
-				rs.sigCrits = append(rs.sigCrits, float64(r.Criticality))
+			if r.Severity != 0 {
+				rs.SumRuleSev += r.Severity
+				evtSev += r.Severity
+				rs.sigCrits = append(rs.sigCrits, float64(r.Severity))
 			}
 		}
 
 	}
-	if evtCrit > engine.CriticalityBound {
-		rs.SumAlertCrit += engine.CriticalityBound
-		rs.alertCrits = append(rs.alertCrits, float64(engine.CriticalityBound))
+	if evtSev > engine.SeverityBound {
+		rs.SumAlertSev += engine.SeverityBound
+		rs.alertCrits = append(rs.alertCrits, float64(engine.SeverityBound))
 	} else {
-		rs.SumAlertCrit += evtCrit
-		rs.alertCrits = append(rs.alertCrits, float64(evtCrit))
+		rs.SumAlertSev += evtSev
+		rs.alertCrits = append(rs.alertCrits, float64(evtSev))
 	}
 
 	rs.CntAlerts++
@@ -119,22 +119,22 @@ func (rs *ReducedStats) Update(t time.Time, matches []string) {
 
 func (rs *ReducedStats) ComputeScore(cntSigs int) int {
 	// compute alerts statistics
-	rs.AvgAlertCrit = stats.Truncate(float64(rs.SumAlertCrit)/float64(rs.CntAlerts), 2)
-	rs.StdDevAlertCrit = stats.Truncate(stats.StdDev(rs.alertCrits), 2)
+	rs.AvgAlertSev = stats.Truncate(float64(rs.SumAlertSev)/float64(rs.CntAlerts), 2)
+	rs.StdDevAlerSev = stats.Truncate(stats.StdDev(rs.alertCrits), 2)
 
 	// compute signature statistics
-	rs.AvgSigCrit = stats.Truncate(float64(rs.SumRuleCrit)/float64(rs.TotalSigs), 2)
+	rs.AvgSigSev = stats.Truncate(float64(rs.SumRuleSev)/float64(rs.TotalSigs), 2)
 	// Compute Standard Dev
-	rs.StdDevSigCrit = stats.Truncate(stats.StdDev(rs.sigCrits), 2)
+	rs.StdDevSigSev = stats.Truncate(stats.StdDev(rs.sigCrits), 2)
 	rs.CntUniqSigs = len(rs.CntBySig)
-	rs.CntUniqByAvgCritBySig = rs.CntUniqSigs * int(math.Round(rs.AvgSigCrit))
+	rs.CntUniqByAvgSevBySig = rs.CntUniqSigs * int(math.Round(rs.AvgSigSev))
 
 	// The diversity is relative to the number of signatures observed
 	// accross the dataset
 	rs.SigDiv = stats.Truncate(float64(rs.CntUniqSigs)*100/float64(cntSigs), 2)
-	rs.AvgAlertCritBySigDiv = int(math.Round((rs.AvgAlertCrit * rs.SigDiv)))
+	rs.AvgAlertSevBySigDiv = int(math.Round((rs.AvgAlertSev * rs.SigDiv)))
 
-	rs.Score = rs.AvgAlertCritBySigDiv + rs.CntUniqByAvgCritBySig
+	rs.Score = rs.AvgAlertSevBySigDiv + rs.CntUniqByAvgSevBySig
 	return rs.Score
 }
 
