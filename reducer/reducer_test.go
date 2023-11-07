@@ -19,8 +19,6 @@ var (
 func TestReducer(t *testing.T) {
 
 	tt := toast.FromT(t)
-
-	rand.Seed(158)
 	identifiers := make([]string, 50)
 
 	e := engine.NewEngine()
