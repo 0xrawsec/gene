@@ -87,6 +87,10 @@ func eventFromString(s string) (evt *GenericEvent) {
 	return
 }
 
+func winEvent() *GenericEvent {
+	return eventFromString(eventStr)
+}
+
 func prettyJSON(i interface{}) string {
 	b, err := json.MarshalIndent(i, "", "    ")
 	if err != nil {
@@ -96,6 +100,7 @@ func prettyJSON(i interface{}) string {
 }
 
 func TestLoad(t *testing.T) {
+	tt := toast.FromT(t)
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
@@ -107,11 +112,8 @@ func TestLoad(t *testing.T) {
 	"Condition": "$a"
 	}`
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 1)
 }
 
 func TestMatch(t *testing.T) {
@@ -124,23 +126,25 @@ func TestMatch(t *testing.T) {
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
 		},
+	"Severity": 10,
 	"Condition": "$a"
 	}`
 
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	tt.CheckErr(e.LoadString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	det := evt.GetDetection()
+	tt.Assert(det.Signature.Contains("ShouldMatch"))
+	tt.Assert(det.IsDetection())
+	tt.Assert(det.MatchCount() == 1)
+	tt.Assert(det.Severity == 10)
 }
 
 func TestShouldNotMatch(t *testing.T) {
+	tt := toast.FromT(t)
 	rule := `{
 	"Name": "ShouldNotMatch",
 	"Meta": {
@@ -151,16 +155,13 @@ func TestShouldNotMatch(t *testing.T) {
 	}`
 
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) != 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	tt.CheckErr(e.LoadString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(!mr.IsDetection())
+	tt.Assert(!mr.IsFiltered())
+	tt.Assert(mr.IsEmpty())
+	tt.Assert(evt.GetDetection() == nil)
 }
 
 func TestMatchAttck(t *testing.T) {
@@ -188,18 +189,18 @@ func TestMatchAttck(t *testing.T) {
 	"Condition": "$a"
 	}`
 
+	tt := toast.FromT(t)
 	e := NewEngine()
 	e.SetShowAttck(true)
-	if err := e.LoadString(rule); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(prettyJSON(winevtEvent))
-	}
+	tt.CheckErr(e.LoadString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	det := evt.GetDetection()
+	tt.Assert(det.Signature.Contains("ShouldMatch"))
+	tt.Assert(det.IsDetection())
+	tt.Assert(det.MatchCount() == 1)
+	tt.Assert(det.attackIds.Contains("S4242", "T666"))
 }
 
 func TestMatchByTag(t *testing.T) {
@@ -229,49 +230,18 @@ func TestMatchByTag(t *testing.T) {
 	"Condition": "$a"
 	}
 	`
-
+	tt := toast.FromT(t)
 	e := NewEngine()
-	tags := []string{"foo"}
-	e.SetFilters([]string{}, tags)
-
-	if err := e.LoadString(rules); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
-
-}
-
-func TestSimpleRule(t *testing.T) {
-	rule := `{
-	"Name": "SimpleRule",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}
-	`
-	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	t.Logf("Engine loaded %d rule", e.Count())
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	e.SetFilters(nil, []string{"foo"})
+	tt.CheckErr(e.LoadString(rules))
+	tt.Assert(e.Count() == 1)
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	det := evt.GetDetection()
+	tt.Assert(det.Signature.Contains("ShouldMatch"))
+	tt.Assert(det.IsDetection())
+	tt.Assert(det.MatchCount() == 1)
 }
 
 func TestNotOrRule(t *testing.T) {
@@ -307,17 +277,14 @@ func TestNotOrRule(t *testing.T) {
 	"Condition": "!($a or $b)"
 	}
 	`
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) != 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 1)
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsEmpty())
+	tt.Assert(evt.GetDetection() == nil)
 }
 
 func TestNotAndRule(t *testing.T) {
@@ -353,17 +320,14 @@ func TestNotAndRule(t *testing.T) {
 	"Condition": "!($a and !$b)"
 	}
 	`
+
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 1)
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
 }
 
 func TestComplexRule(t *testing.T) {
@@ -403,18 +367,12 @@ func TestComplexRule(t *testing.T) {
 	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and $f"
 	}
 	`
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 1)
+	mr := e.MatchOrFilter(winEvent())
+	tt.Assert(mr.IsDetection())
 }
 
 func TestContainer(t *testing.T) {
@@ -451,22 +409,21 @@ func TestContainer(t *testing.T) {
 	"Condition": "$md5 and $sha1 and $sha256"
 	}
 	`
+	tt := toast.FromT(t)
 	e := NewEngine()
+
 	// Container update has to be done before loading rules
 	e.AddToContainer("blacklist", "83514d9aaf0e168944b6d3c01110c393")
 	e.AddToContainer("blacklist", "65894b0162897f2a6bb8d2eb13684bf2b451fdee")
-	e.AddToContainer("blacklist", "03324e67244312360ff089cf61175def2031be513457bb527ae0abf925e72319")
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	// The match should fail
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(m)
-	}
+	e.Blacklist("03324e67244312360ff089cf61175def2031be513457bb527ae0abf925e72319")
+	// adding twice the same doesn't change anything
+	e.Blacklist("03324e67244312360ff089cf61175def2031be513457bb527ae0abf925e72319")
+	tt.Assert(e.BlacklistLen() == 3)
+
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 1)
+	mr := e.MatchOrFilter(winEvent())
+	tt.Assert(mr.IsDetection())
 }
 
 func TestFiltered1(t *testing.T) {
@@ -498,19 +455,18 @@ func TestFiltered1(t *testing.T) {
 	"Condition": ""
 	}
 	`
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&winevtEvent); filtered {
-		t.Log("Event correctly filtered")
-		t.Logf("%s", prettyJSON(winevtEvent))
-	} else {
-		t.Fail()
-	}
+
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 1)
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(!mr.IsDetection())
+	tt.Assert(mr.IsFiltered())
+	tt.Assert(mr.IsOnlyFiltered())
+	tt.Assert(evt.GetDetection() == nil)
+
 }
 
 func TestFiltered2(t *testing.T) {
@@ -555,42 +511,22 @@ func TestFiltered2(t *testing.T) {
 	"Condition": "$a"
 	}
 	`
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	// The match should fail
-	if m, _, filtered := e.MatchOrFilter(&winevtEvent); filtered && len(m) > 0 {
-		t.Log("Event is both an alert and filtered")
-	} else {
-		t.Logf("Matches: %s", m)
-		t.Logf("Filtered: %t", filtered)
-		t.Log(prettyJSON(winevtEvent))
-		t.Fail()
-	}
+
+	tt.CheckErr(e.LoadString(rule))
+	tt.Assert(e.Count() == 2)
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	tt.Assert(mr.IsFiltered())
+	tt.Assert(!mr.IsOnlyFiltered())
+	det := evt.GetDetection()
+	tt.Assert(det != nil)
+	tt.Assert(det.MatchCount() == 1)
 }
 
 func TestNotFiltered(t *testing.T) {
-	/*
-	   "CommandLine": "C:\\Windows\\system32\\devicecensus.exe",
-	   "CurrentDirectory": "C:\\Windows\\system32\\",
-	   "Hashes": "SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,MD5=83514D9AAF0E168944B6D3C01110C393,SHA256=03324E67244312360FF089CF61175DEF2031BE513457BB527AE0ABF925E72319,IMPHASH=D9EA1DE97F43E8F8608832D8E83DA2CF",
-	   "Image": "C:\\Windows\\System32\\DeviceCensus.exe",
-	   "IntegrityLevel": "System",
-	   "LogonGuid": "B2796A13-618F-5881-0000-0020E7030000",
-	   "LogonId": "0x000003e7",
-	   "ParentCommandLine": "C:\\Windows\\system32\\svchost.exe -k netsvcs",
-	   "ParentImage": "C:\\Windows\\System32\\svchost.exe",
-	   "ParentProcessGuid": "B2796A13-6191-5881-0000-00100FD80000",
-	   "ParentProcessId": "828",
-	   "ProcessGuid": "B2796A13-E4BA-5880-0000-00102BC01100",
-	   "ProcessId": "3516",
-	   "TerminalSessionId": "0",
-	   "User": "NT AUTHORITY\\SYSTEM",
-	   "UtcTime": "2017-01-19 16:09:30.252"
-	*/
 	rule := `{
 	"Name": "ProcessCreate",
 	"Meta": {
@@ -601,18 +537,16 @@ func TestNotFiltered(t *testing.T) {
 	"Condition": ""
 	}
 	`
+	tt := toast.FromT(t)
 	e := NewEngine()
-	if err := e.LoadString(rule); err != nil {
-		t.Fail()
-		t.Log(err)
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	// The match should fail
-	if _, _, filtered := e.MatchOrFilter(&winevtEvent); !filtered {
-		t.Log("Event not filtered")
-	} else {
-		t.Fail()
-	}
+
+	tt.CheckErr(e.LoadString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(!mr.IsDetection())
+	tt.Assert(!mr.IsFiltered())
+	tt.Assert(mr.IsEmpty())
+	tt.Assert(evt.GetDetection() == nil)
 }
 
 func TestLoadDirectory(t *testing.T) {
@@ -642,6 +576,10 @@ func TestLoadDirectory(t *testing.T) {
 
 	tt.CheckErr(e.LoadDirectory(dir))
 	tt.Assert(e.Count() == count)
+	mr := e.MatchOrFilter(winEvent())
+	tt.Assert(mr.IsDetection())
+	tt.Assert(!mr.IsFiltered())
+	tt.Assert(mr.MatchCount() == 42)
 }
 
 func TestActions(t *testing.T) {
@@ -659,18 +597,18 @@ func TestActions(t *testing.T) {
 	"Actions": ["kill", "kill", "block", "block"]
 	}`
 
+	tt := toast.FromT(t)
 	e := NewEngine()
 	e.ShowActions = true
-	if err := e.LoadString(rule); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		t.Log(string(prettyJSON(winevtEvent)))
-	}
+
+	tt.CheckErr(e.LoadString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	tt.Assert(evt.GetDetection().HasActions())
+	tt.Assert(evt.GetDetection().Actions.Contains("kill", "block"))
+	tt.Assert(evt.GetDetection().Actions.Len() == 2)
+	tt.Logf(prettyJSON(evt))
 }
 
 func TestDefaultActions(t *testing.T) {
@@ -687,68 +625,46 @@ func TestDefaultActions(t *testing.T) {
 	"Condition": "$a"
 	}`
 
+	tt := toast.FromT(t)
 	e := NewEngine()
 	e.ShowActions = true
-	actions := []string{"kill", "kill", "block", "block"}
-	e.SetDefaultActions(0, 10, actions)
-	if err := e.LoadString(rule); err != nil {
-		t.Logf("Loading failed: %s", err)
-		t.FailNow()
-	}
-	t.Logf("Successfuly loaded %d rules", e.Count())
-	if m, _, _ := e.MatchOrFilter(&winevtEvent); len(m) == 0 {
-		t.Fail()
-	} else {
-		if i, ok := winevtEvent.Get(GeneInfoPath); ok {
-			if det, ok := i.(*Detection); ok {
-				for _, act := range actions {
-					if !det.Actions.Contains(act) {
-						t.Errorf("default action not set as intended")
-					}
-				}
-			}
+	e.SetDefaultActions(0, 10, []string{"kill", "kill", "block", "block"})
 
-		}
-		t.Log(string(prettyJSON(winevtEvent)))
-	}
+	tt.CheckErr(e.LoadString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	tt.Assert(evt.GetDetection().HasActions())
+	tt.Assert(evt.GetDetection().Actions.Contains("kill", "block"))
+	tt.Assert(evt.GetDetection().Actions.Len() == 2)
 }
 
 func TestLoadContainer(t *testing.T) {
 	var cfd *os.File
 	var err error
 
+	tt := toast.FromT(t)
 	size := 10000
 	cname := "container"
 	tmp := t.TempDir()
 	container := filepath.Join(tmp, "container.cont")
 
-	if cfd, err = os.Create(container); err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	cfd, err = os.Create(container)
+	tt.CheckErr(err)
 
 	for i := 0; i < size; i++ {
 		cfd.WriteString(fmt.Sprintf("random.%d\n", rand.Int()))
 	}
 
-	if err = cfd.Close(); err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	tt.CheckErr(cfd.Close())
 
 	e := NewEngine()
-	if cfd, err = os.Open(container); err != nil {
-		t.Error(err)
-		t.FailNow()
-	}
+	cfd, err = os.Open(container)
+	tt.CheckErr(err)
 
-	if err = e.LoadContainer(cname, cfd); err != nil {
-		t.Error(err)
-	}
-
-	if e.containers.Len(cname) != size {
-		t.Error("Unexpected container length")
-	}
+	tt.CheckErr(e.LoadContainer(cname, cfd))
+	// checking container size
+	tt.Assert(e.containers.Len(cname) == size)
 }
 
 func TestGetRule(t *testing.T) {
@@ -858,9 +774,11 @@ func TestAbsolutePath(t *testing.T) {
 	e := NewEngine()
 
 	tt.CheckErr(e.LoadString(rule))
-	names, _, _ := e.MatchOrFilter(eventFromString(event))
-	tt.Logf("names: %s", names)
-	tt.Assert(len(names) > 0)
+	evt := eventFromString(event)
+	mr := e.MatchOrFilter(evt)
+	tt.Logf("names: %s", mr.MatchesSlice())
+	tt.Assert(mr.MatchCount() > 0)
+	tt.Logf(prettyJSON(evt))
 }
 
 /////////////////////////////// Benchmarks /////////////////////////////////////

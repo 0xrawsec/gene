@@ -11,7 +11,7 @@ import (
 func TestDetection(t *testing.T) {
 	tt := toast.FromT(t)
 
-	d := NewDetection(true, true, CamelCase)
+	d := NewMatchResult(true, true, CamelCase)
 	d.Severity = 10
 
 	d.Signature.Add("test")
@@ -34,7 +34,7 @@ func TestDetection(t *testing.T) {
 	tt.Assert(string(b) == `{"signature":["test"],"severity":10,"attack":[{"id":"T4242","tactic":"Hola que tal","description":"","reference":"https://some.reference"}],"actions":["do_something"]}`)
 
 	// checking if unmarshalling works as well we fields get lowercased
-	unmDet := Detection{}
+	unmDet := MatchResult{}
 	tt.CheckErr(json.Unmarshal(b, &unmDet))
 
 	tt.Assert(unmDet.Severity == d.Severity)

@@ -9,9 +9,9 @@ import (
 type Event interface {
 	Type() *LogType
 	Set(*XPath, interface{}) error
-	SetDetection(d *Detection)
+	SetDetection(d *MatchResult)
 	Get(*XPath) (interface{}, bool)
-	GetDetection() *Detection
+	GetDetection() *MatchResult
 	Source() string
 	Computer() string
 	EventID() int64
@@ -68,15 +68,15 @@ func (e GenericEvent) Get(p *XPath) (interface{}, bool) {
 	return nil, false
 }
 
-func (g GenericEvent) SetDetection(d *Detection) {
+func (g GenericEvent) SetDetection(d *MatchResult) {
 	p := g.Type().GeneInfo
 	g.Set(p, d)
 }
 
-func (g GenericEvent) GetDetection() *Detection {
+func (g GenericEvent) GetDetection() *MatchResult {
 	p := g.Type().GeneInfo
 	if i, ok := g.Get(p); ok {
-		if d, ok := i.(*Detection); ok {
+		if d, ok := i.(*MatchResult); ok {
 			return d
 		}
 	}

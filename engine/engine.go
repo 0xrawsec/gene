@@ -479,16 +479,15 @@ func (e *Engine) LoadString(data string) error {
 
 // MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that
 // it also return a flag indicating if the event is filtered.
-func (e *Engine) MatchOrFilter(evt Event) (names []string, severity int, filtered bool) {
-
+func (e *Engine) MatchOrFilter(evt Event) *MatchResult {
 	// initialized variables
-	detection := NewDetection(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)
+	mr := NewMatchResult(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)
 
 	e.RLock()
 	for _, r := range e.rules {
 		if r.Match(evt) {
 
-			detection.Update(r)
+			mr.Update(r)
 
 			// Do not need to go further if it is a filter rule
 			if r.Filter {
@@ -502,22 +501,23 @@ func (e *Engine) MatchOrFilter(evt Event) (names []string, severity int, filtere
 	// Update engine's statistics
 	e.Lock()
 	e.Stats.Scanned++
-	if detection.IsAlert() {
+	if mr.IsDetection() {
 		e.Stats.Positives++
 	}
 	e.Unlock()
 
-	if detection.OnlyMatchedFilters() {
+	if mr.IsOnlyFiltered() || mr.IsEmpty() {
 		// we keep original event unmodified
-		return nil, 0, true
+		return mr
 	}
 
 	// Set default actions if present
-	if actions, ok := e.defaultActions[detection.Severity]; ok {
-		detection.Actions.Add(datastructs.ToInterfaceSlice(actions)...)
+	if actions, ok := e.defaultActions[mr.Severity]; ok {
+		mr.Actions.Add(datastructs.ToInterfaceSlice(actions)...)
 	}
 
-	evt.SetDetection(detection)
+	// we add detection information to event
+	evt.SetDetection(mr)
 
-	return detection.Names(), detection.Severity, detection.AlsoMatchedFilter()
+	return mr
 }

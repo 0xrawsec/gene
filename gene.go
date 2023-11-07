@@ -28,28 +28,29 @@ import (
 //////////////////////////// Utilities //////////////////////////////
 
 func matchEvent(e *engine.Engine, evt engine.Event) {
-	matches, severity, filtered := e.MatchOrFilter(evt)
+	mr := e.MatchOrFilter(evt)
 	// if we don't want to display filtered events
-	if flNoFilter && len(matches) == 0 && filtered {
+	if flNoFilter && mr.IsOnlyFiltered() {
 		return
 	}
 
 	// We print only if we are not in test mode
-	if (len(matches) > 0 || filtered) && !flTest {
+	if (mr.IsDetection() || mr.IsOnlyFiltered()) && !flTest {
 		// Prints out the events with timestamp or not
-		if flShowTimestamp && (severity >= severityTresh || filtered) {
-			fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
-		} else {
-			if severity >= severityTresh || filtered {
-				fmt.Println(string(evtx.ToJSON(evt)))
+		if mr.Severity >= severityTresh || mr.IsOnlyFiltered() {
+			if flShowTimestamp {
+				fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
+				return
 			}
-		}
-	} else if flAllEvents || (flTest && len(matches) == 0) {
-		if flShowTimestamp {
-			fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
-		} else {
 			fmt.Println(string(evtx.ToJSON(evt)))
 		}
+	} else if flAllEvents || (flTest && !mr.IsDetection()) {
+		// if we print all events or if we are in test mode and this is not a detection
+		if flShowTimestamp {
+			fmt.Printf("%d: %s\n", evt.Timestamp().Unix(), string(evtx.ToJSON(evt)))
+			return
+		}
+		fmt.Println(string(evtx.ToJSON(evt)))
 	}
 }
 
