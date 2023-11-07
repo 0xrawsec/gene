@@ -126,7 +126,7 @@ func TestBuggyCondition(t *testing.T) {
 func TestRule(t *testing.T) {
 	tt := toast.FromT(t)
 
-	er := NewCompiledRule(Version{})
+	er := NewCompiledRule()
 	er.EventFilter = NewEventFilter(map[string][]int64{"Microsoft-Windows-Sysmon/Operational": {1, 7}})
 
 	as := `Hashes ~= '83514D9AAF0E168944B6D3C01110C393'`

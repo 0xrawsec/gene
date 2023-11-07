@@ -45,18 +45,16 @@ type CompiledRule struct {
 	Actions     []string
 	// ATT&CK information
 	Attack []Attack
-	Schema Version
 }
 
 // NewCompiledRule initializes and returns an EvtxRule object
-func NewCompiledRule(schema Version) (er CompiledRule) {
+func NewCompiledRule() (er CompiledRule) {
 	er.Tags = datastructs.NewSyncedSet()
 	er.OSs = datastructs.NewSyncedSet()
 	er.Computers = datastructs.NewSyncedSet()
 	er.AtomMap = datastructs.NewSyncedMap()
 	er.Attack = make([]Attack, 0)
 	er.Actions = make([]string, 0)
-	er.Schema = schema
 	return
 }
 
@@ -172,7 +170,6 @@ type MetaSection struct {
 	Attack    []Attack `json:"ATTACK,omitempty"`
 	Disable   bool
 	Filter    bool
-	Schema    Version
 	Authors   []string
 	Comments  []string
 }
@@ -204,7 +201,6 @@ func NewRule() Rule {
 			OSs:       make([]string, 0),
 			Computers: make([]string, 0),
 			Attack:    make([]Attack, 0),
-			Schema:    EngineMinimalRuleSchemaVersion,
 		},
 		Matches:   make(map[string]string),
 		Condition: "",
@@ -269,7 +265,7 @@ func (jr *Rule) Compile(e *Engine) (*CompiledRule, error) {
 
 func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule, error) {
 	var err error
-	rule := NewCompiledRule(jr.Meta.Schema)
+	rule := NewCompiledRule()
 
 	rule.Name = jr.Name
 	rule.Severity = boundSeverity(jr.Severity)

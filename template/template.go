@@ -26,7 +26,6 @@ var (
     ],
     "Disable": false,
     "Filter": false,
-    "Schema": "2.0.0",
     "Authors": [
       "@rawsec"
     ],

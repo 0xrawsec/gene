@@ -99,8 +99,7 @@ func TestLoad(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
-		"LogType": "winevt",
-		"Schema": "2.0.0"
+		"LogType": "winevt"
 	},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -120,8 +119,7 @@ func TestMatch(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -146,8 +144,7 @@ func TestShouldNotMatch(t *testing.T) {
 	rule := `{
 	"Name": "ShouldNotMatch",
 	"Meta": {
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [666]},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [666]}
 		},
 	"Matches": {},
 	"Condition": ""
@@ -183,8 +180,7 @@ func TestMatchAttck(t *testing.T) {
 				"Description": "Super nasty software",
 				"Reference": "https://attack.mitre.org/"
 			}
-		],
-		"Schema": "2.0.0"
+		]
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -212,8 +208,7 @@ func TestMatchByTag(t *testing.T) {
 	"Tags": ["foo"],
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -226,8 +221,7 @@ func TestMatchByTag(t *testing.T) {
 	"Tags": ["bar"],
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -259,8 +253,7 @@ func TestSimpleRule(t *testing.T) {
 	"Name": "SimpleRule",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -294,7 +287,7 @@ func TestNotOrRule(t *testing.T) {
 	   "ParentImage": "C:\\Windows\\System32\\svchost.exe",
 	   "ParentProcessGuid": "B2796A13-6191-5881-0000-00100FD80000",
 	   "ParentProcessId": "828",
-	   "ProcessGuid": "B2796A13-E4BA-5880-0000-00102BC01100",
+	   "ProcessGuid": "B2796A13-E4BA-5880-0000-00102BC011,
 	   "ProcessId": "3516",
 	   "TerminalSessionId": "0",
 	   "User": "NT AUTHORITY\\SYSTEM",
@@ -304,8 +297,8 @@ func TestNotOrRule(t *testing.T) {
 	"Name": "NotOrRule",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
@@ -350,8 +343,8 @@ func TestNotAndRule(t *testing.T) {
 	"Name": "NotAndRule",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
@@ -396,8 +389,8 @@ func TestComplexRule(t *testing.T) {
 	"Name": "ComplexRule",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
@@ -447,8 +440,8 @@ func TestContainer(t *testing.T) {
 	"Name": "ContainerConditions",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$md5": "extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
@@ -499,8 +492,7 @@ func TestFiltered1(t *testing.T) {
 	"Name": "ProcessCreate",
 	"Meta": {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Filter": true,
-		"Schema": "2.0.0"
+		"Filter": true
 		},
 	"Matches": {},
 	"Condition": ""
@@ -545,8 +537,7 @@ func TestFiltered2(t *testing.T) {
 	"Meta": {
 		"LogType": "winevt",
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Filter": true,
-		"Schema": "2.0.0"
+		"Filter": true
 		},
 	"Matches": {},
 	"Condition": ""
@@ -556,8 +547,7 @@ func TestFiltered2(t *testing.T) {
 	"Name": "SimpleRule",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -605,8 +595,7 @@ func TestNotFiltered(t *testing.T) {
 	"Name": "ProcessCreate",
 	"Meta": {
 		"Events": {"Microsoft-Windows-Sysmon/Operational": [2]},
-		"Filter": true,
-		"Schema": "2.0.0"
+		"Filter": true
 		},
 	"Matches": {},
 	"Condition": ""
@@ -638,8 +627,8 @@ func TestLoadDirectory(t *testing.T) {
 	"Name": "ShouldMatch_%d",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -660,8 +649,8 @@ func TestActions(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -689,8 +678,8 @@ func TestDefaultActions(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -776,8 +765,8 @@ func TestGetRule(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Meta": {
 		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []},
-		"Schema": "2.0.0"
+		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
+		
 		},
 	"Matches": {
 		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
@@ -811,8 +800,8 @@ func TestLoadingOldFormat(t *testing.T) {
 	"Name": "ShouldMatch",
 	"Meta": {
 		"EventIDs" : [1, 7],
-		"Channels" : ["Microsoft-Windows-Sysmon/Operational"],
-		"Schema": "2.0.0"
+		"Channels" : ["Microsoft-Windows-Sysmon/Operational"]
+		
 		},
 	"Condition": ""
 	}`
@@ -856,8 +845,8 @@ func TestAbsolutePath(t *testing.T) {
 	rule := `{
 	"Name": "ShouldMatch",
 	"Meta": {
-		"Events" : {"kunai": []},
-		"Schema": "2.0.0"
+		"Events" : {"kunai": []}
+		
 		},
 	"Matches": {
 		"$a": "exe/file = '/usr/bin/ping'",

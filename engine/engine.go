@@ -156,10 +156,6 @@ func (e *Engine) AddLogFormat(name string, format *LogType) {
 // addRule adds a rule to the current engine
 func (e *Engine) addRule(r *CompiledRule) error {
 
-	if r.Schema.Below(EngineMinimalRuleSchemaVersion) {
-		return fmt.Errorf("expecting rule version >= %s", EngineMinimalRuleSchemaVersion)
-	}
-
 	if e.os != "" && !r.matchOS(e.os) {
 		log.Debugf("Skip rule %s because it does not match configured OS: configured=%s rule=%s", r.Name, e.os, r.OSs.Slice())
 		return nil
