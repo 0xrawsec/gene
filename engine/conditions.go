@@ -87,11 +87,9 @@ func (t *Tokenizer) NextExpectedToken(expects ...string) (token string, err erro
 	if err == ErrEOT {
 		return
 	}
-	//log.Debugf("Token: '%s'", token)
 	if etok.Contains(token) || etok.Contains(string(token[0])) {
 		return
 	}
-	//log.Debugf("%s: '%s' not in %v", ErrUnexpectedToken, token, expects)
 	return "", ErrUnexpectedToken
 }
 
@@ -100,7 +98,6 @@ func (t *Tokenizer) ParseCondition(group, level int) (*ConditionElement, error) 
 	var err error
 	var token string
 	c := &ConditionElement{}
-	//log.Debugf("Tokens: %v", t.tokens[t.i:])
 
 	token, err = t.NextExpectedToken("$", "!", "(", ")", "and", "&&", "AND", "or", "||", "OR")
 	if err != nil {
@@ -259,7 +256,6 @@ func (ce *ConditionElement) Prioritize() {
 	for i := ce.maxLevel(); i >= 0; i-- {
 		levels := ce.GetLevels(i)
 		for _, lvl := range levels {
-			//log.Debugf("Level (%d): %s", i, PrettySplit(lvl))
 			for _, s := range splitLevelsByOr(lvl, i) {
 				if len(s) > 2 {
 					for _, e := range s {

@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	//ErrContainerAlreadyExists should be returned in case an container name is already used in Containers
+	// ErrContainerAlreadyExists should be returned in case an container name is already used in Containers
 	ErrContainerAlreadyExists = fmt.Errorf("already existing container")
 )
 
