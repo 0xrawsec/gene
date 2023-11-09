@@ -32,7 +32,7 @@ func TestAtomRule(t *testing.T) {
 	}
 
 	for _, fm := range fms {
-		tt.Assert(fm.Match(winevtEvent))
+		tt.Assert(fm.match(winevtEvent))
 	}
 
 }

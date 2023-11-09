@@ -30,15 +30,15 @@ func seekerGoto(reader io.ReadSeeker, offset int64, flag int) int64 {
 func nextRuleOffset(endLastRuleOffset int64, reader io.ReadSeeker) int64 {
 	var char [1]byte
 	var cnt int64
-	cur := seekerGoto(reader, 0, os.SEEK_CUR)
-	seekerGoto(reader, endLastRuleOffset, os.SEEK_SET)
+	cur := seekerGoto(reader, 0, io.SeekCurrent)
+	seekerGoto(reader, endLastRuleOffset, io.SeekStart)
 	for read, err := reader.Read(char[:]); read == 1 && err == nil; read, err = reader.Read(char[:]) {
 		if char[0] == '{' {
 			break
 		}
 		cnt++
 	}
-	seekerGoto(reader, cur, os.SEEK_SET)
+	seekerGoto(reader, cur, io.SeekStart)
 	return endLastRuleOffset + cnt
 }
 
@@ -47,7 +47,7 @@ func findLineError(ruleOffset int64, reader io.ReadSeeker) (int64, int64) {
 	var buf [4096]byte
 
 	// Go back to beginning of reader
-	seekerGoto(reader, 0, os.SEEK_SET)
+	seekerGoto(reader, 0, io.SeekStart)
 
 ReadLoop:
 	for read, err := reader.Read(buf[:]); read > 0 && err == nil; read, err = reader.Read(buf[:]) {
@@ -92,8 +92,10 @@ func (e ErrRuleExist) Error() string {
 }
 
 type Stats struct {
-	Scanned   uint64
-	Positives uint64
+	Scanned    uint64
+	Cached     uint64
+	Matched    uint64
+	Detections uint64
 }
 
 // Engine defines the engine managing several rules
@@ -101,10 +103,12 @@ type Engine struct {
 	sync.RWMutex
 	templates *TemplateMap
 	rules     []*CompiledRule
-	rawRules  map[string]string
-	os        string           // OS the engine is running on
-	tags      map[string][]int // will be map[tag][]int with index referencing rule in rules
-	names     map[string]int   // will be map[name][]int with index referencing rule in rules
+	// used to cache rules applicable per event
+	rulesCache map[string][]*CompiledRule
+	rawRules   map[string]string
+	os         string           // OS the engine is running on
+	tags       map[string][]int // will be map[tag][]int with index referencing rule in rules
+	names      map[string]int   // will be map[name][]int with index referencing rule in rules
 	// Filters used to choose which rule to compile in case of match by tag/name
 	tagFilters  *datastructs.SyncedSet
 	nameFilters *datastructs.SyncedSet
@@ -129,6 +133,7 @@ func NewEngine() (e *Engine) {
 	e = &Engine{}
 	e.templates = NewTemplateMap()
 	e.rules = make([]*CompiledRule, 0)
+	e.rulesCache = make(map[string][]*CompiledRule)
 	e.rawRules = make(map[string]string)
 	e.tags = make(map[string][]int)
 	e.names = make(map[string]int)
@@ -485,26 +490,55 @@ func (e *Engine) LoadYamlString(data string) error {
 	return e.LoadYamlBytes([]byte(data))
 }
 
-// MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that
+// get rules applicable for a given event
+func (e *Engine) getRulesForEvent(evt Event) []*CompiledRule {
+	// key by event id and source is good enough
+	key := fmt.Sprintf("%s-%d", evt.Source(), evt.EventID())
+	if _, ok := e.rulesCache[key]; !ok {
+		tmp := make([]*CompiledRule, 0)
+		for _, r := range e.rules {
+			if r.matchStep1(evt) {
+				tmp = append(tmp, r)
+			}
+		}
+		e.rulesCache[key] = tmp
+	}
+	return e.rulesCache[key]
+}
+
+// Match checks if there is a match in any rule of the engine. The only difference with Match function is that
 // it also return a flag indicating if the event is filtered.
-func (e *Engine) MatchOrFilter(evt Event) *MatchResult {
+func (e *Engine) Match(evt Event) *MatchResult {
 	// initialized variables
 	mr := NewMatchResult(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)
 
-	e.RLock()
-	for _, r := range e.rules {
-		if r.Match(evt) {
-			mr.Update(r)
+	e.Lock()
+	evtToMatch := evt
+
+	// get rules we are sure to match against this event
+	rules := e.getRulesForEvent(evt)
+
+	// some more optimization skipping useless instructions if no rules to match (gain a few MB/s)
+	if len(rules) > 0 {
+		// creating a cached event has an overhead so wo don't do it for all
+		// events. Only those matching more than a couples of rules
+		if len(rules) > 5 {
+			evtToMatch = newCacheEvent(evt)
+			e.Stats.Cached++
+		}
+		// actually matching the rules
+		for _, r := range rules {
+			if r.matchStep2(evtToMatch) {
+				mr.Update(r)
+				e.Stats.Matched++
+			}
 		}
 	}
-	// Unlock so that we can update engine
-	e.RUnlock()
 
 	// Update engine's statistics
-	e.Lock()
 	e.Stats.Scanned++
 	if mr.IsDetection() {
-		e.Stats.Positives++
+		e.Stats.Detections++
 	}
 	e.Unlock()
 

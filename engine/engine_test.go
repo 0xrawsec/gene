@@ -119,7 +119,7 @@ severity: 10
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	det := evt.GetDetection()
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
@@ -147,7 +147,7 @@ severity: 10
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	det := evt.GetDetection()
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
@@ -168,7 +168,7 @@ condition:
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(!mr.IsDetection())
 	tt.Assert(!mr.IsFiltered())
 	tt.Assert(mr.IsEmpty())
@@ -200,7 +200,7 @@ condition: $a`
 	e.SetShowAttck(true)
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	det := evt.GetDetection()
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
@@ -242,7 +242,7 @@ condition: $a
 	tt.CheckErr(e.LoadYamlString(rules))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	det := evt.GetDetection()
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
@@ -286,7 +286,7 @@ condition: '!($a or $b)'`
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsEmpty())
 	tt.Assert(evt.GetDetection() == nil)
 }
@@ -326,7 +326,7 @@ condition: '!($a and !$b)'`
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 }
 
@@ -369,7 +369,7 @@ condition: '!($a and !$b) and ($c or ($d and !$e) ) and $f'`
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
-	mr := e.MatchOrFilter(winEvent())
+	mr := e.Match(winEvent())
 	tt.Assert(mr.IsDetection())
 }
 
@@ -418,7 +418,7 @@ condition: $md5 and $sha1 and $sha256`
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
-	mr := e.MatchOrFilter(winEvent())
+	mr := e.Match(winEvent())
 	tt.Assert(mr.IsDetection())
 }
 
@@ -456,7 +456,7 @@ match-on:
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(!mr.IsDetection())
 	tt.Assert(mr.IsFiltered())
 	tt.Assert(mr.IsOnlyFiltered())
@@ -509,7 +509,7 @@ condition: $a
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 2)
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	tt.Assert(mr.IsFiltered())
 	tt.Assert(!mr.IsOnlyFiltered())
@@ -533,7 +533,7 @@ match-on:
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(!mr.IsDetection())
 	tt.Assert(!mr.IsFiltered())
 	tt.Assert(mr.IsEmpty())
@@ -567,7 +567,7 @@ actions:
 
 	tt.CheckErr(e.LoadDirectory(dir))
 	tt.Assert(e.Count() == count)
-	mr := e.MatchOrFilter(winEvent())
+	mr := e.Match(winEvent())
 	tt.Assert(mr.IsDetection())
 	tt.Assert(!mr.IsFiltered())
 	tt.Assert(mr.MatchCount() == 42)
@@ -595,7 +595,7 @@ actions:
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	tt.Assert(evt.GetDetection().HasActions())
 	tt.Assert(evt.GetDetection().Actions.Contains("kill", "block"))
@@ -621,7 +621,7 @@ condition: $a`
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Assert(mr.IsDetection())
 	tt.Assert(evt.GetDetection().HasActions())
 	tt.Assert(evt.GetDetection().Actions.Contains("kill", "block"))
@@ -762,7 +762,7 @@ condition: $a and $b
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := eventFromString(event)
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	tt.Logf("names: %s", mr.MatchesSlice())
 	tt.Assert(mr.MatchCount() > 0)
 	tt.Logf(prettyJSON(evt))
@@ -795,6 +795,16 @@ func BenchmarkEngine(b *testing.B) {
 	if err := e.LoadFile(rulePath); err != nil {
 		b.Errorf("Loading failed: %s", err)
 		b.FailNow()
+	}
+
+	for i := 1; i < 3; i++ {
+		for _, r := range e.rules {
+			r.Name = fmt.Sprintf("%s-%d", r.Name, i)
+			if err := e.addRule(r); err != nil {
+				b.Errorf("AddRule failed: %s", err)
+				b.FailNow()
+			}
+		}
 	}
 	loadTime := time.Since(start)
 
@@ -831,7 +841,7 @@ func BenchmarkEngine(b *testing.B) {
 	pprof.StartCPUProfile(f)
 	for i := 0; i < loops; i++ {
 		for _, evt := range events {
-			e.MatchOrFilter(evt)
+			e.Match(evt)
 		}
 	}
 	// stop rule matching profiling
@@ -839,17 +849,27 @@ func BenchmarkEngine(b *testing.B) {
 	scanTime := time.Since(start)
 
 	// statistics
-
 	// we have to multiply the number of bytes scanned by the
 	// number of loops we have done
 	bytesScanned *= uint64(loops)
 	eps := float64(e.Stats.Scanned) / float64(scanTime.Seconds())
 	mbps := float64(bytesScanned) / float64(scanTime.Seconds()*1000000)
 
+	cntRulesEn, cntRulesDis := 0, 0
+	for _, r := range e.rules {
+		if r.Disabled {
+			cntRulesDis++
+			continue
+		}
+		cntRulesEn++
+	}
+
 	b.Logf("Benchmark using real Windows events and production detection rules")
-	b.Logf("Number of rules loaded: %d in %s", e.Count(), loadTime)
-	b.Logf("Number of events scanned: %d", e.Stats.Scanned)
-	b.Logf("Theoretical maximum engine speed: %.2f event/s", eps)
-	b.Logf("                                  %.2f MB/s", mbps)
+	b.Logf("Number of rules loaded: %d (enabled=%d, disabled=%d) in %s", e.Count(), cntRulesEn, cntRulesDis, loadTime)
+	b.Logf("Number of events scanned: %d in %s", e.Stats.Scanned, scanTime)
+	b.Logf("Number of cached events: %d => %.2f%%", e.Stats.Cached, float64(e.Stats.Cached)*100/float64(e.Stats.Scanned))
+	b.Logf("Number of detections: %d => %.2f%%", e.Stats.Detections, float64(e.Stats.Detections)*100/float64(e.Stats.Scanned))
+	b.Logf("Theoretical average engine scanning speed: %.2f events/s", eps)
+	b.Logf("                                           %.2f MBs/s", mbps)
 
 }

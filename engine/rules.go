@@ -61,16 +61,16 @@ func NewCompiledRule() (er CompiledRule) {
 
 // AddMatcher adds an atom rule to the CompiledRule
 // func (er *CompiledRule) AddMatcher(a *AtomRule) {
-func (er *CompiledRule) AddMatcher(m Matcher) {
-	er.AtomMap.Add(m.GetName(), m)
+func (er *CompiledRule) AddMatcher(m matcher) {
+	er.AtomMap.Add(m.getName(), m)
 }
 
-// SetContainers sets the ContainerDB pointer of rule
-func (er *CompiledRule) SetContainers(containers *ContainerDB) {
+// setContainers sets the ContainerDB pointer of rule
+func (er *CompiledRule) setContainers(containers *ContainerDB) {
 	er.containers = containers
 }
 
-// matchOS checks if the is able suitable for OS passed as parameter
+// matchOS checks if os is suitable for this rule
 func (er *CompiledRule) matchOS(os string) bool {
 	if er.OSs.Len() == 0 {
 		return true
@@ -78,31 +78,18 @@ func (er *CompiledRule) matchOS(os string) bool {
 	return er.OSs.Contains(os)
 }
 
-func (er *CompiledRule) metaMatch(evt Event) bool {
+func (er *CompiledRule) matchStep1(evt Event) bool {
+	// rule must be enabled and EventFilter must match event
+	return !er.Disabled && er.EventFilter.Match(evt)
+}
 
-	if !er.EventFilter.Match(evt) {
-		return false
-	}
-
+// matchStep2 only checks if condition is matching
+func (er *CompiledRule) matchStep2(evt Event) bool {
 	// Handle computer matching
 	if er.Computers.Len() > 0 {
 		if comp := evt.Computer(); !er.Computers.Contains(comp) {
 			return false
 		}
-	}
-	return true
-}
-
-// Match returns whether the CompiledRule matches the EVTX event
-func (er *CompiledRule) Match(evt Event) bool {
-	// Check if the rule is disabled, if yes match returns false
-	if er.Disabled {
-		return false
-	}
-
-	// check if rule is applicable to the event
-	if !er.metaMatch(evt) {
-		return false
 	}
 
 	// If there is no rule and the condition is empty we return true
@@ -112,6 +99,12 @@ func (er *CompiledRule) Match(evt Event) bool {
 
 	// We proceed with AtomicRule mathing
 	return Compute(er.Conditions, er.operandReader(evt))
+}
+
+// Match returns whether the CompiledRule matches the event
+func (er *CompiledRule) Match(evt Event) bool {
+	// both the steps must be true so that match is a success
+	return er.matchStep1(evt) && er.matchStep2(evt)
 }
 
 func (er *CompiledRule) operandReader(evt Event) *EventOpReader {
@@ -130,7 +123,7 @@ type EventOpReader struct {
 func (oe *EventOpReader) Read(operand string) (value bool, ok bool) {
 	if ari, ok := oe.rule.AtomMap.Get(operand); ok {
 		// Casting to Matcher interface
-		return ari.(Matcher).Match(oe.event), true
+		return ari.(matcher).match(oe.event), true
 	}
 	return
 }

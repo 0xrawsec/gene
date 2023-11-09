@@ -28,7 +28,7 @@ import (
 //////////////////////////// Utilities //////////////////////////////
 
 func matchEvent(e *engine.Engine, evt engine.Event) {
-	mr := e.MatchOrFilter(evt)
+	mr := e.Match(evt)
 	// if we don't want to display filtered events
 	if flNoFilter && mr.IsOnlyFiltered() {
 		return
@@ -417,7 +417,7 @@ func main() {
 
 	log.Infof("Count Rules Used (loaded + generated): %d", e.Count())
 	log.Infof("Event Scanned: %d", e.Stats.Scanned)
-	log.Infof("Positives: %d", e.Stats.Positives)
+	log.Infof("Positives: %d", e.Stats.Detections)
 
 	// if we were in test mode
 	if flTest {
@@ -431,7 +431,7 @@ func main() {
 			log.Infof("No event scanned")
 			os.Exit(exitFail)
 		}
-		if e.Stats.Scanned != e.Stats.Positives {
+		if e.Stats.Scanned != e.Stats.Detections {
 			log.Error("Test: UNSUCCESSFUL")
 			log.Infof("Some events did not match any rule, events not passing the test have been printed")
 			os.Exit(exitFail)

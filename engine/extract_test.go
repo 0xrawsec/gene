@@ -124,7 +124,7 @@ func TestExtractMatch(t *testing.T) {
 				continue
 			}
 			ae.setContainerDB(containers)
-			if !ae.Match(&evt) {
+			if !ae.match(&evt) {
 				t.Logf("Not matching: %s", ae)
 				t.Fail()
 			}

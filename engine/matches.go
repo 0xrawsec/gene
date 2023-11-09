@@ -10,10 +10,10 @@ import (
 	"github.com/0xrawsec/golang-utils/regexp/submatch"
 )
 
-// Matcher interface
-type Matcher interface {
-	GetName() string
-	Match(Event) bool
+// matcher interface
+type matcher interface {
+	getName() string
+	match(Event) bool
 }
 
 var (
@@ -153,13 +153,13 @@ func (f *FieldMatch) compile() error {
 	return nil
 }
 
-// GetName implements Matcher interface
-func (f *FieldMatch) GetName() string {
+// getName implements Matcher interface
+func (f *FieldMatch) getName() string {
 	return f.Name
 }
 
-// Match checks whether the AtomRule match an Event
-func (f *FieldMatch) Match(se Event) bool {
+// match checks whether the AtomRule match an Event
+func (f *FieldMatch) match(se Event) bool {
 	if err := f.compile(); err != nil {
 		panic(err)
 	}
@@ -304,10 +304,10 @@ func (c *ContainerMatch) Extract(evt Event) (string, bool) {
 	return "", false
 }
 
-// Match matches the extract rule against a ContainerDB and implements
+// match matches the extract rule against a ContainerDB and implements
 // Matcher interface the string matched against the container are converted
 // to lower case (default behaviour of ContainsString method)
-func (c *ContainerMatch) Match(evt Event) bool {
+func (c *ContainerMatch) match(evt Event) bool {
 	if err := c.compile(); err != nil {
 		panic(err)
 	}
@@ -324,7 +324,7 @@ func (c *ContainerMatch) Match(evt Event) bool {
 }
 
 // GetName implements Matcher interface
-func (c *ContainerMatch) GetName() string {
+func (c *ContainerMatch) getName() string {
 	return c.Name
 }
 

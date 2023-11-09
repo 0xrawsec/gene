@@ -22,6 +22,7 @@ var (
 )
 
 type XPath struct {
+	s     string
 	Path  []string
 	Flags struct {
 		EventDataField bool
@@ -92,7 +93,10 @@ func (p *XPath) Append(s string) *XPath {
 }
 
 func (p *XPath) String() string {
-	return fmt.Sprintf("/%s", strings.Join(p.Path, xpathSep))
+	if len(p.s) == 0 {
+		p.s = fmt.Sprintf("/%s", strings.Join(p.Path, xpathSep))
+	}
+	return p.s
 }
 
 func (p *XPath) StartsWith(start *XPath) bool {

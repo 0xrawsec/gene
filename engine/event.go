@@ -9,7 +9,7 @@ import (
 type Event interface {
 	Type() *LogType
 	Set(*XPath, interface{}) error
-	SetDetection(d *MatchResult)
+	SetDetection(*MatchResult)
 	Get(*XPath) (interface{}, bool)
 	GetDetection() *MatchResult
 	Source() string
@@ -28,6 +28,66 @@ func EventGetString(evt Event, p *XPath) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+type cacheRes struct {
+	i  interface{}
+	ok bool
+}
+
+// Event implementation for fast lookup
+type cachedEvent struct {
+	cache map[string]cacheRes
+	orig  Event
+}
+
+func newCacheEvent(other Event) *cachedEvent {
+	e := &cachedEvent{
+		cache: make(map[string]cacheRes),
+		orig:  other,
+	}
+	return e
+}
+
+func (c cachedEvent) Get(p *XPath) (interface{}, bool) {
+	if _, ok := c.cache[p.String()]; !ok {
+		i, ok := c.orig.Get(p)
+		c.cache[p.String()] = cacheRes{i, ok}
+	}
+	cr := c.cache[p.String()]
+	return cr.i, cr.ok
+}
+
+func (c cachedEvent) Type() *LogType {
+	panic("should not be used")
+}
+
+func (c cachedEvent) Set(*XPath, interface{}) error {
+	panic("should not be used")
+}
+
+func (c cachedEvent) SetDetection(*MatchResult) {
+	panic("should not be used")
+}
+
+func (c cachedEvent) GetDetection() *MatchResult {
+	panic("should not be used")
+}
+
+func (c cachedEvent) Source() string {
+	panic("should not be used")
+}
+
+func (c cachedEvent) Computer() string {
+	panic("should not be used")
+}
+
+func (c cachedEvent) EventID() int64 {
+	panic("should not be used")
+}
+
+func (c cachedEvent) Timestamp() time.Time {
+	panic("should not be used")
 }
 
 type GenericEvent map[string]interface{}
