@@ -2,6 +2,7 @@ package engine
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -191,34 +192,28 @@ func (e *Engine) addRule(r *CompiledRule) error {
 	return nil
 }
 
-func (e *Engine) loadReader(reader io.ReadSeeker) error {
+func (e *Engine) loadReaderWithDec(dec Decoder) error {
 	var decerr error
-	dec := NewRuleDecoder(reader)
 
 	for {
 		var jRule Rule
-		decoderOffset := seekerGoto(reader, 0, io.SeekCurrent)
-		// We don't handle error here
-		decBuffer, _ := io.ReadAll(dec.Buffered())
-		ruleOffset := nextRuleOffset(decoderOffset-int64(len(decBuffer)), reader)
 
 		decerr = dec.Decode(&jRule)
 		if decerr != nil {
-			if decerr != io.EOF {
-				ruleLine, offInLine := findLineError(ruleOffset, reader)
-				return fmt.Errorf("JSON parsing (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, decerr)
+			if !errors.Is(decerr, io.EOF) {
+				return fmt.Errorf("decoding error: %w", decerr)
 			}
 			// We got EOF if we go there
 			break
 		}
 
 		if err := e.LoadRule(&jRule); err != nil {
-			ruleLine, offInLine := findLineError(ruleOffset, reader)
-			return fmt.Errorf("failed to load rule (rule line=%d offset=%d) (error=%s)", ruleLine, offInLine, err)
+			return fmt.Errorf("failed to load rule: %w", err)
 		}
 	}
 
 	return nil
+
 }
 
 // SetDumpRaw setter for dumpRaw flag
@@ -356,8 +351,8 @@ func (e *Engine) LoadContainer(container string, reader io.Reader) error {
 }
 
 // LoadReader loads rule from a ReadSeeker
-func (e *Engine) LoadReader(reader io.ReadSeeker) error {
-	return e.loadReader(reader)
+func (e *Engine) LoadReader(r io.ReadSeeker) error {
+	return e.loadReaderWithDec(yamlRuleDecoder(r))
 }
 
 // LoadDirectory loads all the templates and rules inside a directory
@@ -427,10 +422,11 @@ func (e *Engine) LoadFile(rulefile string) error {
 	if err != nil {
 		return err
 	}
-	err = e.loadReader(f)
+	err = e.loadReaderWithDec(yamlRuleDecoder(f))
 	if err != nil {
 		return fmt.Errorf("failed to load rule file \"%s\": %s", rulefile, err)
 	}
+
 	return nil
 }
 
@@ -467,14 +463,26 @@ func (e *Engine) LoadRule(rule *Rule) error {
 	return nil
 }
 
-// LoadBytes loads rules from []byte data
-func (e *Engine) LoadBytes(data []byte) error {
-	return e.LoadReader(newSeekBuffer(data))
+// LoadJsonBytes loads rules from []byte data
+func (e *Engine) LoadJsonBytes(data []byte) error {
+	r := newSeekBuffer(data)
+	return e.loadReaderWithDec(jsonRuleDecoder(r))
 }
 
-// LoadString loads rules from string data
-func (e *Engine) LoadString(data string) error {
-	return e.LoadBytes([]byte(data))
+// LoadJsonString loads rules from string data
+func (e *Engine) LoadJsonString(data string) error {
+	return e.LoadJsonBytes([]byte(data))
+}
+
+// LoadYamlString loads rules from string data
+func (e *Engine) LoadYamlBytes(data []byte) error {
+	r := newSeekBuffer(data)
+	return e.loadReaderWithDec(yamlRuleDecoder(r))
+}
+
+// LoadYamlString loads rules from string data
+func (e *Engine) LoadYamlString(data string) error {
+	return e.LoadYamlBytes([]byte(data))
 }
 
 // MatchOrFilter checks if there is a match in any rule of the engine. The only difference with Match function is that
@@ -486,13 +494,7 @@ func (e *Engine) MatchOrFilter(evt Event) *MatchResult {
 	e.RLock()
 	for _, r := range e.rules {
 		if r.Match(evt) {
-
 			mr.Update(r)
-
-			// Do not need to go further if it is a filter rule
-			if r.Filter {
-				continue
-			}
 		}
 	}
 	// Unlock so that we can update engine

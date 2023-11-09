@@ -13,5 +13,5 @@ func TestTemplate(t *testing.T) {
 
 	e := engine.NewEngine()
 
-	tt.CheckErr(e.LoadString(RuleTemplate))
+	tt.CheckErr(e.LoadYamlString(RuleTemplate))
 }

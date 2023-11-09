@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/log"
+	"gopkg.in/yaml.v3"
 )
 
 ///////////////////////////////////// Rule /////////////////////////////////////
@@ -99,6 +100,7 @@ func (er *CompiledRule) Match(evt Event) bool {
 		return false
 	}
 
+	// check if rule is applicable to the event
 	if !er.metaMatch(evt) {
 		return false
 	}
@@ -109,7 +111,6 @@ func (er *CompiledRule) Match(evt Event) bool {
 	}
 
 	// We proceed with AtomicRule mathing
-	log.Debug(er.Conditions)
 	return Compute(er.Conditions, er.operandReader(evt))
 }
 
@@ -161,33 +162,59 @@ var (
 	ErrInvalidFieldName = fmt.Errorf("invalid field name")
 )
 
+// Attack structure definiton to encode information from ATT&CK Mitre
+type Attack struct {
+	ID          string `yaml:"id" json:"id,omitempty"`
+	Tactic      string `yaml:"tactic" json:"tactic,omitempty"`
+	Description string `yaml:"description,omitempty" json:",omitempty"`
+	Reference   string `yaml:"reference,omitempty"`
+}
+
 // MetaSection defines the section holding the metadata of the rule
 type MetaSection struct {
-	LogType   string
-	Events    map[string][]int64
-	OSs       []string
-	Computers []string
-	Attack    []Attack `json:"ATTACK,omitempty"`
-	Disable   bool
-	Filter    bool
-	Authors   []string
-	Comments  []string
+	Attack   []Attack `yaml:"attack" json:"ATTACK,omitempty"`
+	Authors  []string `yaml:"authors"`
+	Comments []string `yaml:"comments"`
+}
+
+type Params struct {
+	Disable bool `yaml:"disable"`
+	Filter  bool `yaml:"filter"`
+}
+
+type MatchOn struct {
+	LogType   string             `yaml:"log-type"`
+	Events    map[string][]int64 `yaml:"events"`
+	OSs       []string           `yaml:"oss"`
+	Computers []string           `yaml:"computers"`
 }
 
 // Rule is a JSON parsable rule
 type Rule struct {
-	Name      string
-	Tags      []string
-	Meta      MetaSection
-	Matches   map[string]string
-	Condition string
-	Severity  int
-	Actions   []string
+	Name      string            `yaml:"name"`
+	Tags      []string          `yaml:"tags"`
+	Meta      MetaSection       `yaml:"meta"`
+	Params    Params            `yaml:"params"`
+	MatchOn   MatchOn           `yaml:"match-on"`
+	Matches   map[string]string `yaml:"matches"`
+	Condition string            `yaml:"condition"`
+	Severity  int               `yaml:"severity"`
+	Actions   []string          `yaml:"actions"`
 }
 
-func NewRuleDecoder(r io.Reader) *json.Decoder {
+type Decoder interface {
+	Decode(v interface{}) error
+}
+
+func jsonRuleDecoder(r io.Reader) *json.Decoder {
 	dec := json.NewDecoder(r)
 	dec.DisallowUnknownFields()
+	return dec
+}
+
+func yamlRuleDecoder(r io.Reader) Decoder {
+	dec := yaml.NewDecoder(r)
+	dec.KnownFields(true)
 	return dec
 }
 
@@ -196,11 +223,13 @@ func NewRule() Rule {
 	r := Rule{
 		Name: "",
 		Tags: make([]string, 0),
-		Meta: MetaSection{
+		MatchOn: MatchOn{
 			Events:    make(map[string][]int64),
 			OSs:       make([]string, 0),
 			Computers: make([]string, 0),
-			Attack:    make([]Attack, 0),
+		},
+		Meta: MetaSection{
+			Attack: make([]Attack, 0),
 		},
 		Matches:   make(map[string]string),
 		Condition: "",
@@ -211,7 +240,7 @@ func NewRule() Rule {
 
 // IsDisabled returns true if the rule has been disabled
 func (jr *Rule) IsDisabled() bool {
-	return jr.Meta.Disable
+	return jr.Params.Disable
 }
 
 // ReplaceTemplate the regexp templates found in the matches
@@ -229,18 +258,18 @@ func (jr *Rule) JSON() (string, error) {
 
 func (jr *Rule) resolveLogType(logTypes map[string]*LogType) *LogType {
 	// the logtype specified in rule takes precedence
-	if len(jr.Meta.LogType) > 0 {
-		return logTypes[jr.Meta.LogType]
+	if len(jr.MatchOn.LogType) > 0 {
+		return logTypes[jr.MatchOn.LogType]
 	}
 
 	// if we wanna match ONLY kunai events
-	if _, ok := jr.Meta.Events["kunai"]; ok && len(jr.Meta.Events) == 1 {
+	if _, ok := jr.MatchOn.Events["kunai"]; ok && len(jr.MatchOn.Events) == 1 {
 		return logTypes["kunai"]
 	}
 
 	// based on windows channels frequently matched
 	winMatch := 0
-	for c := range jr.Meta.Events {
+	for c := range jr.MatchOn.Events {
 		if c == "Security" ||
 			strings.HasPrefix(c, "Microsoft") {
 			winMatch += 1
@@ -248,7 +277,7 @@ func (jr *Rule) resolveLogType(logTypes map[string]*LogType) *LogType {
 	}
 
 	// we are sure ONLY all we want to match are windows channels
-	if winMatch == len(jr.Meta.Events) {
+	if winMatch == len(jr.MatchOn.Events) {
 		return logTypes["winevt"]
 	}
 
@@ -278,10 +307,10 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	}
 
 	// Setting up event filter
-	rule.EventFilter = NewEventFilter(jr.Meta.Events)
+	rule.EventFilter = NewEventFilter(jr.MatchOn.Events)
 
 	// Initializes OSs
-	for _, os := range jr.Meta.OSs {
+	for _, os := range jr.MatchOn.OSs {
 		// force OS being lower case
 		os = strings.ToLower(os)
 		if !supportedOS.Contains(os) {
@@ -291,12 +320,12 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	}
 
 	// Initializes Computers
-	for _, s := range jr.Meta.Computers {
+	for _, s := range jr.MatchOn.Computers {
 		rule.Computers.Add(s)
 	}
 
 	// Set Filter member
-	rule.Filter = jr.Meta.Filter
+	rule.Filter = jr.Params.Filter
 
 	// Parse predicates
 	for mname, p := range jr.Matches {
@@ -366,14 +395,26 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	return &rule, nil
 }
 
-// LoadRule loads (unmarshal and compile) a rule
-func LoadRule(b []byte, containers *ContainerDB) (*CompiledRule, error) {
-	var jr Rule
+// loadJsonRule loads (unmarshal and compile) a rule
+func loadJsonRule(b []byte, containers *ContainerDB) (*CompiledRule, error) {
+	var r Rule
 
-	dec := NewRuleDecoder(bytes.NewBuffer(b))
-	err := dec.Decode(&jr)
+	dec := jsonRuleDecoder(bytes.NewBuffer(b))
+	err := dec.Decode(&r)
 	if err != nil {
 		return nil, err
 	}
-	return jr.compile(containers, jr.resolveLogType(logTypes))
+	return r.compile(containers, r.resolveLogType(logTypes))
+}
+
+// loadJsonRule loads (unmarshal and compile) a rule
+func loadYamlRule(b []byte, containers *ContainerDB) (*CompiledRule, error) {
+	var r Rule
+
+	dec := yamlRuleDecoder(bytes.NewBuffer(b))
+	err := dec.Decode(&r)
+	if err != nil {
+		return nil, err
+	}
+	return r.compile(containers, r.resolveLogType(logTypes))
 }

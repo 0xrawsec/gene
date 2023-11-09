@@ -4,9 +4,11 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime/pprof"
 	"testing"
 	"time"
 
@@ -99,40 +101,51 @@ func prettyJSON(i interface{}) string {
 	return string(b)
 }
 
-func TestLoad(t *testing.T) {
+func TestMatch(t *testing.T) {
+
+	rule := `
+name: ShouldMatch
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: [ 1 ]
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+severity: 10
+`
+
 	tt := toast.FromT(t)
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"LogType": "winevt"
-	},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}`
 	e := NewEngine()
-	tt.CheckErr(e.LoadString(rule))
-	tt.Assert(e.Count() == 1)
+	tt.CheckErr(e.LoadYamlString(rule))
+	evt := winEvent()
+	mr := e.MatchOrFilter(evt)
+	tt.Assert(mr.IsDetection())
+	det := evt.GetDetection()
+	tt.Assert(det.Signature.Contains("ShouldMatch"))
+	tt.Assert(det.IsDetection())
+	tt.Assert(det.MatchCount() == 1)
+	tt.Assert(det.Severity == 10)
 }
 
-func TestMatch(t *testing.T) {
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Severity": 10,
-	"Condition": "$a"
-	}`
+func TestMatchWithEscape(t *testing.T) {
+
+	rule := `
+name: ShouldMatch
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: [ 1 ]
+matches:
+  $a: Image = 'C:\Windows\System32\DeviceCensus.exe'
+  $b: Image ~= '(?i:C:\\WINDOWS\\SYSTEM32\\DEVICECENSUS.EXE)'
+condition: $a and $b
+severity: 10
+`
 
 	tt := toast.FromT(t)
 	e := NewEngine()
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
 	tt.Assert(mr.IsDetection())
@@ -145,17 +158,15 @@ func TestMatch(t *testing.T) {
 
 func TestShouldNotMatch(t *testing.T) {
 	tt := toast.FromT(t)
-	rule := `{
-	"Name": "ShouldNotMatch",
-	"Meta": {
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [666]}
-		},
-	"Matches": {},
-	"Condition": ""
-	}`
-
+	rule := `
+name: ShouldNotMatch
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational: [ 4242 ]
+condition:
+`
 	e := NewEngine()
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
 	tt.Assert(!mr.IsDetection())
@@ -165,34 +176,29 @@ func TestShouldNotMatch(t *testing.T) {
 }
 
 func TestMatchAttck(t *testing.T) {
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"ATTACK": [
-			{
-				"ID": "T666",
-				"Tactic": "Blow everything up",
-				"Reference": "https://attack.mitre.org/"
-			},
-			{
-				"ID": "S4242",
-				"Description": "Super nasty software",
-				"Reference": "https://attack.mitre.org/"
-			}
-		]
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}`
+	rule := `
+name: ShouldMatch
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+meta:
+  attack:
+    - id: T666
+      tactic: Blow everything up
+      reference: https://attack.mitre.org/
+    - id: S4242
+      description: Super nasty software
+      reference: https://attack.mitre.org/
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a`
 
 	tt := toast.FromT(t)
 	e := NewEngine()
 	e.SetShowAttck(true)
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
 	tt.Assert(mr.IsDetection())
@@ -204,36 +210,36 @@ func TestMatchAttck(t *testing.T) {
 }
 
 func TestMatchByTag(t *testing.T) {
-	rules := `{
-	"Name": "ShouldMatch",
-	"Tags": ["foo"],
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}
-
-	{
-	"Name": "ShouldNotMatch",
-	"Tags": ["bar"],
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]}
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}
-	`
+	rules := `
+---
+name: ShouldMatch
+tags:
+  - foo
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+---
+name: ShouldNotMatch
+tags:
+  - bar
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+`
 	tt := toast.FromT(t)
 	e := NewEngine()
 	e.SetFilters(nil, []string{"foo"})
-	tt.CheckErr(e.LoadString(rules))
+	tt.CheckErr(e.LoadYamlString(rules))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
@@ -263,23 +269,21 @@ func TestNotOrRule(t *testing.T) {
 	   "User": "NT AUTHORITY\\SYSTEM",
 	   "UtcTime": "2017-01-19 16:09:30.252"
 	*/
-	rule := `{
-	"Name": "NotOrRule",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
-		"$b": "CurrentDirectory = 'C:\\Windows\\system32\\'"
-		},
-	"Condition": "!($a or $b)"
-	}
-	`
+
+	rule := `
+name: NotOrRule
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+  $b: CurrentDirectory = 'C:\Windows\system32\'
+condition: '!($a or $b)'`
+
 	tt := toast.FromT(t)
 	e := NewEngine()
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
@@ -306,24 +310,20 @@ func TestNotAndRule(t *testing.T) {
 	   "User": "NT AUTHORITY\\SYSTEM",
 	   "UtcTime": "2017-01-19 16:09:30.252"
 	*/
-	rule := `{
-	"Name": "NotAndRule",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
-		"$b": "CurrentDirectory = 'C:\\Windows\\system32\\'"
-		},
-	"Condition": "!($a and !$b)"
-	}
-	`
+	rule := `
+name: NotAndRule
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+  $b: CurrentDirectory = 'C:\Windows\system32\'
+condition: '!($a and !$b)'`
 
 	tt := toast.FromT(t)
 	e := NewEngine()
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
@@ -349,27 +349,25 @@ func TestComplexRule(t *testing.T) {
 	   "User": "NT AUTHORITY\\SYSTEM",
 	   "UtcTime": "2017-01-19 16:09:30.252"
 	*/
-	rule := `{
-	"Name": "ComplexRule",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'",
-		"$b": "CurrentDirectory = 'C:\\Windows\\system32\\'",
-		"$c": "CommandLine = 'C:\\Windows\\system32\\devicecensus.exe'",
-		"$d": "Image = 'C:\\Windows\\System32\\DeviceCensus.exe'",
-		"$e": "IntegrityLevel = 'Blop'",
-		"$f": "LogonGuid = 'B2796A13-618F-5881-0000-0020E7030000'"
-		},
-	"Condition": "!($a and !$b) and ($c or ($d and !$e) ) and $f"
-	}
-	`
+
+	rule := `
+name: ComplexRule
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+  $b: CurrentDirectory = 'C:\Windows\system32\'
+  $c: CommandLine = 'C:\Windows\system32\devicecensus.exe'
+  $d: Image = 'C:\Windows\System32\DeviceCensus.exe'
+  $e: IntegrityLevel = 'Blop'
+  $f: LogonGuid = 'B2796A13-618F-5881-0000-0020E7030000'
+condition: '!($a and !$b) and ($c or ($d and !$e) ) and $f'`
+
 	tt := toast.FromT(t)
 	e := NewEngine()
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	mr := e.MatchOrFilter(winEvent())
 	tt.Assert(mr.IsDetection())
@@ -394,21 +392,19 @@ func TestContainer(t *testing.T) {
 	   "User": "NT AUTHORITY\\SYSTEM",
 	   "UtcTime": "2017-01-19 16:09:30.252"
 	*/
-	rule := `{
-	"Name": "ContainerConditions",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$md5": "extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist",
-		"$sha1": "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
-		"$sha256": "extract('SHA256=(?P<sha1>[A-F0-9]{64})', Hashes) in blacklist"
-		},
-	"Condition": "$md5 and $sha1 and $sha256"
-	}
-	`
+
+	rule := `
+name: ContainerConditions
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist
+  $sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist
+  $sha256: extract('SHA256=(?P<sha1>[A-F0-9]{64})', Hashes) in blacklist
+condition: $md5 and $sha1 and $sha256`
+
 	tt := toast.FromT(t)
 	e := NewEngine()
 
@@ -420,7 +416,7 @@ func TestContainer(t *testing.T) {
 	e.Blacklist("03324e67244312360ff089cf61175def2031be513457bb527ae0abf925e72319")
 	tt.Assert(e.BlacklistLen() == 3)
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	mr := e.MatchOrFilter(winEvent())
 	tt.Assert(mr.IsDetection())
@@ -445,20 +441,19 @@ func TestFiltered1(t *testing.T) {
 	   "User": "NT AUTHORITY\\SYSTEM",
 	   "UtcTime": "2017-01-19 16:09:30.252"
 	*/
-	rule := `{
-	"Name": "ProcessCreate",
-	"Meta": {
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Filter": true
-		},
-	"Matches": {},
-	"Condition": ""
-	}
-	`
+
+	rule := `
+name: ProcessCreate
+params:
+  filter: true
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational: [1]`
+
 	tt := toast.FromT(t)
 	e := NewEngine()
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
@@ -488,33 +483,30 @@ func TestFiltered2(t *testing.T) {
 	   "User": "NT AUTHORITY\\SYSTEM",
 	   "UtcTime": "2017-01-19 16:09:30.252"
 	*/
-	rule := `{
-	"Name": "ProcessCreate",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [1]},
-		"Filter": true
-		},
-	"Matches": {},
-	"Condition": ""
-	}
-	
-	{
-	"Name": "SimpleRule",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}
-	`
+
+	rule := `
+---
+name: ProcessCreate
+params:
+  filter: true
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational: [1]
+...
+---
+name: SimpleRule
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+...
+`
 	tt := toast.FromT(t)
 	e := NewEngine()
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 2)
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
@@ -527,20 +519,19 @@ func TestFiltered2(t *testing.T) {
 }
 
 func TestNotFiltered(t *testing.T) {
-	rule := `{
-	"Name": "ProcessCreate",
-	"Meta": {
-		"Events": {"Microsoft-Windows-Sysmon/Operational": [2]},
-		"Filter": true
-		},
-	"Matches": {},
-	"Condition": ""
-	}
-	`
+	rule := `
+---
+name: ProcessCreate
+params:
+  filter: true
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational: [2]
+...`
 	tt := toast.FromT(t)
 	e := NewEngine()
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
 	tt.Assert(!mr.IsDetection())
@@ -557,19 +548,19 @@ func TestLoadDirectory(t *testing.T) {
 	count := 42
 
 	for i := 0; i < count; i++ {
-		rule := fmt.Sprintf(`{
-	"Name": "ShouldMatch_%d",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a",
-	"Actions": ["kill", "kill", "block", "block"]
-	}`, i)
+		rule := fmt.Sprintf(`
+---
+name: ShouldMatch_%d
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+actions:
+  - kill
+  - kill
+  - block
+  - block
+...
+`, i)
 
 		tt.CheckErr(os.WriteFile(filepath.Join(dir, fmt.Sprintf("rule_%d.gen", i)), []byte(rule), 0777))
 	}
@@ -583,25 +574,26 @@ func TestLoadDirectory(t *testing.T) {
 }
 
 func TestActions(t *testing.T) {
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a",
-	"Actions": ["kill", "kill", "block", "block"]
-	}`
+	rule := `
+name: ShouldMatch
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+actions:
+  - kill
+  - kill
+  - block
+  - block`
 
 	tt := toast.FromT(t)
 	e := NewEngine()
 	e.ShowActions = true
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
 	tt.Assert(mr.IsDetection())
@@ -612,25 +604,22 @@ func TestActions(t *testing.T) {
 }
 
 func TestDefaultActions(t *testing.T) {
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}`
+	rule := `
+name: ShouldMatch
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a`
 
 	tt := toast.FromT(t)
 	e := NewEngine()
 	e.ShowActions = true
 	e.SetDefaultActions(0, 10, []string{"kill", "kill", "block", "block"})
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
 	mr := e.MatchOrFilter(evt)
 	tt.Assert(mr.IsDetection())
@@ -677,23 +666,22 @@ func TestGetRule(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {"Microsoft-Windows-Sysmon/Operational": []}
-		
-		},
-	"Matches": {
-		"$a": "Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'"
-		},
-	"Condition": "$a"
-	}`
+	rule := `
+---
+name: ShouldMatch
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational: []
+matches:
+  $a: Hashes ~= 'SHA1=65894B0162897F2A6BB8D2EB13684BF2B451FDEE,'
+condition: $a
+...`
 
 	e := NewEngine()
 	e.SetDumpRaw(true)
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 
 	tt.Assert(len(collect(e.GetRawRule("Should"))) == 1)
 
@@ -724,7 +712,7 @@ func TestLoadingOldFormat(t *testing.T) {
 
 	e := NewEngine()
 
-	tt.Assert(e.LoadString(rule) != nil)
+	tt.Assert(e.LoadJsonString(rule) != nil)
 }
 
 func TestAbsolutePath(t *testing.T) {
@@ -758,22 +746,21 @@ func TestAbsolutePath(t *testing.T) {
 	}
 	`
 
-	rule := `{
-	"Name": "ShouldMatch",
-	"Meta": {
-		"Events" : {"kunai": []}
-		
-		},
-	"Matches": {
-		"$a": "exe/file = '/usr/bin/ping'",
-		"$b": "/data/exe/md5 = '2d57c5245652e40bbf51edaaa3be65bd'"
-	},
-	"Condition": "$a and $b"
-	}`
+	rule := `
+---
+name: ShouldMatch
+match-on:
+  events:
+    kunai: []
+matches:
+  $a: exe/file = '/usr/bin/ping'
+  $b: /data/exe/md5 = '2d57c5245652e40bbf51edaaa3be65bd'
+condition: $a and $b
+...`
 
 	e := NewEngine()
 
-	tt.CheckErr(e.LoadString(rule))
+	tt.CheckErr(e.LoadYamlString(rule))
 	evt := eventFromString(event)
 	mr := e.MatchOrFilter(evt)
 	tt.Logf("names: %s", mr.MatchesSlice())
@@ -783,20 +770,18 @@ func TestAbsolutePath(t *testing.T) {
 
 /////////////////////////////// Benchmarks /////////////////////////////////////
 
-func BenchmarkLoadThousand(b *testing.B) {
-	e := NewEngine()
-	if err := e.LoadFile(bigRuleFile); err != nil {
-		b.Logf("Loading failed: %s", err)
-		b.FailNow()
-	}
-	b.Logf("Engine loaded %d rules", e.Count())
-}
-
 func BenchmarkEngine(b *testing.B) {
 	var err error
 	var fd *os.File
 	var r *gzip.Reader
 	var bytesScanned uint64
+
+	// Enable CPU profiling
+	f, err := os.Create("/tmp/cpu.pprof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer f.Close()
 
 	loops := 5
 	events := make([]GenericEvent, 0)
@@ -805,9 +790,16 @@ func BenchmarkEngine(b *testing.B) {
 	rulePath := "./test/data/compiled.gen"
 	e := NewEngine()
 
+	start := time.Now()
 	// loading rules into engine
 	if err := e.LoadFile(rulePath); err != nil {
 		b.Errorf("Loading failed: %s", err)
+		b.FailNow()
+	}
+	loadTime := time.Since(start)
+
+	if e.Count() == 0 {
+		b.Errorf("No rule loaded")
 		b.FailNow()
 	}
 
@@ -834,27 +826,30 @@ func BenchmarkEngine(b *testing.B) {
 	}
 	r.Close()
 
-	start := time.Now()
+	start = time.Now()
+	// start rule matching profiling
+	pprof.StartCPUProfile(f)
 	for i := 0; i < loops; i++ {
 		for _, evt := range events {
 			e.MatchOrFilter(evt)
 		}
 	}
-	stop := time.Now()
+	// stop rule matching profiling
+	pprof.StopCPUProfile()
+	scanTime := time.Since(start)
 
 	// statistics
 
 	// we have to multiply the number of bytes scanned by the
 	// number of loops we have done
 	bytesScanned *= uint64(loops)
-	dmatch := stop.Sub(start)
-	eps := float64(e.Stats.Scanned) / float64(dmatch.Seconds())
-	mbps := float64(bytesScanned) / float64(dmatch.Seconds()*1000000)
+	eps := float64(e.Stats.Scanned) / float64(scanTime.Seconds())
+	mbps := float64(bytesScanned) / float64(scanTime.Seconds()*1000000)
 
 	b.Logf("Benchmark using real Windows events and production detection rules")
-	b.Logf("Number of rules loaded: %d", e.Count())
+	b.Logf("Number of rules loaded: %d in %s", e.Count(), loadTime)
 	b.Logf("Number of events scanned: %d", e.Stats.Scanned)
-	b.Logf("Theoretical maximum engine speed: %.2f Event/s", eps)
+	b.Logf("Theoretical maximum engine speed: %.2f event/s", eps)
 	b.Logf("                                  %.2f MB/s", mbps)
 
 }

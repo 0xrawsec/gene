@@ -287,17 +287,7 @@ func main() {
 
 	// Display rule template and exit if template flag
 	if flTemplate {
-
-		r := engine.Rule{}
-		json.Unmarshal([]byte(template.RuleTemplate), &r)
-
-		// marshaling the stuff out
-		b, err := json.Marshal(r)
-		if err != nil {
-			log.Abort(exitFail, err)
-		}
-
-		fmt.Println(string(b))
+		fmt.Println(string(template.RuleTemplate))
 		os.Exit(exitSuccess)
 	}
 

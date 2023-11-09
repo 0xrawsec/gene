@@ -3,7 +3,6 @@ package engine
 import (
 	"errors"
 	"io"
-	"os"
 )
 
 var (
@@ -15,6 +14,10 @@ type seekBuffer struct {
 	buff []byte
 }
 
+func newSeekBufferString(s string) *seekBuffer {
+	return newSeekBuffer([]byte(s))
+}
+
 func newSeekBuffer(b []byte) *seekBuffer {
 	sb := &seekBuffer{}
 	sb.buff = make([]byte, len(b))
@@ -23,7 +26,7 @@ func newSeekBuffer(b []byte) *seekBuffer {
 }
 
 func (sb *seekBuffer) Read(p []byte) (n int, err error) {
-	if sb.i+len(p) < sb.Len() {
+	if sb.i+len(p) <= sb.Len() {
 		n = copy(p, sb.buff[sb.i:sb.i+len(p)])
 		sb.i += n
 		return n, nil
@@ -35,19 +38,19 @@ func (sb *seekBuffer) Read(p []byte) (n int, err error) {
 
 func (sb *seekBuffer) Seek(offset int64, whence int) (int64, error) {
 	switch whence {
-	case os.SEEK_CUR:
+	case io.SeekCurrent:
 		if sb.i+int(offset) <= sb.Len() {
 			sb.i += int(offset)
 			break
 		}
 		return 0, errBufferOutOfBounds
-	case os.SEEK_SET:
+	case io.SeekStart:
 		if int(offset) <= sb.Len() && offset >= 0 {
 			sb.i = int(offset)
 			break
 		}
 		return 0, errBufferOutOfBounds
-	case os.SEEK_END:
+	case io.SeekEnd:
 		if sb.Len()-int(offset) > 0 {
 			sb.i = sb.Len() - int(offset)
 			break

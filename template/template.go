@@ -1,46 +1,34 @@
 package template
 
 var (
-	RuleTemplate = `
-{
-  "Name": "RuleName",
-  "Tags": [],
-  "Meta": {
-    "LogType": "winevt",
-    "Events": {
-      "SomeEventSource": [
-        42
-      ]
-    },
-    "OSs": [
-      "linux",
-      "windows"
-    ],
-    "Computers": [],
-    "ATTACK": [
-      {
-        "ID": "T4242",
-        "Tactic": "",
-        "Reference": "https://attack.mitre.org/T4242"
-      }
-    ],
-    "Disable": false,
-    "Filter": false,
-    "Authors": [
-      "@rawsec"
-    ],
-    "Comments": [
-      "Rule catching technique documented in the following link",
-      "https://super.ttp.com"
-    ]
-  },
-  "Matches": {
-    "$a": "SomeField = '42'",
-    "$b": "/Absolute/Field/Path ~= 'SomeRegex'"
-  },
-  "Condition": "$a or $b",
-  "Severity": 5,
-  "Actions": []
-}
-	`
+	RuleTemplate = `---
+# rule name, this is the only mandatory field
+name: RuleName
+params:
+  filter: false
+  disable: false
+match-on:
+  log-type: winevt
+  events:
+    SomeEventSource: [1, 2, 42]
+  oss:
+    - linux
+    - windows
+  computers: []
+meta:
+  attack:
+    - id: T4242
+      tactic: ''
+      reference: https://attack.mitre.org/T4242
+  authors:
+    - '@0xrawsec'
+  comments:
+    - Rule catching technique documented in the following link
+    - https://super.ttp.com
+matches:
+  $a: SomeField = '42'
+  $b: /Absolute/Field/Path ~= 'SomeRegex'
+condition: $a or $b
+severity: 5
+...`
 )

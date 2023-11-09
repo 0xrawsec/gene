@@ -157,25 +157,29 @@ func TestRule(t *testing.T) {
 func TestLoadRule(t *testing.T) {
 	tt := toast.FromT(t)
 
-	ruleStr := `{
-	"Name": "Test",
-	"Tags": ["Hello", "World"],
-	"Meta": {
-		"LogType": "winevt",
-		"Events": {
-			"Microsoft-Windows-Sysmon/Operational": [1,7]
-		},
-		"Computers": ["DESKTOP-5SUA567"]
-		},
-	"Matches": {
-		"$a": "Hashes ~= '83514D9AAF0E168944B6D3C01110C393'",
-		"$b": "Hashes ~= 'Not'",
-		"$c": "Image ~= '(?i:DeviceCENSUS\\.exe$)'"
-		},
-	"Condition": "$c and $a and (!$b)"
-	}`
+	ruleStr := `
+---
+name: Test
+tags:
+  - Hello
+  - World
+match-on:
+  log-type: winevt
+  events:
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+      - 7
+  computers:
+    - DESKTOP-5SUA567
+matches:
+  $a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'
+  $b: Hashes ~= 'Not'
+  $c: Image ~= '(?i:DeviceCENSUS\.exe$)'
+condition: $c and $a and (!$b)
+...
+`
 
-	er, err := LoadRule([]byte(ruleStr), nil)
+	er, err := loadYamlRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 
 	tt.Assert(er.Match(winevtEvent))
@@ -207,21 +211,23 @@ func TestParseContainerMatch(t *testing.T) {
 func TestBlacklist(t *testing.T) {
 	tt := toast.FromT(t)
 
-	ruleStr := `{
-	"Name": "Blacklisted",
-	"Tags": ["Hello", "World"],
-	"Meta": {
-		"Events": {
-			"Microsoft-Windows-Sysmon/Operational": [1,7]
-		}
-	},
-	"Matches": {
-		"$sha1In": "extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist",
-		"$md5InBl": "extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in blacklist",
-		"$md5InWl": "extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in whitelist"
-		},
-	"Condition": "$md5InBl and $sha1In and !$md5InWl"
-	}`
+	ruleStr := `
+---
+name: Blacklisted
+tags:
+  - Hello
+  - World
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+      - 7
+matches:
+  $sha1In: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist
+  $md5InBl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in blacklist
+  $md5InWl: extract('(?P<md5>83514D9AAF0E168944B6D3C01110C393)', Hashes) in whitelist
+condition: $md5InBl and $sha1In and !$md5InWl
+...`
 
 	containers := NewContainers()
 	// adding md5
@@ -231,7 +237,7 @@ func TestBlacklist(t *testing.T) {
 	// bogus value in whitelist, we don't care what's in it
 	containers.AddStringToContainer("whitelist", "turbo fish")
 
-	er, err := LoadRule([]byte(ruleStr), containers)
+	er, err := loadYamlRule([]byte(ruleStr), containers)
 
 	tt.CheckErr(err)
 	tt.Assert(er.Match(winevtEvent))
@@ -242,44 +248,44 @@ func TestIndirectMatch(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	ruleStr := `{
-	"Name": "IndirectMatch",
-	"Meta": {
-		"Events": {
-			"Microsoft-Windows-Sysmon/Operational": [1,7]
-		}
-	},
-	"Matches": {
-		"$dummyIndirect": "Hashes = @Hashes",
-		"$abs": "/Event/System/Computer = @/Event/System/Computer",
-		"$fail": "/Event/System/Computer = @/Event/System/Channel"
-		},
-	"Condition": "$dummyIndirect and $abs and !$fail"
-	}`
+	ruleStr := `
+---
+name: IndirectMatch
+match-on:
+  events:
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+      - 7
+matches:
+  $dummyIndirect: Hashes = @Hashes
+  $abs: /Event/System/Computer = @/Event/System/Computer
+  $fail: /Event/System/Computer = @/Event/System/Channel
+condition: $dummyIndirect and $abs and !$fail
+...`
 
-	er, err := LoadRule([]byte(ruleStr), nil)
+	er, err := loadYamlRule([]byte(ruleStr), nil)
 
 	tt.CheckErr(err)
 
 	tt.Assert(er.Match(winevtEvent))
-
 }
 
 func TestMatchEvent(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	ruleStr := `{
-	"Name": "TestMatchEvent",
-	"Meta": {
-		"Events": {
-			"kunai": [1],
-			"Microsoft-Windows-Sysmon/Operational": [1]
-			}
-		}
-	}`
+	ruleStr := `
+---
+name: TestMatchEvent
+match-on:
+  events:
+    kunai:
+      - 1
+    Microsoft-Windows-Sysmon/Operational:
+      - 1
+...`
 
-	er, err := LoadRule([]byte(ruleStr), nil)
+	er, err := loadYamlRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
 
@@ -294,14 +300,18 @@ func TestMatchOS(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	ruleStr := `{
-	"Name": "TestOSMatch",
-	"Meta": {
-		"OSs": ["windows", "Linux", "DARWIN"]
-		}
-	}`
+	ruleStr := `
+---
+name: TestOSMatch
+match-on:
+  oss:
+    - windows
+    - Linux
+    - DARWIN
+...
+`
 
-	er, err := LoadRule([]byte(ruleStr), nil)
+	er, err := loadYamlRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 	tt.Assert(er.OSs.Len() == 3)
 
@@ -314,13 +324,13 @@ func TestMatchOS(t *testing.T) {
 	tt.Assert(!er.matchOS("android"))
 
 	// testing that we return ErrInvalidOS on invalid OS
-	_, err = LoadRule([]byte(`
-	{
-	"Name": "TestOSMatch",
-	"Meta": {
-		"OSs": ["invalid_os"]
-		}
-	}`), nil)
+	_, err = loadYamlRule([]byte(`
+---
+name: TestOSMatch
+match-on:
+  oss:
+    - invalid_os
+...`), nil)
 
 	tt.ExpectErr(err, ErrInvalidOS)
 }
@@ -329,20 +339,18 @@ func TestAuthorsComments(t *testing.T) {
 
 	tt := toast.FromT(t)
 
-	ruleStr := `{
-	"Name": "TestAuthorsComments",
-	"Meta": {
-		"Authors": [
-			"0xrawsec",
-			"Santa"
-		],
-		"Comments": [
-			"Some useful comment",
-			"Another comment"
-			]
-		}
-	}`
+	ruleStr := `
+---
+name: TestAuthorsComments
+meta:
+  authors:
+    - 0xrawsec
+    - Santa
+  comments:
+    - Some useful comment
+    - Another comment
+...`
 
-	_, err := LoadRule([]byte(ruleStr), nil)
+	_, err := loadYamlRule([]byte(ruleStr), nil)
 	tt.CheckErr(err)
 }
