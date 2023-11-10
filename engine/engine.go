@@ -13,7 +13,6 @@ import (
 
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/fsutil"
-	"github.com/0xrawsec/golang-utils/fsutil/fswalker"
 	"github.com/0xrawsec/golang-utils/log"
 )
 
@@ -384,43 +383,48 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 	}
 
 	if fsutil.IsDir(templateDir) {
-		for wi := range fswalker.Walk(templateDir) {
-			for _, fi := range wi.Files {
-				ext := filepath.Ext(fi.Name())
-				templateFile := filepath.Join(wi.Dirpath, fi.Name())
-				if e.tplExtensions.Contains(ext) {
-					log.Debugf("Loading regexp templates from file: %s", templateFile)
-					err := e.loadTemplate(templateFile)
-					if err != nil {
-						log.Errorf("Error loading %s: %s", templateFile, err)
-						return err
-					}
+		entries, err := os.ReadDir(templateDir)
+		if err != nil {
+			return err
+		}
+
+		// we only check for entries in rule's directory we don't recurse
+		for _, de := range entries {
+			ext := filepath.Ext(de.Name())
+			templateFile := filepath.Join(templateDir, de.Name())
+			if e.tplExtensions.Contains(ext) {
+				log.Debugf("Loading regexp templates from file: %s", templateFile)
+				err := e.loadTemplate(templateFile)
+				if err != nil {
+					return fmt.Errorf("error loading template (file=%s): %w", templateFile, err)
 				}
 			}
 		}
 	}
 
+	// We can now load the rules
 	// Handle both rules argument as file or directory
 	switch {
 	case fsutil.IsFile(realPath):
 		err := e.loadFile(realPath)
 		if err != nil {
-			log.Errorf("Error loading %s: %s", realPath, err)
-			return err
+			return fmt.Errorf("failed to load rule (file=%s): %w", realPath, err)
 		}
 
 	case fsutil.IsDir(realPath):
-		for wi := range fswalker.Walk(realPath) {
-			for _, fi := range wi.Files {
-				ext := filepath.Ext(fi.Name())
-				rulefile := filepath.Join(wi.Dirpath, fi.Name())
-				// Check if the file extension is in the list of valid rule extension
-				if e.ruleExtensions.Contains(ext) {
-					err := e.loadFile(rulefile)
-					if err != nil {
-						log.Errorf("Error loading %s: %s", rulefile, err)
-						return err
-					}
+		entries, err := os.ReadDir(realPath)
+		if err != nil {
+			return fmt.Errorf("failed to read rule dir: %w", err)
+		}
+
+		for _, de := range entries {
+			ext := filepath.Ext(de.Name())
+			rulefile := filepath.Join(realPath, de.Name())
+			// Check if the file extension is in the list of valid rule extension
+			if e.ruleExtensions.Contains(ext) {
+				err := e.loadFile(rulefile)
+				if err != nil {
+					return fmt.Errorf("failed to load rule (file=%s): %w", rulefile, err)
 				}
 			}
 		}
@@ -460,7 +464,7 @@ func (e *Engine) loadRule(rule *Rule) error {
 
 	// We store the rule in raw rules
 	if e.dumpRaw {
-		if json, err := rule.JSON(); err != nil {
+		if json, err := rule.Yaml(); err != nil {
 			return fmt.Errorf("cannot save raw rule: %w", err)
 		} else {
 			e.rawRules[rule.Name] = json

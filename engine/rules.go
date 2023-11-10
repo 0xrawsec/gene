@@ -243,9 +243,15 @@ func (jr *Rule) ReplaceTemplate(tm *TemplateMap) {
 	}
 }
 
-// JSON returns the JSON string corresponding to the rule
-func (jr *Rule) JSON() (string, error) {
+// Json returns the Json string corresponding to the rule
+func (jr *Rule) Json() (string, error) {
 	b, err := json.Marshal(jr)
+	return string(b), err
+}
+
+// JSON returns the JSON string corresponding to the rule
+func (jr *Rule) Yaml() (string, error) {
+	b, err := yaml.Marshal(jr)
 	return string(b), err
 }
 
