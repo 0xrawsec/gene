@@ -8,11 +8,14 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"runtime/pprof"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/0xrawsec/golang-utils/readers"
+	"github.com/0xrawsec/golang-utils/sync/semaphore"
 	"github.com/0xrawsec/toast"
 )
 
@@ -686,10 +689,10 @@ condition: $a
 	tt.Assert(len(collect(e.GetRawRule("Should"))) == 1)
 
 	tt.Assert(e.GetRawRuleByName("ShouldMatch") != "")
-	tt.Assert(e.GetCRuleByName("ShouldMatch") != nil)
+	tt.Assert(e.GetCompRuleByName("ShouldMatch") != nil)
 
 	tt.Assert(e.GetRawRuleByName("XYZ") == "")
-	tt.Assert(e.GetCRuleByName("XYZ") == nil)
+	tt.Assert(e.GetCompRuleByName("XYZ") == nil)
 
 	names := e.GetRuleNames()
 	tt.Assert(len(names) == 1)
@@ -771,6 +774,14 @@ condition: $a and $b
 /////////////////////////////// Benchmarks /////////////////////////////////////
 
 func BenchmarkEngine(b *testing.B) {
+	bench(b, 1)
+}
+
+func BenchmarkEngineParallel(b *testing.B) {
+	bench(b, uint64(runtime.NumCPU()))
+}
+
+func bench(b *testing.B, jobs uint64) {
 	var err error
 	var fd *os.File
 	var r *gzip.Reader
@@ -839,11 +850,20 @@ func BenchmarkEngine(b *testing.B) {
 	start = time.Now()
 	// start rule matching profiling
 	pprof.StartCPUProfile(f)
+	wg := sync.WaitGroup{}
+	sem := semaphore.New(jobs)
 	for i := 0; i < loops; i++ {
-		for _, evt := range events {
-			e.Match(evt)
-		}
+		wg.Add(1)
+		sem.Acquire()
+		go func() {
+			for _, evt := range events {
+				e.Match(evt)
+			}
+			wg.Done()
+			sem.Release()
+		}()
 	}
+	wg.Wait()
 	// stop rule matching profiling
 	pprof.StopCPUProfile()
 	scanTime := time.Since(start)
@@ -865,11 +885,11 @@ func BenchmarkEngine(b *testing.B) {
 	}
 
 	b.Logf("Benchmark using real Windows events and production detection rules")
+	b.Logf("Number of scanning jobs: %d", jobs)
 	b.Logf("Number of rules loaded: %d (enabled=%d, disabled=%d) in %s", e.Count(), cntRulesEn, cntRulesDis, loadTime)
 	b.Logf("Number of events scanned: %d in %s", e.Stats.Scanned, scanTime)
 	b.Logf("Number of cached events: %d => %.2f%%", e.Stats.Cached, float64(e.Stats.Cached)*100/float64(e.Stats.Scanned))
 	b.Logf("Number of detections: %d => %.2f%%", e.Stats.Detections, float64(e.Stats.Detections)*100/float64(e.Stats.Scanned))
 	b.Logf("Theoretical average engine scanning speed: %.2f events/s", eps)
 	b.Logf("                                           %.2f MBs/s", mbps)
-
 }

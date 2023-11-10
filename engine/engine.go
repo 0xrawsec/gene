@@ -17,55 +17,6 @@ import (
 	"github.com/0xrawsec/golang-utils/log"
 )
 
-/////////////////////////// Utility functions //////////////////////////////////
-
-func seekerGoto(reader io.ReadSeeker, offset int64, flag int) int64 {
-	off, err := reader.Seek(offset, flag)
-	if err != nil {
-		panic(err)
-	}
-	return off
-}
-
-func nextRuleOffset(endLastRuleOffset int64, reader io.ReadSeeker) int64 {
-	var char [1]byte
-	var cnt int64
-	cur := seekerGoto(reader, 0, io.SeekCurrent)
-	seekerGoto(reader, endLastRuleOffset, io.SeekStart)
-	for read, err := reader.Read(char[:]); read == 1 && err == nil; read, err = reader.Read(char[:]) {
-		if char[0] == '{' {
-			break
-		}
-		cnt++
-	}
-	seekerGoto(reader, cur, io.SeekStart)
-	return endLastRuleOffset + cnt
-}
-
-func findLineError(ruleOffset int64, reader io.ReadSeeker) (int64, int64) {
-	var line, offset int64
-	var buf [4096]byte
-
-	// Go back to beginning of reader
-	seekerGoto(reader, 0, io.SeekStart)
-
-ReadLoop:
-	for read, err := reader.Read(buf[:]); read > 0 && err == nil; read, err = reader.Read(buf[:]) {
-		for _, c := range buf[:read] {
-			if offset == ruleOffset {
-				break ReadLoop
-			}
-			if c == '\n' {
-				line++
-			}
-			offset++
-		}
-	}
-	// Line number always starts at 1
-	line++
-	return line, offset
-}
-
 ////////////////////////////////// Engine /////////////////////////////////////
 
 const (
@@ -98,6 +49,13 @@ type Stats struct {
 	Detections uint64
 }
 
+func (s *Stats) increment(scanned, cached, matched, detections uint64) {
+	s.Scanned += scanned
+	s.Cached += cached
+	s.Matched += matched
+	s.Detections += detections
+}
+
 // Engine defines the engine managing several rules
 type Engine struct {
 	sync.RWMutex
@@ -119,7 +77,7 @@ type Engine struct {
 	tplExtensions  *datastructs.SyncedSet
 	// default actions
 	defaultActions map[int][]string
-	// log formats
+	// log types supported by the engine
 	logTypes map[string]*LogType
 
 	// engine statistics
@@ -140,9 +98,6 @@ func NewEngine() (e *Engine) {
 	e.tagFilters = datastructs.NewSyncedSet()
 	e.nameFilters = datastructs.NewSyncedSet()
 	e.containers = NewContainers()
-	// We do not create the containers so that they are not considered as empty
-	//e.containers.AddNewContainer("blacklist")
-	//e.containers.AddNewContainer("whitelist")
 	e.ruleExtensions = DefaultRuleExtensions
 	e.tplExtensions = DefaultTplExtensions
 	e.defaultActions = make(map[int][]string)
@@ -155,12 +110,13 @@ func NewEngine() (e *Engine) {
 }
 
 func (e *Engine) AddLogFormat(name string, format *LogType) {
+	e.Lock()
+	defer e.Unlock()
 	e.logTypes[name] = format
 }
 
 // addRule adds a rule to the current engine
 func (e *Engine) addRule(r *CompiledRule) error {
-
 	if e.os != "" && !r.matchOS(e.os) {
 		log.Debugf("Skip rule %s because it does not match configured OS: configured=%s rule=%s", r.Name, e.os, r.OSs.Slice())
 		return nil
@@ -178,8 +134,6 @@ func (e *Engine) addRule(r *CompiledRule) error {
 		return nil
 	}
 
-	e.Lock()
-	defer e.Unlock()
 	// don't need to increment since element will be appended at i
 	i := len(e.rules)
 	if _, ok := e.names[r.Name]; ok {
@@ -201,9 +155,9 @@ func (e *Engine) loadReaderWithDec(dec Decoder) error {
 	var decerr error
 
 	for {
-		var jRule Rule
+		var rule Rule
 
-		decerr = dec.Decode(&jRule)
+		decerr = dec.Decode(&rule)
 		if decerr != nil {
 			if !errors.Is(decerr, io.EOF) {
 				return fmt.Errorf("decoding error: %w", decerr)
@@ -212,7 +166,7 @@ func (e *Engine) loadReaderWithDec(dec Decoder) error {
 			break
 		}
 
-		if err := e.LoadRule(&jRule); err != nil {
+		if err := e.loadRule(&rule); err != nil {
 			return fmt.Errorf("failed to load rule: %w", err)
 		}
 	}
@@ -223,11 +177,15 @@ func (e *Engine) loadReaderWithDec(dec Decoder) error {
 
 // SetDumpRaw setter for dumpRaw flag
 func (e *Engine) SetDumpRaw(value bool) {
+	e.Lock()
+	defer e.Unlock()
 	e.dumpRaw = value
 }
 
 // SetFilters sets the filters to use in the engine
 func (e *Engine) SetFilters(names, tags []string) {
+	e.Lock()
+	defer e.Unlock()
 	for _, n := range names {
 		e.nameFilters.Add(n)
 	}
@@ -239,6 +197,8 @@ func (e *Engine) SetFilters(names, tags []string) {
 // SetDefaultActions sets default actions given to event reaching
 // certain severity within [low; high]
 func (e *Engine) SetDefaultActions(low, high int, actions []string) {
+	e.Lock()
+	defer e.Unlock()
 	for i := low; i <= high; i++ {
 		e.defaultActions[i] = actions
 	}
@@ -247,16 +207,22 @@ func (e *Engine) SetDefaultActions(low, high int, actions []string) {
 // SetShowAttck sets engine flag to display ATT&CK information in matching events
 // Update: member was private before, this method is kept for compatibility purposes
 func (e *Engine) SetShowAttck(value bool) {
+	e.Lock()
+	defer e.Unlock()
 	e.ShowAttack = value
 }
 
 // Count returns the number of rules successfuly loaded
 func (e *Engine) Count() int {
+	e.RLock()
+	defer e.RUnlock()
 	return len(e.rules)
 }
 
 // Tags returns the tags of the rules currently loaded into the engine
 func (e *Engine) Tags() []string {
+	e.RLock()
+	defer e.RUnlock()
 	tn := make([]string, 0, len(e.tags))
 	for t := range e.tags {
 		tn = append(tn, t)
@@ -264,36 +230,53 @@ func (e *Engine) Tags() []string {
 	return tn
 }
 
+func (e *Engine) addToContainer(container, value string) {
+	e.containers.AddStringToContainer(container, value)
+}
+
 // AddToContainer adds a value to a given container and creates it if needed
 // the string pushed to the container is lower cased (behaviour of
 // AddSTringToContainer)
 func (e *Engine) AddToContainer(container, value string) {
-	e.containers.AddStringToContainer(container, value)
+	e.Lock()
+	defer e.Unlock()
+	e.addToContainer(container, value)
 }
 
 // Blacklist insert a value (converted to lowercase) to be blacklisted
 func (e *Engine) Blacklist(value string) {
-	e.containers.AddStringToContainer(blacklistContainer, value)
+	e.Lock()
+	defer e.Unlock()
+	e.addToContainer(blacklistContainer, value)
 }
 
 // Whitelist insert a value (converted to lowercase) to be whitelisted
 func (e *Engine) Whitelist(value string) {
-	e.containers.AddStringToContainer(whitelistContainer, value)
+	e.Lock()
+	defer e.Unlock()
+	e.addToContainer(whitelistContainer, value)
 }
 
 // BlacklistLen returns the size of the blacklist
 func (e *Engine) BlacklistLen() int {
+	e.RLock()
+	defer e.RUnlock()
 	return e.containers.Len(blacklistContainer)
 }
 
 // WhitelistLen returns the size of the whitelist
 func (e *Engine) WhitelistLen() int {
+	e.RLock()
+	defer e.RUnlock()
 	return e.containers.Len(whitelistContainer)
 }
 
 // GetRawRule returns the raw rule according to its name
 // it is convenient to get the rule after template replacement
 func (e *Engine) GetRawRule(regex string) (cs chan string) {
+	e.RLock()
+	defer e.RUnlock()
+
 	cs = make(chan string)
 	nameRegexp := regexp.MustCompile(regex)
 	go func() {
@@ -314,12 +297,18 @@ func (e *Engine) GetRawRule(regex string) (cs chan string) {
 
 // GetRawRuleByName returns the raw rule for a given rule name
 func (e *Engine) GetRawRuleByName(name string) string {
+	e.RLock()
+	defer e.RUnlock()
+
 	return e.rawRules[name]
 }
 
 // GetRuleNames returns a slice of containing the names of all the
 // rules loaded in the engine
 func (e *Engine) GetRuleNames() (names []string) {
+	e.RLock()
+	defer e.RUnlock()
+
 	names = make([]string, 0, len(e.names))
 	for name := range e.names {
 		names = append(names, name)
@@ -327,16 +316,18 @@ func (e *Engine) GetRuleNames() (names []string) {
 	return names
 }
 
-// GetCRuleByName gets a compile rule by its name
-func (e *Engine) GetCRuleByName(name string) (r *CompiledRule) {
+// GetCompRuleByName gets a compile rule by its name
+func (e *Engine) GetCompRuleByName(name string) (r *CompiledRule) {
+	e.RLock()
+	defer e.RUnlock()
+
 	if idx, ok := e.names[name]; ok {
 		return e.rules[idx]
 	}
 	return
 }
 
-// LoadTemplate loads a template from a file
-func (e *Engine) LoadTemplate(templatefile string) error {
+func (e *Engine) loadTemplate(templatefile string) error {
 	f, err := os.Open(templatefile)
 	if err != nil {
 		return err
@@ -344,12 +335,23 @@ func (e *Engine) LoadTemplate(templatefile string) error {
 	return e.templates.LoadReader(f)
 }
 
+// LoadTemplate loads a template from a file
+func (e *Engine) LoadTemplate(templatefile string) error {
+	e.Lock()
+	defer e.Unlock()
+
+	return e.loadTemplate(templatefile)
+}
+
 // LoadContainer loads every line found in reader into the container
 func (e *Engine) LoadContainer(container string, reader io.Reader) error {
+	e.Lock()
+	defer e.Unlock()
+
 	scanner := bufio.NewScanner(reader)
 
 	for scanner.Scan() {
-		e.AddToContainer(container, scanner.Text())
+		e.addToContainer(container, scanner.Text())
 	}
 
 	return scanner.Err()
@@ -357,12 +359,18 @@ func (e *Engine) LoadContainer(container string, reader io.Reader) error {
 
 // LoadReader loads rule from a ReadSeeker
 func (e *Engine) LoadReader(r io.ReadSeeker) error {
+	e.Lock()
+	defer e.Unlock()
+
 	return e.loadReaderWithDec(yamlRuleDecoder(r))
 }
 
 // LoadDirectory loads all the templates and rules inside a directory
 // this function does not walk directory recursively
 func (e *Engine) LoadDirectory(rulesDir string) error {
+	e.Lock()
+	defer e.Unlock()
+
 	// Loading the rules
 	realPath, err := fsutil.ResolveLink(rulesDir)
 	if err != nil {
@@ -382,7 +390,7 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 				templateFile := filepath.Join(wi.Dirpath, fi.Name())
 				if e.tplExtensions.Contains(ext) {
 					log.Debugf("Loading regexp templates from file: %s", templateFile)
-					err := e.LoadTemplate(templateFile)
+					err := e.loadTemplate(templateFile)
 					if err != nil {
 						log.Errorf("Error loading %s: %s", templateFile, err)
 						return err
@@ -395,7 +403,7 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 	// Handle both rules argument as file or directory
 	switch {
 	case fsutil.IsFile(realPath):
-		err := e.LoadFile(realPath)
+		err := e.loadFile(realPath)
 		if err != nil {
 			log.Errorf("Error loading %s: %s", realPath, err)
 			return err
@@ -406,10 +414,9 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 			for _, fi := range wi.Files {
 				ext := filepath.Ext(fi.Name())
 				rulefile := filepath.Join(wi.Dirpath, fi.Name())
-				log.Debug(ext)
 				// Check if the file extension is in the list of valid rule extension
 				if e.ruleExtensions.Contains(ext) {
-					err := e.LoadFile(rulefile)
+					err := e.loadFile(rulefile)
 					if err != nil {
 						log.Errorf("Error loading %s: %s", rulefile, err)
 						return err
@@ -421,21 +428,27 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 	return nil
 }
 
-// LoadFile loads a rule file into the current engine
-func (e *Engine) LoadFile(rulefile string) error {
-	f, err := os.Open(rulefile)
+func (e *Engine) loadFile(rf string) error {
+	f, err := os.Open(rf)
 	if err != nil {
 		return err
 	}
 	err = e.loadReaderWithDec(yamlRuleDecoder(f))
 	if err != nil {
-		return fmt.Errorf("failed to load rule file \"%s\": %s", rulefile, err)
+		return fmt.Errorf("failed to load rule file \"%s\": %s", rf, err)
 	}
 
 	return nil
 }
 
-func (e *Engine) LoadRule(rule *Rule) error {
+// LoadFile loads a rule file into the current engine
+func (e *Engine) LoadFile(rf string) error {
+	e.Lock()
+	defer e.Unlock()
+	return e.loadFile(rf)
+}
+
+func (e *Engine) loadRule(rule *Rule) error {
 	// Check if the rule is disabled
 	if rule.IsDisabled() {
 		log.Infof("Rule \"%s\" has been disabled", rule.Name)
@@ -468,26 +481,48 @@ func (e *Engine) LoadRule(rule *Rule) error {
 	return nil
 }
 
-// LoadJsonBytes loads rules from []byte data
-func (e *Engine) LoadJsonBytes(data []byte) error {
+func (e *Engine) LoadRule(rule *Rule) error {
+	e.Lock()
+	defer e.Unlock()
+	return e.loadRule(rule)
+}
+
+func (e *Engine) loadJsonBytes(data []byte) error {
 	r := newSeekBuffer(data)
 	return e.loadReaderWithDec(jsonRuleDecoder(r))
 }
 
-// LoadJsonString loads rules from string data
-func (e *Engine) LoadJsonString(data string) error {
-	return e.LoadJsonBytes([]byte(data))
+// LoadJsonBytes loads rules from []byte data
+func (e *Engine) LoadJsonBytes(data []byte) error {
+	e.Lock()
+	defer e.Unlock()
+	return e.loadJsonBytes(data)
 }
 
-// LoadYamlString loads rules from string data
-func (e *Engine) LoadYamlBytes(data []byte) error {
+// LoadJsonString loads rules from string data
+func (e *Engine) LoadJsonString(data string) error {
+	e.Lock()
+	defer e.Unlock()
+	return e.loadJsonBytes([]byte(data))
+}
+
+func (e *Engine) loadYamlBytes(data []byte) error {
 	r := newSeekBuffer(data)
 	return e.loadReaderWithDec(yamlRuleDecoder(r))
 }
 
 // LoadYamlString loads rules from string data
+func (e *Engine) LoadYamlBytes(data []byte) error {
+	e.Lock()
+	defer e.Unlock()
+	return e.loadYamlBytes(data)
+}
+
+// LoadYamlString loads rules from string data
 func (e *Engine) LoadYamlString(data string) error {
-	return e.LoadYamlBytes([]byte(data))
+	e.Lock()
+	defer e.Unlock()
+	return e.loadYamlBytes([]byte(data))
 }
 
 // get rules applicable for a given event
@@ -512,11 +547,13 @@ func (e *Engine) Match(evt Event) *MatchResult {
 	// initialized variables
 	mr := NewMatchResult(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)
 
-	e.Lock()
 	evtToMatch := evt
+	var cache, match, det uint64
 
 	// get rules we are sure to match against this event
+	e.Lock()
 	rules := e.getRulesForEvent(evt)
+	e.Unlock()
 
 	// some more optimization skipping useless instructions if no rules to match (gain a few MB/s)
 	if len(rules) > 0 {
@@ -524,22 +561,24 @@ func (e *Engine) Match(evt Event) *MatchResult {
 		// events. Only those matching more than a couples of rules
 		if len(rules) > 5 {
 			evtToMatch = newCacheEvent(evt)
-			e.Stats.Cached++
+			cache++
 		}
 		// actually matching the rules
 		for _, r := range rules {
 			if r.matchStep2(evtToMatch) {
 				mr.Update(r)
-				e.Stats.Matched++
+				match++
 			}
 		}
 	}
 
 	// Update engine's statistics
-	e.Stats.Scanned++
 	if mr.IsDetection() {
-		e.Stats.Detections++
+		det++
 	}
+
+	e.Lock()
+	e.Stats.increment(1, cache, match, det)
 	e.Unlock()
 
 	if mr.IsOnlyFiltered() || mr.IsEmpty() {

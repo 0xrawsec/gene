@@ -91,7 +91,7 @@ func (rs *ReducedStats) Update(t time.Time, matches []string) {
 		rs.CntBySig[m]++
 		rs.TotalSigs++
 
-		if r := rs.eng.GetCRuleByName(m); r != nil {
+		if r := rs.eng.GetCompRuleByName(m); r != nil {
 			for _, ttp := range r.Attack {
 				rs.techniques.Add(ttp.ID)
 				rs.tactics.Add(ttp.Tactic)
