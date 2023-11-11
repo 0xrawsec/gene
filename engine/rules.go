@@ -152,6 +152,9 @@ var supportedOS = datastructs.NewInitSyncedSet(
 var (
 	ErrInvalidOS        = fmt.Errorf("invalid OS")
 	ErrInvalidFieldName = fmt.Errorf("invalid field name")
+	ErrInvalidMatch     = fmt.Errorf("invalid match statement")
+	ErrUnknownOperand   = fmt.Errorf("unknown operand")
+	ErrLogTypeNotSet    = fmt.Errorf("log type not set or ambiguous")
 )
 
 // Attack structure definiton to encode information from ATT&CK Mitre
@@ -231,51 +234,54 @@ func NewRule() Rule {
 }
 
 // IsDisabled returns true if the rule has been disabled
-func (jr *Rule) IsDisabled() bool {
-	return jr.Params.Disable
+func (r *Rule) IsDisabled() bool {
+	return r.Params.Disable
 }
 
 // ReplaceTemplate the regexp templates found in the matches
-func (jr *Rule) ReplaceTemplate(tm *TemplateMap) {
-	for name, match := range jr.Matches {
-		jr.Matches[name] = tm.ReplaceAll(match)
+func (r *Rule) ReplaceTemplate(tm *TemplateMap) {
+	for name, match := range r.Matches {
+		r.Matches[name] = tm.ReplaceAll(match)
 	}
 }
 
 // Json returns the Json string corresponding to the rule
-func (jr *Rule) Json() (string, error) {
-	b, err := json.Marshal(jr)
+func (r *Rule) Json() (string, error) {
+	b, err := json.Marshal(r)
 	return string(b), err
 }
 
 // JSON returns the JSON string corresponding to the rule
-func (jr *Rule) Yaml() (string, error) {
-	b, err := yaml.Marshal(jr)
+func (r *Rule) Yaml() (string, error) {
+	b, err := yaml.Marshal(r)
 	return string(b), err
 }
 
-func (jr *Rule) resolveLogType(logTypes map[string]*LogType) *LogType {
+func (r *Rule) resolveLogType(logTypes map[string]*LogType) *LogType {
 	// the logtype specified in rule takes precedence
-	if len(jr.MatchOn.LogType) > 0 {
-		return logTypes[jr.MatchOn.LogType]
+	if len(r.MatchOn.LogType) > 0 {
+		return logTypes[r.MatchOn.LogType]
 	}
 
 	// if we wanna match ONLY kunai events
-	if _, ok := jr.MatchOn.Events["kunai"]; ok && len(jr.MatchOn.Events) == 1 {
+	if _, ok := r.MatchOn.Events["kunai"]; ok && len(r.MatchOn.Events) == 1 {
 		return logTypes["kunai"]
 	}
 
 	// based on windows channels frequently matched
 	winMatch := 0
-	for c := range jr.MatchOn.Events {
+	for c := range r.MatchOn.Events {
 		if c == "Security" ||
-			strings.HasPrefix(c, "Microsoft") {
+			c == "Application" ||
+			c == "System" ||
+			strings.HasPrefix(c, "Microsoft") ||
+			strings.HasPrefix(c, "Windows") {
 			winMatch += 1
 		}
 	}
 
 	// we are sure ONLY all we want to match are windows channels
-	if winMatch == len(jr.MatchOn.Events) {
+	if winMatch == len(r.MatchOn.Events) {
 		return logTypes["winevt"]
 	}
 
@@ -283,65 +289,71 @@ func (jr *Rule) resolveLogType(logTypes map[string]*LogType) *LogType {
 }
 
 // Compile a Rule
-func (jr *Rule) Compile(e *Engine) (*CompiledRule, error) {
+func (r *Rule) Compile(e *Engine) (*CompiledRule, error) {
 	if e != nil {
-		return jr.compile(e.containers, jr.resolveLogType(e.logTypes))
+		return r.compile(e.containers, r.resolveLogType(e.logTypes))
 	}
-	return jr.compile(nil, nil)
+	return r.compile(nil, nil)
 }
 
-func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule, error) {
+func (r *Rule) compile(containers *ContainerDB, logType *LogType) (*CompiledRule, error) {
 	var err error
 	rule := NewCompiledRule()
 
-	rule.Name = jr.Name
-	rule.Severity = boundSeverity(jr.Severity)
+	rule.Name = r.Name
+	rule.Severity = boundSeverity(r.Severity)
 	// Pass ATT&CK information to compiled rule
-	rule.Attack = jr.Meta.Attack
+	rule.Attack = r.Meta.Attack
 	// Pass Actions to compiled rule
-	rule.Actions = jr.Actions
-	for _, t := range jr.Tags {
+	rule.Actions = r.Actions
+	for _, t := range r.Tags {
 		rule.Tags.Add(t)
 	}
 
 	// Setting up event filter
-	rule.EventFilter = NewEventFilter(jr.MatchOn.Events)
+	if len(r.MatchOn.Events) > 0 && logType == nil {
+		return nil, fmt.Errorf("cannot use match-on events: %w", ErrLogTypeNotSet)
+	}
+	rule.EventFilter = NewEventFilter(r.MatchOn.Events)
 
 	// Initializes OSs
-	for _, os := range jr.MatchOn.OSs {
+	for _, os := range r.MatchOn.OSs {
 		// force OS being lower case
 		os = strings.ToLower(os)
 		if !supportedOS.Contains(os) {
-			return nil, fmt.Errorf("%w: %s", ErrInvalidOS, os)
+			return nil, fmt.Errorf("%w os=%s", ErrInvalidOS, os)
 		}
 		rule.OSs.Add(os)
 	}
 
 	// Initializes Computers
-	for _, s := range jr.MatchOn.Computers {
+	if len(r.MatchOn.Computers) > 0 && logType == nil {
+		return nil, fmt.Errorf("cannot use match-on computers: %w", ErrLogTypeNotSet)
+	}
+	for _, s := range r.MatchOn.Computers {
 		rule.Computers.Add(s)
 	}
 
 	// Set Filter member
-	rule.Filter = jr.Params.Filter
+	rule.Filter = r.Params.Filter
 
 	// Parse predicates
-	for mname, p := range jr.Matches {
+	for mname, p := range r.Matches {
 		if !isValidName(mname) {
-			return nil, fmt.Errorf("%w: %s", ErrInvalidFieldName, mname)
+			return nil, fmt.Errorf("%w name=%s", ErrInvalidFieldName, mname)
 		}
 
 		switch {
 		case isFieldMatch(p):
 			var a FieldMatch
-			a, err = parseFieldMatch(mname, p, format)
+			a, err = parseFieldMatch(mname, p, logType)
 			if err != nil {
 				return nil, err
 			}
 			rule.AddMatcher(&a)
 		case isContainerMatch(p):
 			var cm *ContainerMatch
-			cm, err = parseContainerMatch(mname, p, format)
+			cm, err = parseContainerMatch(mname, p, logType)
 			if err != nil {
 				return nil, err
 			}
@@ -363,15 +375,15 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 			cm.setContainerDB(rule.containers)
 			rule.AddMatcher(cm)
 		default:
-			return nil, fmt.Errorf("unknown match statement: %s", p)
+			return nil, fmt.Errorf("%w match=%s", ErrInvalidMatch, p)
 		}
 	}
 
 	// Parse the condition
-	tokenizer := NewTokenizer(jr.Condition)
+	tokenizer := NewTokenizer(r.Condition)
 	cond, err := tokenizer.ParseCondition(0, 0)
 	if err != nil && err != ErrEOT {
-		return nil, fmt.Errorf("failed to parse condition \"%s\": %s", jr.Condition, err)
+		return nil, fmt.Errorf("%w condition=%s", err, r.Condition)
 	}
 
 	rule.Conditions = cond
@@ -380,7 +392,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	// We control that all the operands are known
 	for _, op := range operands {
 		if !rule.AtomMap.Contains(op) {
-			return nil, fmt.Errorf("unkown operand %s in condition \"%s\"", op, jr.Condition)
+			return nil, fmt.Errorf("%w operand=%s", ErrUnknownOperand, op)
 		}
 	}
 

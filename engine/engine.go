@@ -477,7 +477,7 @@ func (e *Engine) loadRule(rule *Rule) error {
 	// We compile the rule
 	er, err := rule.Compile(e)
 	if err != nil {
-		return fmt.Errorf("failed to compile rule: %w", err)
+		return fmt.Errorf("failed to compile rule name=%s: %w", rule.Name, err)
 	}
 
 	// We add the rule to the engine

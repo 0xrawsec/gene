@@ -270,7 +270,7 @@ condition: $dummyIndirect and $abs and !$fail
 	tt.Assert(er.Match(winevtEvent))
 }
 
-func TestMatchEvent(t *testing.T) {
+func TestAmbiguousMatchOn(t *testing.T) {
 
 	tt := toast.FromT(t)
 
@@ -285,15 +285,63 @@ match-on:
       - 1
 ...`
 
-	er, err := loadYamlRule([]byte(ruleStr), nil)
-	tt.CheckErr(err)
-	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
+	_, err := loadYamlRule([]byte(ruleStr), nil)
+	tt.ExpectErr(err, ErrLogTypeNotSet)
+
+	/*tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
 
 	tt.Assert(er.EventFilter.match("kunai", 1))
 	tt.Assert(!er.EventFilter.match("kunai", 42))
 
 	tt.Assert(er.EventFilter.match("Microsoft-Windows-Sysmon/Operational", 1))
+	tt.Assert(!er.EventFilter.match("Microsoft-Windows-Sysmon/Operational", 42))*/
+}
+
+func TestWinevtLogtypeResolve(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	ruleStr := `
+---
+name: TestMatchEvent
+match-on:
+  events:
+    System: []
+    Application: []
+    Security: []
+    Microsoft-Windows-Sysmon/Operational: [1]
+    Windows Powershell: []
+...`
+
+	er, err := loadYamlRule([]byte(ruleStr), nil)
+	tt.CheckErr(err)
+
+	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
+
+	tt.Assert(er.EventFilter.match("Microsoft-Windows-Sysmon/Operational", 1))
 	tt.Assert(!er.EventFilter.match("Microsoft-Windows-Sysmon/Operational", 42))
+	tt.Assert(er.EventFilter.match("Security", 4624))
+}
+
+func TestKunaiLogtypeResolve(t *testing.T) {
+
+	tt := toast.FromT(t)
+
+	ruleStr := `
+---
+name: TestMatchEvent
+match-on:
+  events:
+    kunai: [1]
+...`
+
+	er, err := loadYamlRule([]byte(ruleStr), nil)
+	tt.CheckErr(err)
+
+	tt.Assert(!er.EventFilter.IsEmpty(), "filter should not be empty")
+
+	tt.Assert(er.EventFilter.match("kunai", 1))
+	tt.Assert(!er.EventFilter.match("kunai", 42))
 }
 
 func TestMatchOS(t *testing.T) {
