@@ -181,7 +181,7 @@ type MatchOn struct {
 	LogType   string             `yaml:"log-type,omitempty"`
 	Events    map[string][]int64 `yaml:"events,omitempty"`
 	OSs       []string           `yaml:"oss,omitempty"`
-	Computers []string           `yaml:"computers,omitempty"`
+	Hostnames []string           `yaml:"hostnames,omitempty"`
 }
 
 // Rule is a JSON parsable rule
@@ -221,7 +221,7 @@ func NewRule() Rule {
 		MatchOn: MatchOn{
 			Events:    make(map[string][]int64),
 			OSs:       make([]string, 0),
-			Computers: make([]string, 0),
+			Hostnames: make([]string, 0),
 		},
 		Meta: MetaSection{
 			Attack: make([]Attack, 0),
@@ -327,10 +327,10 @@ func (r *Rule) compile(containers *ContainerDB, logType *LogType) (*CompiledRule
 	}
 
 	// Initializes Computers
-	if len(r.MatchOn.Computers) > 0 && logType == nil {
+	if len(r.MatchOn.Hostnames) > 0 && logType == nil {
 		return nil, fmt.Errorf("cannot use match-on computers: %w", ErrLogTypeNotSet)
 	}
-	for _, s := range r.MatchOn.Computers {
+	for _, s := range r.MatchOn.Hostnames {
 		rule.Computers.Add(s)
 	}
 

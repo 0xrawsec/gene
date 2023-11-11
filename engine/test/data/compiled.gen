@@ -10,7 +10,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $net: Image ~= '(?i:C:\\Windows\\Sys(tem32|wow64)\\net1?\.exe)'
   $command: CommandLine ~= 'user.*/ADD'
@@ -32,7 +32,7 @@ match-on:
   events:
     Security:
       - 4648
-  computers: []
+  hostnames: []
 matches:
   $iplh1: IpAddress = '-'
   $iplh2: IpAddress = '127.0.0.1'
@@ -57,7 +57,7 @@ match-on:
   events:
     Security:
       - 4624
-  computers: []
+  hostnames: []
 matches:
   $logt: LogonType = '3'
   $kerb: AuthenticationPackageName = 'Kerberos'
@@ -81,7 +81,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $parent: ParentImage ~= '(?i:C:\\windows\\explorer.exe)'
   $exe: Image ~= '(?i:\\cmd.exe$)'
@@ -102,11 +102,11 @@ match-on:
   log-type: winevt
   events:
     Microsoft-Windows-DNS-Client/Operational: []
-  computers: []
+  hostnames: []
 matches:
-  $domain-bl: extract('(?P<dom>\w+\.\w+$)',QueryName) in blacklist'
-  $subdomain-bl: extract('(?P<sub>\w+\.\w+\.\w+$)',QueryName) in blacklist'
-  $subsubdomain-bl: extract('(?P<subsub>\w+\.\w+\.\w+\.\w+$)',QueryName) in blacklist'
+  $domainBL: extract('(?P<dom>\w+\.\w+$)',QueryName) in blacklist'
+  $subdomainBL: extract('(?P<sub>\w+\.\w+\.\w+$)',QueryName) in blacklist'
+  $subsubdomainBL: extract('(?P<subsub>\w+\.\w+\.\w+\.\w+$)',QueryName) in blacklist'
 condition: $domainBL or $subdomainBL or $subsubdomainBL
 severity: 10
 actions: null
@@ -126,7 +126,7 @@ match-on:
       - 1
       - 6
       - 7
-  computers: []
+  hostnames: []
 matches:
   $md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in blacklist
   $sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in blacklist
@@ -150,7 +150,7 @@ match-on:
       - 1
       - 6
       - 7
-  computers: []
+  hostnames: []
 matches:
   $imphash: extract('IMPHASH=(?P<imphash>[A-F0-9]{32})', Hashes) in blacklist
 condition: $imphash
@@ -170,7 +170,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $browser: ParentImage ~= '(?i:\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\.exe)$'
 condition: $browser
@@ -190,7 +190,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $browser: ParentImage ~= '(?i:\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\.exe)$'
   $susp: Image ~= '(?i:\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\.exe)$'
@@ -212,7 +212,7 @@ match-on:
   events:
     Security:
       - 4663
-  computers: []
+  hostnames: []
 matches:
   $access: AccessMask &= '0x1'
   $canary: ObjectName ~= '(?i:C:\\PutYourCanaryHere\\)'
@@ -233,7 +233,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1140
@@ -261,7 +261,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1140
@@ -287,7 +287,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 matches:
   $allowed: Image ~= '(?i:C:\\Windows\\Sys(wow64|tem32)\\)'
   $empty_ext: Extension = ''
@@ -312,7 +312,7 @@ match-on:
     Microsoft-Windows-Windows Defender/Operational:
       - 1119
       - 5008
-  computers: []
+  hostnames: []
 severity: 8
 actions: null
 ...
@@ -329,7 +329,7 @@ match-on:
   events:
     Microsoft-Windows-Windows Defender/Operational:
       - 1015
-  computers: []
+  hostnames: []
 severity: 8
 actions: null
 ...
@@ -346,7 +346,7 @@ match-on:
   events:
     Microsoft-Windows-Windows Defender/Operational:
       - 5007
-  computers: []
+  hostnames: []
 severity: 8
 actions: null
 ...
@@ -364,7 +364,7 @@ match-on:
     Microsoft-Windows-Windows Defender/Operational:
       - 5010
       - 5012
-  computers: []
+  hostnames: []
 severity: 10
 actions: null
 ...
@@ -382,7 +382,7 @@ match-on:
     Microsoft-Windows-Windows Defender/Operational:
       - 1006
       - 1116
-  computers: []
+  hostnames: []
 severity: 10
 actions: null
 ...
@@ -398,11 +398,11 @@ match-on:
   log-type: winevt
   events:
     Microsoft-Windows-DNS-Client/Operational: []
-  computers: []
+  hostnames: []
 matches:
-  $domain-bl: extract('(?P<dom>\w+\.\w+$)',QueryName) in misp'
-  $subdomain-bl: extract('(?P<sub>\w+\.\w+\.\w+$)',QueryName) in misp'
-  $subsubdomain-bl: extract('(?P<subsub>\w+\.\w+\.\w+\.\w+$)',QueryName) in misp'
+  $domainBL: extract('(?P<dom>\w+\.\w+$)',QueryName) in misp'
+  $subdomainBL: extract('(?P<sub>\w+\.\w+\.\w+$)',QueryName) in misp'
+  $subsubdomainBL: extract('(?P<subsub>\w+\.\w+\.\w+\.\w+$)',QueryName) in misp'
 condition: $domainBL or $subdomainBL or $subsubdomainBL
 severity: 10
 actions: null
@@ -422,7 +422,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $path1: CommandLine ~= '(?i:\\Downloads\\)'
   $path2: CommandLine ~= '(?i:appdata\\local\\microsoft\\windows\\temporary internet
@@ -445,7 +445,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 6
-  computers: []
+  hostnames: []
 matches:
   $valid: SignatureStatus = 'Valid'
 condition: '!$valid'
@@ -466,7 +466,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 6
-  computers: []
+  hostnames: []
 matches:
   $valid: SignatureStatus = 'Valid'
   $unavailable: SignatureStatus = 'Unavailable'
@@ -487,7 +487,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 6
-  computers: []
+  hostnames: []
 matches:
   $uspath1: ImageLoaded ~= '(?i:C:\\Windows\\Sys(wow64|tem32))'
   $uspath2: ImageLoaded ~= '(?i:C:\\Windows\\Sys(tem32|wow64)\\drivers)'
@@ -509,7 +509,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $http: CommandLine ~= '(?i:https?://)'
 condition: $http
@@ -529,7 +529,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1070
@@ -557,7 +557,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $path1: Image ~= '(?i:appdata\\local\\microsoft\\windows\\temporary internet files\\)'
   $path2: Image ~= '(?i:\\Downloads\\)'
@@ -578,7 +578,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 2
-  computers: []
+  hostnames: []
 matches:
   $exec: TargetFilename ~= '(?i:((?i:(\.ps1|\.bat|\.cmd|\.vb|\.vbs|\.vbscript|\.vbe|\.js|\.jse|\.ws|\.wsf))|(?i:(\.acm|\.ax|\.com|\.cpl|\.dic|\.dll|\.drv|\.ds|\.efi|\.exe|\.grm|\.iec|\.ime|\.lex|\.msstyles|\.mui|\.ocx|\.olb|\.rll|\.rs|\.scr|\.sys|\.tlb|\.tsp|\.winmd|\.node))))'
   $wl1: TargetFilename ~= '(?i:^C:\\Users\\.*?\\AppData\\Roaming\\Microsoft\\Windows\\Recent\\CustomDestinations)\\[A-Z0-9]{20}.temp$'
@@ -601,7 +601,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 15
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1096
@@ -628,7 +628,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 matches:
   $system: Image ~= '(?i:C:\\Windows)'
   $defender: Image ~= '(?i:((?i:C:\\(PROGRA~(1|2)|Program Files.*?)\\)Windows Defender\\MsMpEng\.exe|(?i:C:\\(PROGRA~3|ProgramData)\\)Microsoft\\Windows
@@ -652,7 +652,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 matches:
   $knownext: ImageLoaded ~= '(?i:(\.acm|\.ax|\.com|\.cpl|\.dic|\.dll|\.drv|\.ds|\.efi|\.exe|\.grm|\.iec|\.ime|\.lex|\.msstyles|\.mui|\.ocx|\.olb|\.rll|\.rs|\.scr|\.sys|\.tlb|\.tsp|\.winmd|\.node))$'
 condition: '!$knownext'
@@ -673,7 +673,7 @@ match-on:
   events:
     Security:
       - 4624
-  computers: []
+  hostnames: []
 matches:
   $logt: LogonType = '3'
   $user: TargetUserName = 'ANONYMOUS LOGON'
@@ -697,7 +697,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1055
@@ -730,7 +730,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 matches:
   $wl: TargetFilename ~= '(?i:C:\\(Users|ProgramData)\\.*)'
   $il: IntegrityLevel ~= '(Low|Medium)'
@@ -752,7 +752,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $pimsoffice: ParentImage ~= '(?i:\\(excel|winword|powerpnt|outlook)\.exe)$'
   $pcl: ParentCommandLine ~= '(?i:appdata\\local\\microsoft\\windows\\temporary internet
@@ -776,7 +776,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1193
@@ -804,7 +804,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1096
@@ -829,7 +829,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 matches:
   $ct: CallTrace ~= 'UNKNOWN'
   $src: SourceImage ~= '(?i:\\(iexplore|firefox|chrome|MicrosoftEdge|opera|vivaldi)\.exe)$'
@@ -853,7 +853,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $ruser: 'CommandLine ~= ''(?i: /U )'''
   $rhost: 'CommandLine ~= ''(?i: /S )'''
@@ -877,7 +877,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 8
-  computers: []
+  hostnames: []
 matches:
   $stfunc: StartFunction = ''
   $stmod: StartModule = ''
@@ -899,7 +899,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 22
-  computers: []
+  hostnames: []
 matches:
   $susp: Image ~= '(?i:\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\.exe)$'
 condition: $susp
@@ -920,7 +920,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 matches:
   $susp: Image ~= '(?i:\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\.exe)$'
   $target: TargetFilename ~= '((?i:(\.acm|\.ax|\.com|\.cpl|\.dic|\.dll|\.drv|\.ds|\.efi|\.exe|\.grm|\.iec|\.ime|\.lex|\.msstyles|\.mui|\.ocx|\.olb|\.rll|\.rs|\.scr|\.sys|\.tlb|\.tsp|\.winmd|\.node))|(?i:(\.ps1|\.bat|\.cmd|\.vb|\.vbs|\.vbscript|\.vbe|\.js|\.jse|\.ws|\.wsf)))$'
@@ -942,7 +942,7 @@ match-on:
   log-type: winevt
   events:
     Microsoft-Windows-DNS-Client/Operational: []
-  computers: []
+  hostnames: []
 matches:
   $ldomain: QueryName ~= '.{50,}'
 condition: $ldomain
@@ -963,7 +963,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 matches:
   $ct: CallTrace ~= 'UNKNOWN'
   $whitelist: SourceImage ~= '(?i:(?i:C:\\Windows\\Sys(wow64|tem32)\\)(sdiagnhost|svchost)\.exe)'
@@ -990,7 +990,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $anc: Ancestors ~= '(?i:\\(excel|winword|powerpnt|outlook)\.exe)'
   $tools: Image ~= '((?i:\\(rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm|dnx|rcsi|WinDbg|cdb|tracker|cmstp|msiexec|mavinject|SyncAppvPublishingServer|Odbcconf|msxsl|wmic)\.exe)|(?i:\\(certutil)\.exe))'
@@ -1012,7 +1012,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exist: Ancestors ~= '(?i:^System\|)'
   $anc: Ancestors ~= '(?i:C:\\Windows\\explorer\.exe)'
@@ -1035,7 +1035,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $tools: Image ~= '(?i:\\(ping|systeminfo|net1?|xcopy|nbtstat)\.exe$)'
   $parent: ParentImage ~= '(?i:C:\\Windows\\.*\\(powershell|cmd|wscript|cscript|msiexec|net)\.exe$)'
@@ -1056,7 +1056,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $susp: Image ~= '((?i:\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\.exe)|(?i:\\wmic\.exe))'
   $rempld: CommandLine ~= '(?i:(\\\\.*?\\|https?://).*\.\w{2,5})'
@@ -1077,7 +1077,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $shell: Image ~= '(?i:\\(powershell|cmd)\.exe$)'
   $validparent: ParentImage ~= '(?i:(c:\\Windows\\Explorer\.exe|c:\\Windows\\.*\\(powershell|cmd)\.exe)$)'
@@ -1098,7 +1098,7 @@ match-on:
   events:
     Security:
       - 4663
-  computers: []
+  hostnames: []
 matches:
   $access: AccessMask &= '0x2'
   $user_proc: ProcessName ~= '(?i:C:\\Users\\)'
@@ -1122,7 +1122,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 22
-  computers: []
+  hostnames: []
 matches:
   $ldomain: QueryName ~= '.{50,}'
   $ip6: QueryName ~= 'ip6\.arpa\.$'
@@ -1145,7 +1145,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $anc: Ancestors ~= '(?:\\(tomcat.*?|w3wp|php-cgi|nginx|httpd|apache.*?)\.exe)'
   $tools: Image ~= '(?i:\\(ping|systeminfo|net1?|xcopy|nbtstat|bitsadmin|netstat|powershell|cmd|cscript|wscript|arp|at|certutil|dsquery|ipconfig|netsh|reg|route|schtasks|wusa|wmic|sc|rundll32|qprocess|tasklist|query)\.exe$)'
@@ -1168,7 +1168,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1193
@@ -1196,7 +1196,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 matches:
   $il1: ImageLoaded ~= '(?i:\\samlib.dll$)'
   $system32: Image ~= '(?i:C:\\Windows\\System32\\[^\\]*?\.exe)'
@@ -1221,7 +1221,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 matches:
   $il1: ImageLoaded ~= '(?i:\\vaultcli.dll$)'
   $system32: Image ~= '(?i:C:\\Windows\\System32\\[^\\]*?\.exe)'
@@ -1244,7 +1244,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $psexec: Product = 'Sysinternals PsExec'
   $im: Image ~= '(?i:\\psexe(c|svc).exe$)'
@@ -1265,7 +1265,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 25
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1093
@@ -1291,7 +1291,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $rpath: CommandLine ~= '(?i:\\\\[\w\.]+)'
 condition: $rpath
@@ -1311,7 +1311,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $susp: ParentImage ~= '(?i:\\(certutil|rundll32|powershell|wscript|cscript|cmd|mshta|regsvr32|msbuild|installutil|regasm)\.exe)$'
 condition: $susp
@@ -1331,7 +1331,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $lb64: CommandLine ~= '[0-9A-Za-z]{512,}'
 condition: $lb64
@@ -1351,7 +1351,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $lcl: CommandLine ~= '.{512,}'
   $llcl: CommandLine ~= '.{999,}'
@@ -1376,7 +1376,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $lcl: CommandLine ~= '.{999,}'
   $wlp1: Image ~= '^C:\\Program Files.*?\\Mozilla Firefox\\firefox\.exe$'
@@ -1401,7 +1401,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $wmi: Image ~= '(?i:\\wmic\.exe$)'
   $node: CommandLine ~= '(?i:/node:)'
@@ -1423,7 +1423,7 @@ match-on:
   events:
     Security:
       - 4624
-  computers: []
+  hostnames: []
 matches:
   $iplh1: IpAddress = '-'
   $iplh2: IpAddress = '127.0.0.1'
@@ -1447,7 +1447,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1193
@@ -1476,7 +1476,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1003
@@ -1503,7 +1503,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 matches:
   $ct: CallTrace ~= 'UNKNOWN'
   $svchost: TargetImage ~= '(?i:windows\\sys(tem32|wow64)\\svchost\.exe$)'
@@ -1524,7 +1524,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 25
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1093
@@ -1551,7 +1551,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 13
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1003
@@ -1583,7 +1583,7 @@ match-on:
   events:
     Security:
       - 4657
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1003
@@ -1613,7 +1613,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\nbtstat\.exe$)'
 condition: $exe
@@ -1633,7 +1633,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\net1?\.exe$)'
 condition: $exe
@@ -1653,7 +1653,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 15
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1096
@@ -1680,7 +1680,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 13
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1060
@@ -1710,7 +1710,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 matches:
   $smss: Image ~= '(?i:C:\\Windows\\System32\\smss\.exe)'
   $pageswap: TargetFilename ~= '(?i:C:\\(page|swap)file\.sys)'
@@ -1732,7 +1732,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $net: Image ~= '(?i:C:\\Windows\\Sys(tem32|wow64)\\net1?\.exe)'
   $command: CommandLine ~= '(?i:localgroup\s+Administrators.*?/ADD)'
@@ -1754,7 +1754,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1053
@@ -1783,7 +1783,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 13
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1053
@@ -1809,7 +1809,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1053
@@ -1834,7 +1834,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1053
@@ -1863,7 +1863,7 @@ match-on:
       - 1
       - 6
       - 7
-  computers: []
+  hostnames: []
 matches:
   $md5: extract('MD5=(?P<md5>[A-F0-9]{32})', Hashes) in whitelist
   $sha1: extract('SHA1=(?P<sha1>[A-F0-9]{40})', Hashes) in whitelist
@@ -1886,7 +1886,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 11
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1193
@@ -1913,7 +1913,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1193
@@ -1940,7 +1940,7 @@ match-on:
   log-type: winevt
   events:
     Microsoft-Windows-PowerShell/Operational: []
-  computers: []
+  hostnames: []
 matches:
   $api: ScriptBlockText ~= '(?i:(OpenProcess|OpenThread|SetThreadContext|OpenThreadToken|GetProcAddress|OpenThreadToken|OpenProcessToken|CreateProcess|WriteProcessMemory|ReadProcessMemory|VirtualAlloc))'
 condition: $api
@@ -1960,7 +1960,7 @@ match-on:
   events:
     Microsoft-Windows-PowerShell/Operational:
       - 4103
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1202
@@ -1985,7 +1985,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\ping\.exe$)'
 condition: $exe
@@ -2006,7 +2006,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $ps: ParentImage ~= '(?i:\\powershell.exe$)'
   $csc: Image ~= '(?i:\\csc.exe$)'
@@ -2028,7 +2028,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1202
@@ -2055,7 +2055,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $lcl: CommandLine ~= '.{512,}'
   $ps: Image ~= '(?i:\\powershell.exe$)'
@@ -2079,7 +2079,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 matches:
   $il: ImageLoaded ~= '(?i:\\samlib.dll$)'
   $ps: Image ~= '(?i:\\powershell\.exe$)'
@@ -2100,7 +2100,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1202
@@ -2126,7 +2126,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 matches:
   $ga: GrantedAccess &= '0x20'
   $srclow: SourceIntegrityLevel = 'Low'
@@ -2152,7 +2152,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: null
+  hostnames: null
 severity: 0
 actions: null
 ...
@@ -2170,7 +2170,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $psexec: Product = 'Sysinternals PsExec'
   $im: Image ~= '(?i:\\psexe(c|svc).exe$)'
@@ -2192,7 +2192,7 @@ match-on:
   events:
     Security:
       - 4624
-  computers: []
+  hostnames: []
 matches:
   $psexec: ProcessName ~= '(?i:\\PSEXESVC\.exe$)'
 condition: $psexec
@@ -2213,7 +2213,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $psexesvc: ParentImage ~= '(?i:\\psexesvc.exe$)'
 condition: $psexesvc
@@ -2233,7 +2233,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\reg\.exe$)'
 condition: $exe
@@ -2255,7 +2255,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1117
@@ -2284,7 +2284,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1053
@@ -2309,7 +2309,7 @@ match-on:
   events:
     Security:
       - 1102
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1070
@@ -2331,7 +2331,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $sc: Image ~= '(?i:sc.exe$)'
   $op: 'CommandLine ~= ''(?i: (delete) )'''
@@ -2353,7 +2353,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 matches:
   $svchost: TargetImage ~= '(?i:C:\\windows\\sys(tem32|wow64)\\svchost\.exe)'
   $wl: SourceImage ~= '((?i:C:\\ProgramData\\Microsoft\\Windows Defender\\platform\\.*?\\MsMpEng\.exe|C:\\Program
@@ -2377,7 +2377,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $wmic: Image ~= '(?i:\\wmic\.exe$)'
   $proc: CommandLine ~= '(?i:process\s+call\s+create)'
@@ -2398,7 +2398,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1055
@@ -2430,7 +2430,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 15
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1096
@@ -2457,7 +2457,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 10
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1003
@@ -2487,7 +2487,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1085
@@ -2516,7 +2516,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $parent: ParentImage ~= '(?i:C:\\Windows\\(System32|SysWOW64)\\services\.exe)'
   $windows: Image ~= '(?i:C:\\Windows\\)'
@@ -2538,7 +2538,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $sc: Image ~= '(?i:sc.exe$)'
   $op: 'CommandLine ~= ''(?i: (create) )'''
@@ -2562,7 +2562,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 13
-  computers: []
+  hostnames: []
 matches:
   $eventtype: EventType = 'SetValue'
   $key1: TargetObject ~= '(?i:^HKLM\\System\\CurrentControlSet\\services\\.*?\\ImagePath$)'
@@ -2588,7 +2588,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $svchost: Image ~= '(?i:^c:\\windows\\sys(tem32|wow64)\\svchost\.exe$)'
   $pservices: ParentImage ~= '(?i:^C:\\Windows\\sys(tem32|wow64)\\(services|svchost)\.exe$)'
@@ -2610,7 +2610,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $im: Image ~= '(?i:\\svchost)'
   $svchost: Image ~= '(?i:c:\\windows\\sys(tem32|wow64)\\svchost.exe$)'
@@ -2633,7 +2633,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 matches:
   $im: Image ~= '(?i:C:\\Windows\\System32\\svchost\.exe)'
   $unsigned: Signed = 'false'
@@ -2656,7 +2656,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 matches:
   $im: Image ~= '(?i:C:\\Windows\\System32\\svchost\.exe)'
   $trusted: Signature ~= '^(Microsoft Windows|Microsoft Corporation|Microsoft Windows
@@ -2678,7 +2678,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 16
-  computers: []
+  hostnames: []
 severity: 8
 actions: null
 ...
@@ -2696,7 +2696,7 @@ match-on:
     Microsoft-Windows-Sysmon/Operational:
       - 12
       - 13
-  computers: []
+  hostnames: []
 matches:
   $set: EventType = 'SetValue'
   $del: EventType = 'DeleteValue'
@@ -2720,11 +2720,11 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 22
-  computers: []
+  hostnames: []
 matches:
-  $domain-bl: extract('(?P<dom>\w+\.\w+$)',QueryName) in misp'
-  $subdomain-bl: extract('(?P<sub>\w+\.\w+\.\w+$)',QueryName) in misp'
-  $subsubdomain-bl: extract('(?P<subsub>\w+\.\w+\.\w+\.\w+$)',QueryName) in misp'
+  $domainBL: extract('(?P<dom>\w+\.\w+$)',QueryName) in misp'
+  $subdomainBL: extract('(?P<sub>\w+\.\w+\.\w+$)',QueryName) in misp'
+  $subsubdomainBL: extract('(?P<subsub>\w+\.\w+\.\w+\.\w+$)',QueryName) in misp'
 condition: $domainBL or $subdomainBL or $subsubdomainBL
 severity: 10
 actions: null
@@ -2742,7 +2742,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $sysmon: Product = 'Sysinternals Sysmon'
   $sysmonim: Image ~= '(?i:C:\\Windows\\.*sysmon.*)'
@@ -2764,7 +2764,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 12
-  computers: []
+  hostnames: []
 matches:
   $create: EventType = 'CreateKey'
   $sysmon: Image ~= '(?i:C:\\Windows\\Sysmon.exe)'
@@ -2786,7 +2786,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 4
-  computers: []
+  hostnames: []
 matches:
   $start: State = 'Started'
 condition: '!$start'
@@ -2806,7 +2806,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\systeminfo\.exe$)'
 condition: $exe
@@ -2826,7 +2826,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\taskkill\.exe$)'
 condition: $exe
@@ -2846,7 +2846,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\tasklist\.exe$)'
 condition: $exe
@@ -2866,7 +2866,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 3
-  computers: []
+  hostnames: []
 matches:
   $dstlocalhost: DestinationIp = '127.0.0.1'
   $dstprivip: DestinationIp ~= '(?i:(^127\.)|(^10\.)|(^172\.1[6-9]\.)|(^172\.2[0-9]\.)|(^172\.3[0-1]\.)|(^192\.168\.))'
@@ -2890,7 +2890,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 3
-  computers: []
+  hostnames: []
 matches:
   $dstlocalhostv6: DestinationIp = '0:0:0:0:0:0:0:1'
   $dstlocalhost: DestinationIp = '127.0.0.1'
@@ -2916,7 +2916,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exist: Services ~= '.'
   $na: Services = 'N/A'
@@ -2942,7 +2942,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 6
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1014
@@ -2967,7 +2967,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 7
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1035
@@ -2996,7 +2996,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $pi: ParentImage ~= '^C:\\Users\\.*\\AppData\\Local\\Temp\\'
   $i: Image ~= '^C:\\Users\\.*\\AppData\\Local\\Temp\\'
@@ -3017,7 +3017,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1220
@@ -3045,7 +3045,7 @@ match-on:
       - 19
       - 20
       - 21
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1084
@@ -3067,7 +3067,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T1047
@@ -3093,7 +3093,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $wtpi: ParentImage ~= '^C:\\Windows\\Temp'
   $wti: Image ~= '^C:\\Windows\\Temp'
@@ -3114,7 +3114,7 @@ match-on:
   events:
     Microsoft-Windows-Sysmon/Operational:
       - 1
-  computers: []
+  hostnames: []
 matches:
   $exe: Image ~= '(?i:\\xcopy\.exe$)'
 condition: $exe

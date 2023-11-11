@@ -169,7 +169,7 @@ match-on:
     Microsoft-Windows-Sysmon/Operational:
       - 1
       - 7
-  computers:
+  hostnames:
     - DESKTOP-5SUA567
 matches:
   $a: Hashes ~= '83514D9AAF0E168944B6D3C01110C393'

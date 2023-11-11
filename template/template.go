@@ -2,7 +2,6 @@ package template
 
 var (
 	RuleTemplate = `---
-# rule name, this is the only mandatory field
 name: RuleName
 params:
   filter: false
@@ -14,14 +13,14 @@ match-on:
   oss:
     - linux
     - windows
-  computers: []
+  hostnames: []
 meta:
   attack:
     - id: T4242
       tactic: ''
       reference: https://attack.mitre.org/T4242
   authors:
-    - '@0xrawsec'
+    - 'Neo'
   comments:
     - Rule catching technique documented in the following link
     - https://super.ttp.com
