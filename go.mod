@@ -11,4 +11,7 @@ require (
 
 require github.com/0xrawsec/jsonobj v1.0.2
 
-require gopkg.in/yaml.v3 v3.0.1 // indirect
+require (
+	github.com/0xrawsec/golog v1.0.4 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)

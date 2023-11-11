@@ -20,9 +20,9 @@ import (
 	"github.com/0xrawsec/golang-utils/args"
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/fsutil"
-	"github.com/0xrawsec/golang-utils/log"
 	"github.com/0xrawsec/golang-utils/progress"
 	"github.com/0xrawsec/golang-utils/readers"
+	"github.com/0xrawsec/golog"
 )
 
 //////////////////////////// Utilities //////////////////////////////
@@ -223,6 +223,8 @@ var (
 	// set with -ldflags at compile time
 	version  string
 	commitID string
+
+	log = engine.Logger
 )
 
 func main() {
@@ -230,7 +232,7 @@ func main() {
 	flag.BoolVar(&flShowTimestamp, "t", flShowTimestamp, "Show the timestamp of the event when printing")
 	flag.BoolVar(&flAllEvents, "all", flAllEvents, "Print all events (even the one not matching rules)")
 	flag.BoolVar(&flShowProgress, "progress", flShowProgress, "Show progress")
-	flag.BoolVar(&flJSONFormat, "j", flJSONFormat, "Input is in JSON format")
+	flag.BoolVar(&flJSONFormat, "j", flJSONFormat, "Input is in JSON format")
 	flag.BoolVar(&flTemplate, "template", flTemplate, "Prints a rule template")
 	flag.BoolVar(&flVerify, "verify", flVerify, "Verify the rules and exit")
 	flag.BoolVar(&flListTags, "list-tags", flListTags, "List tags of rules loaded into the engine")
@@ -269,7 +271,7 @@ func main() {
 
 	// Enable debugging mode if needed
 	if flDebug {
-		log.InitLogger(log.LDebug)
+		log.Level = golog.LevelDebug
 	}
 
 	// If version switch
@@ -374,8 +376,8 @@ func main() {
 	// If we want to dump rules
 	if len(dumpsVar) > 0 {
 		for _, nameRegex := range dumpsVar {
-			for json := range e.GetRawRule(nameRegex) {
-				fmt.Println(json)
+			for yaml := range e.GetRawRule(nameRegex) {
+				fmt.Printf("---\n%s...\n\n", yaml)
 			}
 		}
 		os.Exit(exitSuccess)

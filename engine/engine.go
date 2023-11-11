@@ -13,7 +13,7 @@ import (
 
 	"github.com/0xrawsec/golang-utils/datastructs"
 	"github.com/0xrawsec/golang-utils/fsutil"
-	"github.com/0xrawsec/golang-utils/log"
+	"github.com/0xrawsec/golog"
 )
 
 ////////////////////////////////// Engine /////////////////////////////////////
@@ -29,6 +29,8 @@ var (
 	DefaultRuleExtensions = datastructs.NewInitSyncedSet(".gen", ".gene")
 	// DefaultTplExtensions default extensions for template files
 	DefaultTplExtensions = datastructs.NewInitSyncedSet(".toml")
+
+	Logger = golog.FromStderr()
 )
 
 // ErrRuleExist definition
@@ -101,6 +103,7 @@ func NewEngine() (e *Engine) {
 	e.tplExtensions = DefaultTplExtensions
 	e.defaultActions = make(map[int][]string)
 	e.logTypes = make(map[string]*LogType)
+
 	// we set all known logTypes
 	for n, t := range logTypes {
 		e.logTypes[n] = t
@@ -117,19 +120,19 @@ func (e *Engine) AddLogFormat(name string, format *LogType) {
 // addRule adds a rule to the current engine
 func (e *Engine) addRule(r *CompiledRule) error {
 	if e.os != "" && !r.matchOS(e.os) {
-		log.Debugf("Skip rule %s because it does not match configured OS: configured=%s rule=%s", r.Name, e.os, r.OSs.Slice())
+		Logger.Debugf("Skip rule %s because it does not match configured OS: configured=%s rule=%s", r.Name, e.os, r.OSs.Slice())
 		return nil
 	}
 
 	// We skip adding the rule to the engine if we decided to match by name(s)
 	if !e.nameFilters.Contains(r.Name) && e.nameFilters.Len() > 0 {
-		log.Debugf("Skip compiling by name %s", r.Name)
+		Logger.Debugf("Skip compiling by name %s", r.Name)
 		return nil
 	}
 
 	// We skip adding the rule to the engine if we decided to match by tags
 	if e.tagFilters.Intersect(r.Tags).Len() == 0 && e.tagFilters.Len() > 0 {
-		log.Debugf("Skip compiling by tags %s", r.Name)
+		Logger.Debugf("Skip compiling by tags %s", r.Name)
 		return nil
 	}
 
@@ -393,7 +396,7 @@ func (e *Engine) LoadDirectory(rulesDir string) error {
 			ext := filepath.Ext(de.Name())
 			templateFile := filepath.Join(templateDir, de.Name())
 			if e.tplExtensions.Contains(ext) {
-				log.Debugf("Loading regexp templates from file: %s", templateFile)
+				Logger.Debugf("Loading regexp templates from file: %s", templateFile)
 				err := e.loadTemplate(templateFile)
 				if err != nil {
 					return fmt.Errorf("error loading template (file=%s): %w", templateFile, err)
@@ -455,7 +458,7 @@ func (e *Engine) LoadFile(rf string) error {
 func (e *Engine) loadRule(rule *Rule) error {
 	// Check if the rule is disabled
 	if rule.IsDisabled() {
-		log.Infof("Rule \"%s\" has been disabled", rule.Name)
+		Logger.Infof("Rule \"%s\" has been disabled", rule.Name)
 		return nil
 	}
 

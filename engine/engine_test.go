@@ -16,6 +16,7 @@ import (
 
 	"github.com/0xrawsec/golang-utils/readers"
 	"github.com/0xrawsec/golang-utils/sync/semaphore"
+	"github.com/0xrawsec/golog"
 	"github.com/0xrawsec/toast"
 )
 
@@ -786,6 +787,8 @@ func bench(b *testing.B, jobs uint64) {
 	var fd *os.File
 	var r *gzip.Reader
 	var bytesScanned uint64
+
+	Logger.Level = golog.LevelDisable
 
 	// Enable CPU profiling
 	f, err := os.Create("/tmp/cpu.pprof")

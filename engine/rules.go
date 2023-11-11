@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/0xrawsec/golang-utils/datastructs"
-	"github.com/0xrawsec/golang-utils/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -165,34 +164,34 @@ type Attack struct {
 
 // MetaSection defines the section holding the metadata of the rule
 type MetaSection struct {
-	Attack   []Attack `yaml:"attack" json:"ATTACK,omitempty"`
-	Authors  []string `yaml:"authors"`
-	Comments []string `yaml:"comments"`
+	Attack   []Attack `yaml:"attack,omitempty" json:"ATTACK,omitempty"`
+	Authors  []string `yaml:"authors,omitempty"`
+	Comments []string `yaml:"comments,omitempty"`
 }
 
 type Params struct {
-	Disable bool `yaml:"disable"`
-	Filter  bool `yaml:"filter"`
+	Disable bool `yaml:"disable,omitempty"`
+	Filter  bool `yaml:"filter,omitempty"`
 }
 
 type MatchOn struct {
-	LogType   string             `yaml:"log-type"`
-	Events    map[string][]int64 `yaml:"events"`
-	OSs       []string           `yaml:"oss"`
-	Computers []string           `yaml:"computers"`
+	LogType   string             `yaml:"log-type,omitempty"`
+	Events    map[string][]int64 `yaml:"events,omitempty"`
+	OSs       []string           `yaml:"oss,omitempty"`
+	Computers []string           `yaml:"computers,omitempty"`
 }
 
 // Rule is a JSON parsable rule
 type Rule struct {
 	Name      string            `yaml:"name"`
-	Tags      []string          `yaml:"tags"`
-	Meta      MetaSection       `yaml:"meta"`
-	Params    Params            `yaml:"params"`
-	MatchOn   MatchOn           `yaml:"match-on"`
-	Matches   map[string]string `yaml:"matches"`
-	Condition string            `yaml:"condition"`
-	Severity  int               `yaml:"severity"`
-	Actions   []string          `yaml:"actions"`
+	Tags      []string          `yaml:"tags,omitempty"`
+	Meta      MetaSection       `yaml:"meta,omitempty"`
+	Params    Params            `yaml:"params,omitempty"`
+	MatchOn   MatchOn           `yaml:"match-on,omitempty"`
+	Matches   map[string]string `yaml:"matches,omitempty"`
+	Condition string            `yaml:"condition,omitempty"`
+	Severity  int               `yaml:"severity,omitempty"`
+	Actions   []string          `yaml:"actions,omitempty"`
 }
 
 type Decoder interface {
@@ -350,15 +349,15 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 			rule.containers = containers
 			if rule.containers != nil {
 				if !rule.containers.Has(cm.Container) {
-					log.Warnf("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+					Logger.Warnf("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
 					rule.Disabled = true
-					log.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
+					Logger.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
 					return &rule, nil
 				}
 			} else {
-				log.Warnf("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
+				Logger.Warnf("Unknown container \"%s\" used in rule \"%s\"", cm.Container, rule.Name)
 				rule.Disabled = true
-				log.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
+				Logger.Warnf("Rule \"%s\" has been disabled at compile time", rule.Name)
 				return &rule, nil
 			}
 			cm.setContainerDB(rule.containers)
@@ -388,7 +387,7 @@ func (jr *Rule) compile(containers *ContainerDB, format *LogType) (*CompiledRule
 	// Check for unknown operands and display warnings
 	for _, iOp := range rule.AtomMap.Keys() {
 		if !operandsSet.Contains(iOp.(string)) {
-			log.Warnf("Rule \"%s\" operand %s not used", rule.Name, iOp.(string))
+			Logger.Warnf("Rule \"%s\" operand %s not used", rule.Name, iOp.(string))
 		}
 	}
 	return &rule, nil
