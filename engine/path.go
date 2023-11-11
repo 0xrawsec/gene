@@ -6,17 +6,17 @@ import (
 	"strings"
 )
 
-const (
-	xpathSep = "/"
+var (
+	xpathCutset = []rune{'.', '/'}
 )
 
 var (
-	systemTimePath = Path("/Event/System/TimeCreated/SystemTime")
+	systemTimePath = Path(".Event.System.TimeCreated.SystemTime")
 
-	eventDataPath = path("/Event/EventData")
+	eventDataPath = path(".Event.EventData")
 
 	// GeneInfoPath path to the Gene information in a modified event
-	GeneInfoPath = Path("/Event/GeneInfo")
+	GeneInfoPath = Path(".Event.GeneInfo")
 
 	ErrItemNotFound = errors.New("item not found")
 )
@@ -30,21 +30,28 @@ type XPath struct {
 	}
 }
 
+func inCutset(r rune) bool {
+	for _, c := range xpathCutset {
+		if r == c {
+			return true
+		}
+	}
+	return false
+}
+
 func splitPath(p string) []string {
 	// if we want to have a cutset instead of a single character
-	return strings.FieldsFunc(p, func(c rune) bool {
-		return c == '/'
-	})
+	return strings.FieldsFunc(p, inCutset)
 }
 
 func path(p string) (x *XPath) {
-	san := strings.Trim(p, xpathSep)
+	san := strings.TrimFunc(p, inCutset)
 	x = &XPath{Path: splitPath(san)}
 	return x
 }
 
 func IsAbsoluteXPath(p string) bool {
-	return strings.HasPrefix(p, xpathSep)
+	return strings.IndexFunc(p, inCutset) == 0
 }
 
 func Path(p string) (x *XPath) {
@@ -86,6 +93,8 @@ func (p *XPath) Merge(other *XPath) *XPath {
 	return &new
 }
 
+// Append just append string to path. s is not parsed as an XPath.
+// If you want to merge two XPath use Merge function
 func (p *XPath) Append(s string) *XPath {
 	new := XPath{Path: append(p.Path[:], s)}
 	new.initFlags()
@@ -94,7 +103,7 @@ func (p *XPath) Append(s string) *XPath {
 
 func (p *XPath) String() string {
 	if len(p.s) == 0 {
-		p.s = fmt.Sprintf("/%s", strings.Join(p.Path, xpathSep))
+		p.s = fmt.Sprintf(".%s", strings.Join(p.Path, "."))
 	}
 	return p.s
 }

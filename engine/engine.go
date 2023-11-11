@@ -548,8 +548,7 @@ func (e *Engine) getRulesForEvent(evt Event) []*CompiledRule {
 	return e.rulesCache[key]
 }
 
-// Match checks if there is a match in any rule of the engine. The only difference with Match function is that
-// it also return a flag indicating if the event is filtered.
+// Match checks if there is a match in any rule of the engine
 func (e *Engine) Match(evt Event) *MatchResult {
 	// initialized variables
 	mr := NewMatchResult(e.ShowAttack, e.ShowActions, evt.Type().FieldNameConv)

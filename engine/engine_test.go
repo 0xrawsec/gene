@@ -758,7 +758,7 @@ match-on:
     kunai: []
 matches:
   $a: exe/file = '/usr/bin/ping'
-  $b: /data/exe/md5 = '2d57c5245652e40bbf51edaaa3be65bd'
+  $b: .data.exe.md5 = '2d57c5245652e40bbf51edaaa3be65bd'
 condition: $a and $b
 ...`
 

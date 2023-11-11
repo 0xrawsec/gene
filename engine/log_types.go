@@ -32,7 +32,7 @@ type LogType struct {
 
 // Windows Event Format
 var (
-	systemPath = Path("/Event/System")
+	systemPath = Path(".Event.System")
 
 	TypeWinevt = LogType{
 		FieldNameConv: CamelCase,
@@ -40,7 +40,7 @@ var (
 		Source:        systemPath.Append("Channel"),
 		EventID:       systemPath.Append("EventID"),
 		Hostname:      systemPath.Append("Computer"),
-		GeneInfo:      Path("/Event/GeneInfo"),
+		GeneInfo:      Path(".Event.GeneInfo"),
 		Timestamp:     systemPath.Append("TimeCreated").Append("SystemTime"),
 	}
 )
@@ -49,11 +49,11 @@ var (
 var (
 	TypeKunai = LogType{
 		FieldNameConv: SnakeCase,
-		Data:          Path("/data"),
-		Source:        Path("/info/event/source"),
-		EventID:       Path("/info/event/id"),
-		Hostname:      Path("/info/host/hostname"),
-		GeneInfo:      Path("/gene_info"),
-		Timestamp:     Path("/info/utc_time"),
+		Data:          Path(".data"),
+		Source:        Path(".info.event.source"),
+		EventID:       Path(".info.event.id"),
+		Hostname:      Path(".info.host.hostname"),
+		GeneInfo:      Path(".gene_info"),
+		Timestamp:     Path(".info.utc_time"),
 	}
 )

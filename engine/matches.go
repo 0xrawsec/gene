@@ -22,7 +22,7 @@ var (
 	ErrLogFormat = fmt.Errorf("log format error")
 
 	//Regexp and its helper to ease AtomRule parsing
-	pathRe                  = `([\w/]+|".*?")`
+	pathRe                  = `([\w/\.]+|".*?")`
 	fieldNameRegexp         = regexp.MustCompile(`^\$\w+`)
 	fieldMatchRegexp        = regexp.MustCompile(fmt.Sprintf(`^(?P<operand>%s)\s*(?P<operator>(=|~=|\&=|<|>|>=|<=))\s+'(?P<value>.*)'`, pathRe))
 	fieldMatchRegexpHlpr    = submatch.NewHelper(fieldMatchRegexp)
