@@ -788,6 +788,7 @@ func bench(b *testing.B, jobs uint64) {
 	var r *gzip.Reader
 	var bytesScanned uint64
 
+	// disable engine logging
 	Logger.Level = golog.LevelDisable
 
 	// Enable CPU profiling
