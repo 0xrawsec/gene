@@ -142,6 +142,18 @@ func (m *MatchResult) IsEmpty() bool {
 	return m.Signature.Len() == 0 && !m.filtered
 }
 
+// UpdateEvent updates an event by incorporating detection information
+// This function is made to separate the logic between matching the event
+// and updating it.
+func (m *MatchResult) UpdateEvent(evt Event) *MatchResult {
+	// if it is a detection
+	if m.IsDetection() {
+		// we add detection information to event
+		evt.SetDetection(m)
+	}
+	return m
+}
+
 // IsOnlyFiltered tells that the event only matched filter rules
 // this is similar to !IsDetection() && IsFiltered()
 func (m *MatchResult) IsOnlyFiltered() bool {

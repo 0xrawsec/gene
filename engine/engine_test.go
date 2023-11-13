@@ -123,9 +123,10 @@ severity: 10
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
-	det := evt.GetDetection()
+	det, ok := evt.GetDetection()
+	tt.Assert(ok)
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
 	tt.Assert(det.IsDetection())
 	tt.Assert(det.MatchCount() == 1)
@@ -151,9 +152,10 @@ severity: 10
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
-	det := evt.GetDetection()
+	det, ok := evt.GetDetection()
+	tt.Assert(ok)
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
 	tt.Assert(det.IsDetection())
 	tt.Assert(det.MatchCount() == 1)
@@ -172,11 +174,12 @@ condition:
 	e := NewEngine()
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(!mr.IsDetection())
 	tt.Assert(!mr.IsFiltered())
 	tt.Assert(mr.IsEmpty())
-	tt.Assert(evt.GetDetection() == nil)
+	_, ok := evt.GetDetection()
+	tt.Assert(!ok)
 }
 
 func TestMatchAttck(t *testing.T) {
@@ -204,9 +207,10 @@ condition: $a`
 	e.SetShowAttck(true)
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
-	det := evt.GetDetection()
+	det, ok := evt.GetDetection()
+	tt.Assert(ok)
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
 	tt.Assert(det.IsDetection())
 	tt.Assert(det.MatchCount() == 1)
@@ -246,9 +250,10 @@ condition: $a
 	tt.CheckErr(e.LoadYamlString(rules))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
-	det := evt.GetDetection()
+	det, ok := evt.GetDetection()
+	tt.Assert(ok)
 	tt.Assert(det.Signature.Contains("ShouldMatch"))
 	tt.Assert(det.IsDetection())
 	tt.Assert(det.MatchCount() == 1)
@@ -290,9 +295,10 @@ condition: '!($a or $b)'`
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsEmpty())
-	tt.Assert(evt.GetDetection() == nil)
+	_, ok := evt.GetDetection()
+	tt.Assert(!ok)
 }
 
 func TestNotAndRule(t *testing.T) {
@@ -330,7 +336,7 @@ condition: '!($a and !$b)'`
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
 }
 
@@ -460,11 +466,12 @@ match-on:
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 1)
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(!mr.IsDetection())
 	tt.Assert(mr.IsFiltered())
 	tt.Assert(mr.IsOnlyFiltered())
-	tt.Assert(evt.GetDetection() == nil)
+	_, ok := evt.GetDetection()
+	tt.Assert(!ok)
 
 }
 
@@ -513,11 +520,12 @@ condition: $a
 	tt.CheckErr(e.LoadYamlString(rule))
 	tt.Assert(e.Count() == 2)
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
 	tt.Assert(mr.IsFiltered())
 	tt.Assert(!mr.IsOnlyFiltered())
-	det := evt.GetDetection()
+	det, ok := evt.GetDetection()
+	tt.Assert(ok)
 	tt.Assert(det != nil)
 	tt.Assert(det.MatchCount() == 1)
 }
@@ -537,11 +545,12 @@ match-on:
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(!mr.IsDetection())
 	tt.Assert(!mr.IsFiltered())
 	tt.Assert(mr.IsEmpty())
-	tt.Assert(evt.GetDetection() == nil)
+	_, ok := evt.GetDetection()
+	tt.Assert(!ok)
 }
 
 func TestLoadDirectory(t *testing.T) {
@@ -599,11 +608,13 @@ actions:
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
-	tt.Assert(evt.GetDetection().HasActions())
-	tt.Assert(evt.GetDetection().Actions.Contains("kill", "block"))
-	tt.Assert(evt.GetDetection().Actions.Len() == 2)
+	d, ok := evt.GetDetection()
+	tt.Assert(ok)
+	tt.Assert(d.HasActions())
+	tt.Assert(d.Actions.Contains("kill", "block"))
+	tt.Assert(d.Actions.Len() == 2)
 	tt.Logf(prettyJSON(evt))
 }
 
@@ -625,11 +636,13 @@ condition: $a`
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := winEvent()
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Assert(mr.IsDetection())
-	tt.Assert(evt.GetDetection().HasActions())
-	tt.Assert(evt.GetDetection().Actions.Contains("kill", "block"))
-	tt.Assert(evt.GetDetection().Actions.Len() == 2)
+	d, ok := evt.GetDetection()
+	tt.Assert(ok)
+	tt.Assert(d.HasActions())
+	tt.Assert(d.Actions.Contains("kill", "block"))
+	tt.Assert(d.Actions.Len() == 2)
 }
 
 func TestLoadContainer(t *testing.T) {
@@ -766,7 +779,7 @@ condition: $a and $b
 
 	tt.CheckErr(e.LoadYamlString(rule))
 	evt := eventFromString(event)
-	mr := e.Match(evt)
+	mr := e.Match(evt).UpdateEvent(evt)
 	tt.Logf("names: %s", mr.MatchesSlice())
 	tt.Assert(mr.MatchCount() > 0)
 	tt.Logf(prettyJSON(evt))

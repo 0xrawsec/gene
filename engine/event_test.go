@@ -23,9 +23,11 @@ func TestEvent(t *testing.T) {
 	tt.Assert(evt.Timestamp().Equal(ts))
 
 	// detection must be nil
-	tt.Assert(evt.GetDetection() == nil)
+	d, ok := evt.GetDetection()
+	tt.Assert(!ok && d == nil)
 	det := NewMatchResult(true, true, CamelCase)
 	evt.SetDetection(det)
-	tt.Assert(evt.GetDetection() == det)
+	d, ok = evt.GetDetection()
+	tt.Assert(d == det && ok)
 
 }

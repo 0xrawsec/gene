@@ -11,7 +11,7 @@ type Event interface {
 	Set(*XPath, interface{}) error
 	SetDetection(*MatchResult)
 	Get(*XPath) (interface{}, bool)
-	GetDetection() *MatchResult
+	GetDetection() (*MatchResult, bool)
 	Source() string
 	Computer() string
 	EventID() int64
@@ -70,7 +70,7 @@ func (c cachedEvent) SetDetection(*MatchResult) {
 	panic("should not be used")
 }
 
-func (c cachedEvent) GetDetection() *MatchResult {
+func (c cachedEvent) GetDetection() (*MatchResult, bool) {
 	panic("should not be used")
 }
 
@@ -133,14 +133,14 @@ func (g GenericEvent) SetDetection(d *MatchResult) {
 	g.Set(p, d)
 }
 
-func (g GenericEvent) GetDetection() *MatchResult {
+func (g GenericEvent) GetDetection() (*MatchResult, bool) {
 	p := g.Type().GeneInfo
 	if i, ok := g.Get(p); ok {
 		if d, ok := i.(*MatchResult); ok {
-			return d
+			return d, ok
 		}
 	}
-	return nil
+	return nil, false
 }
 
 func (g GenericEvent) Source() string {

@@ -597,8 +597,5 @@ func (e *Engine) Match(evt Event) *MatchResult {
 		mr.Actions.Add(datastructs.ToInterfaceSlice(actions)...)
 	}
 
-	// we add detection information to event
-	evt.SetDetection(mr)
-
 	return mr
 }
